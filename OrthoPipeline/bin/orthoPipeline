@@ -8,7 +8,7 @@ use GUS::Pipeline::MakeTaskDirs;
 use GUS::Pipeline::SshCluster;
 use GUS::Pipeline::NfsCluster;
 use GUS::Common::GusConfig;
-#use GUS::Common::ReleaseGetter;
+use GUS::Pipeline::ExternalResources::ReleaseIdGetter
 use GUS::ObjRelP::DbiDatabase;
 use GUS::Pipeline::ExternalResources::Loader;
 use CBIL::Util::PropertySet;
@@ -175,10 +175,7 @@ sub downloadAndInsertSeqs {
     $mgr->endStep($signal);
 }
 
-#todo: currently in the middle of writing new functionality for reading database name, version info
-#from fileRepository xml files and using them to retrieve external database releases.  Use that functionality
-#here when it is written (Steve is writing it).
-
+ 
 sub extractExternalSeqs{
 
     my $signal = "extractExternalSeqs";
@@ -187,32 +184,17 @@ sub extractExternalSeqs{
 
     my $gusConfigFile = $propertySet->getProp('gusConfigFile');
 
-    my @releaseIds;
+    my $repositoryXml = $propertySet->getProp('fileRepositoryXml');
+
+    my $releaseGetter = GUS::Pipeline::ExternalResources::ReleaseIdGetter->new($xmlFile);
     
-    my $dbInfoFile = $propertySet->getProp("dbInfoFile");
+    my $releaseString = $releaseGetter->getIdList();
 
-    open (DBINFO, "<" . $dbInfoFile);
-    
-    my $releaseGetter = GUS::Common::ReleaseGetter->new($gusConfigFile);
-
-    while (<DBINFO>){
-	my $line = $_;
-	$line =~ /(\S+)\s(\S+)\s(.*)/;
-	my $resourceName = $1;
-	my $version = $2;
-	my $dbName = $3;
-		
-	my $releaseId = $releaseGetter->getReleaseId($dbName, "2005-01-13");
-	if ($releaseId){
-	    push (@releaseIds, $releaseId);
-	}
-    }
-
-    my $sql = "select aa_sequence_id,sequence from dots.externalaasequence where external_database_release_id in (" . join (",", @releaseIds) . ")";
+    my $sql = "select aa_sequence_id,sequence from dots.externalaasequence where external_database_release_id in ($releaseString)";
 
     $mgr->log("extracting seqs with sql $sql\n");
 
-    my $seqFileName =  $propertySet->getProp('extSeqFastaFile');
+    my $seqFileName =  $propertySet->getProp('extSeqFasxotaFile');
 
     my $seqFile = "$pipelineDir/seqfiles/$seqFileName";
     my $logFile = "$pipelineDir/logs/externalSeqExtract.log";
