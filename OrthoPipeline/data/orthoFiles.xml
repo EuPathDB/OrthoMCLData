@@ -1,0 +1,167 @@
+<resourcesPipeline repository="/files/efr" downloadDir="@downloadDir@">
+
+   <resource resource="Gallus_gallus" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Gallus gallus database from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genomes/Gallus_gallus/protein"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Gallus gallus">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=protein.fa.gz</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Gallus_gallus/protein.fa.gz --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Mus_musculus" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Mus musculus database from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genomes/M_musculus/protein"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Mus musculus">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=protein.fa.gz</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Mus_musculus/protein.fa.gz --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Homo_sapiens" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Homo sapiens database from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genomes/H_sapiens/protein"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Homo sapiens">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=protein.fa.gz</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Homo_sapiens/protein.fa.gz --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+   <resource resource="Tetrahymena_thermophila" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Tetrahymena thermophila database from tigr before 2005-03-21"
+             url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_thermophila/Gene_Predictions"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Tetrahymena thermophila">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=Preliminary_Gene_Predictions_Aug_2004.pep.gz</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(\d+);\s" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Tetrahymena_thermophila/Preliminary_Gene_Predictions_Aug_2004.pep.gz --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Leishmania_major" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Leishmania major database from sanger before 2005-03-21"
+             url="ftp://ftp.sanger.ac.uk/pub/databases/L.major_sequences/LEISHPEP"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Leishmania major">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=GeneDB_protein_database_090704</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(\S+)\s" --log_frequency "1000" --sequenceFile @downloadDir@/Leishmania_major/GeneDB_protein_database_090704 --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Takifugu_rubripes" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Takifugu rubripes database from fugu-sg before 2005-03-21"
+             url="ftp://shaggy.fugu-sg.org/pub/current_fugu/data/fasta/pep"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Takifugu rubripes">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=Fugu_rubripes.pep.fa.gz</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(.*)\s" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Takifugu_rubripes/Fugu_rubripes.pep.fa.gz --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Theileria_annulata" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Theileria annulata database from sanger before 2005-03-21"
+             url="ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Theileria annulata">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=TANN.GeneDB.pep</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(.*)\s\|\|\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Theileria_annulata/TANN.GeneDB.pep --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+
+   <resource resource="Plasmodium_falciparum" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Plasmodium Falciparum from plasmoDb before 2005-03-21"
+             url="http://plasmodb.org/restricted/data/P_falciparum/WG/cds.aa/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Plasmodium falciparum">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=5 --accept=Pfa3D7_WholeGenome_Automatic_PEP_2004.11.23.fasta</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(\d+)\s" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Plasmodium_falciparum/Pfa3D7_WholeGenome_Automatic_PEP_2004.11.23.fasta --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+   <resource resource="Plasmodium_yoelii" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Plasmodium Yoelii from plasmoDb before 2005-03-21"
+             url="http://plasmodb.org/restricted/data/P_yoelii/ORFs/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Plasmodium yoelii">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=4 --accept=Pyl17XNL_2002.09.10_ORFS50.fasta</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>(\d+)\s" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Plasmodium_yoelii/Pyl17XNL_2002.09.10_ORFS50.fasta --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+
+
+   <resource resource="Anopheles_gambiae" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Anopheles Gambiae from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Anopheles_gambiae/Gene_products/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Anopheles gambiae">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=4 --accept=Mosq-new-proteins.fasta</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Anopheles_gambiae/Mosq-new-proteins.fasta --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+
+<resource resource="Drosophila_melanogaster" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Drosophila Melanogaster from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Drosophila_melanogaster/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Drosophila melanogaster">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept="*.faa"</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --seqFileDir @downloadDir@/Drosophila_melanogaster/ --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+</resource>
+
+
+<resource resource="Saccharomyces_cerevisiae" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Saccharomyces Cerevisiae from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Saccharomyces_cerevisiae/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Saccharomyces cerevisiae">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept="*.faa"</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --seqFileDir @downloadDir@/Saccharomyces_cerevisiae/ --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+
+
+<resource resource="Arabidopsis_thaliana" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Arabidopsis Thaliana from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Arabidopsis_thaliana/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Arabidopsis thaliana">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept="*.faa"</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --seqFileDir @downloadDir@/Arabidopsis_thaliana/ --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+
+
+<resource resource="Caenorhabditis_elegans" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Caenorhabditis Elegans from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Caenorhabditis_elegans/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Caenorhabditis elegans">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept="*.faa"</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --seqFileDir @downloadDir@/Caenorhabditis_elegans/ --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+<resource resource="Escherichia_coli_k12" version="2005-03-21" extDbRlsVer="2005-03-21" extDbRlsDescrip="Most recent release of Escherichia Coli K12 from genbank before 2005-03-21"
+             url="ftp://ftp.ncbi.nih.gov/genbank/genomes/Bacteria/Escherichia_coli_K12/"
+             plugin="GUS::Common::Plugin::InsertNewExternalSequences"
+             extDbName="Escherichia coli k12">
+
+      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=4 --accept=NC_000913.faa</wgetArgs>
+
+      <pluginArgs> --table_name "DoTS::ExternalAASequence" --regex_source_id "^\>gi\|(\d+)\|" --log_frequency "1000" --no_check --sequenceFile @downloadDir@/Escherichia_coli_k12/NC_000913.faa --external_database_name %EXT_DB_NAME% --version %EXT_DB_RLS_VER%</pluginArgs>
+   </resource>
+
+</resourcesPipeline>

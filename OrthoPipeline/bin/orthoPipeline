@@ -1,0 +1,373 @@
+#!/usr/bin/perl
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::Pipeline::Manager;
+use GUS::Pipeline::MakeTaskDirs;
+use GUS::Pipeline::ExternalResources::DatabaseSet;
+use GUS::Pipeline::ExternalResources::DatabaseSetEntry;
+use GUS::Pipeline::SshCluster;
+use GUS::Pipeline::NfsCluster;
+use GUS::Common::GusConfig;
+use GUS::Common::ReleaseGetter;
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Pipeline::ExternalResources::Loader;
+use CBIL::Util::PropertySet;
+use File::Basename;
+
+use FileHandle;
+
+$| = 1;
+
+###########################  Properties  ##################################
+
+my $propertiesFile = $ARGV[0];
+
+&usage unless -e $propertiesFile;
+
+# [name, default (or null if reqd), comment]
+
+my @properties = 
+(
+ ["stopBefore",   "none",  "the step to stop before.  uses the signal name"],
+ ["orthoPipelineDir", "", "directory in which to create new ortho pipeline builds"],
+ ["extSeqFastaFile", "extAASeq.fsa", "file to dump external protein sequences for blasting"],
+
+ ["testNextPlugin", "false", "'true' to run in no-commit mode the first plugin not yet done and then exit"],
+
+ ["clusterServer",         "none",  "full name of cluster server"],
+ ["serverPath",           "",  "full path of ortho pipeline directory on cluster server"],
+ ["nodePath",             "",  "full path of scratch dir on cluster node"],
+
+ ["blastsimilarity.taskSize", "",  "number of seqs to process per blastsimilarity subtask"], 
+ ["blastsimilarity.Bparam", "", "paramter B for blastsimilarity"], 
+ ["blastsimilarity.Vparam", "", "paramter V for blastsimilarity"],
+ ["blastsimilarity.Eparam", "", "paramter E for blastsimilarity"],
+ ["blastsimilarity.Tparam", "", "paramter T for blastsimilarity"],
+ ["blastsimilarity.Wparam", "", "paramter W for blastsimilarity"],
+ ["blastType", "", "blast type for blasting external seqs against prodom and vice-versa"],
+ ["wuBlastBinPathCluster",         "",  "path of wu blast bin dir on Cluster"],
+
+ ["externalDbDir", "", "full path of directory to store downloaded external protein sequence files"],
+ ["buildDate", "", "approximate start date of build"],
+
+ ["dbInfoFile", "", "file listing short database name and version info for sequences we are processing"],
+
+ ["fileRepositoryXml", "", "xml file for running file repository pipeline to load external protein seqs"],
+ ["fileRepositoryConfig", "", "config file for running file repository pipeline"],
+ ["downloadDir", "", "directory to put files obtained from repository"],
+ ["commit", "", "whether to commit repository plugins"],
+ ["dbcommit", "", "whether to commit new ExternalDatabase and ExternalDatabaseRelease entries for repository plugins"],
+
+ ["gusConfigFile", "$ENV{GUS_CONFIG_FILE}", "user's GUS configuration file for making database connections"],
+ ["orthoRelease", "", "Release number of current orthoPipeline run"],
+
+ ["downloadAndInsertSeqs", "", "yes or no"],
+ ["createOrthoPipelineDir", "", "yes or no"],
+ ["extractExternalSeqs", "", "yes or no"],
+ ["blastSeqs", "", "yes or no"],
+
+ );
+
+
+###########################  Initialization  ##################################
+
+my $propertySet  = CBIL::Util::PropertySet->new($propertiesFile, \@properties);
+
+my $orthoPipelineDir = $propertySet->getProp('orthoPipelineDir');
+
+my $buildName = &makeBuildName();  
+
+my $pipelineDir = "$orthoPipelineDir/$buildName";
+
+
+
+###################  The Pipeline  ##########################
+
+my $cluster;
+if ($propertySet->getProp('clusterServer')) {
+    $cluster = GUS::Pipeline::SshCluster->new($propertySet->getProp('clusterServer'),
+					      undef);
+} else {
+  $cluster = GUS::Pipeline::NfsCluster->new();
+}
+
+my $mgr = GUS::Pipeline::Manager->new($pipelineDir, $propertySet, 
+				      $propertiesFile, $cluster, 
+				      $propertySet->getProp('testNextPlugin'));
+
+&createOrthoPipelineDir();
+
+&downloadAndInsertSeqs();
+
+&extractExternalSeqs();
+
+&copyPipelineDirToCluster();
+
+&blastExternalSeqs();
+
+&copySimsFromCluster();
+
+&insertExtSeqExtSeqSimilarities();
+
+&prepareOrthoMclInputs();
+
+&runOrthomcl();
+
+&insertMclResults();
+
+
+#########################   Pipeline Subroutines   ########################
+
+sub createOrthoPipelineDir{
+
+    if (-e "$pipelineDir/seqfiles"){
+	print "$pipelineDir already exists!\n";
+	return;
+    }
+
+    #sequence files
+    my $extSeqFastaFile = $propertySet->getProp('extSeqFastaFile');
+
+    #paths on cluster server
+    my $serverPath = $propertySet->getProp('serverPath');
+    my $nodePath = $propertySet->getProp('nodePath');
+
+    #parameters that will go into blast files
+    my $bsTaskSize = $propertySet->getProp('blastsimilarity.taskSize');
+    my $wuBlastBinPathCluster = $propertySet->getProp('wuBlastBinPathCluster');
+    my $bsBparam = $propertySet->getProp('blastsimilarity.Bparam');
+    my $bsVparam = $propertySet->getProp('blastsimilarity.Vparam');
+    my $bsWparam = $propertySet->getProp('blastsimilarity.Wparam');
+    my $bsTparam = $propertySet->getProp('blastsimilarity.Tparam');
+    my $bsEparam = $propertySet->getProp('blastsimilarity.Eparam');
+    my $blastType = $propertySet->getProp('blastType'); #blastp
+
+    my $sequenceDir = "$pipelineDir/seqfiles";
+
+    $mgr->runCmd("mkdir -p $sequenceDir");
+ 
+    my $blastParamsString = "-wordmask=seg+xnu\nW=$bsWparam\nT=$bsTparam\nB=$bsBparam\nV=$bsVparam\nE=$bsEparam";
+    
+    #for now assuming that both files are in fasta form, will have to change this if not the case
+    
+    #ext-seq vs self
+    &makeSimilarityDir("extseq", "extseq", $buildName, $orthoPipelineDir,
+		       $serverPath, $nodePath, $bsTaskSize, 
+		       $wuBlastBinPathCluster, $extSeqFastaFile, $sequenceDir,
+		       $extSeqFastaFile, '(\S+)', $blastType, $blastParamsString
+		       );
+    
+    $mgr->runCmd("chmod -R g+w $orthoPipelineDir/$buildName");
+}
+
+sub downloadAndInsertSeqs {
+
+    my $signal = "downloadAndInsertSeqs";
+
+    return if $mgr->startStep("Downloading and inserting external protein sequences using file repository", $signal, 'downloadAndInsertSeqs');
+
+    my $repositoryXml = $propertySet->getProp('fileRepositoryXml');
+
+    my $loader = GUS::Pipeline::ExternalResources::Loader->new($mgr, $repositoryXml);
+
+    $loader->run();
+    
+    $mgr->endStep($signal);
+}
+
+#todo: currently in the middle of writing new functionality for reading database name, version info
+#from fileRepository xml files and using them to retrieve external database releases.  Use that functionality
+#here when it is written (Steve is writing it).
+
+sub extractExternalSeqs{
+
+    my $signal = "extractExternalSeqs";
+
+    return if $mgr->startStep("Extracting external protein sequences from GUS", $signal, 'extractExternalSeqs');
+
+    my $gusConfigFile = $propertySet->getProp('gusConfigFile');
+
+    my @releaseIds;
+    
+    my $dbInfoFile = $propertySet->getProp("dbInfoFile");
+
+    open (DBINFO, "<" . $dbInfoFile);
+    
+    my $releaseGetter = GUS::Common::ReleaseGetter->new($gusConfigFile);
+
+    while (<DBINFO>){
+	my $line = $_;
+	$line =~ /(\S+)\s(\S+)\s(.*)/;
+	my $resourceName = $1;
+	my $version = $2;
+	my $dbName = $3;
+		
+	my $releaseId = $releaseGetter->getReleaseId($dbName, "2005-01-13");
+	if ($releaseId){
+	    push (@releaseIds, $releaseId);
+	}
+    }
+
+    my $sql = "select aa_sequence_id,sequence from dots.externalaasequence where external_database_release_id in (" . join (",", @releaseIds) . ")";
+
+    $mgr->log("extracting seqs with sql $sql\n");
+
+    my $seqFileName =  $propertySet->getProp('extSeqFastaFile');
+
+    my $seqFile = "$pipelineDir/seqfiles/$seqFileName";
+    my $logFile = "$pipelineDir/logs/externalSeqExtract.log";
+
+    #outputFile: fasta file, created here
+
+    my $cmd = "dumpDistinctSequencesFromTable.pl --gusConfigFile $gusConfigFile  --outputFile $seqFile --idSQL \"$sql\"  2>> $logFile";
+
+    $mgr->runCmd($cmd);
+
+    $mgr->endStep($signal);
+}
+
+sub blastExternalSeqs{
+
+    my $serverPath = $propertySet->getProp('serverPath');
+    
+    my $signal = "findOrthoSimilarities";
+    return if $mgr->startStep("Starting similarities between domains and external sequences on cluster", $signal, 'blastSeqs');
+    
+    $mgr->endStep($signal);
+    
+    my $clusterCmdMsg = "submitPipelineJob runOrthoSimilarities $serverPath/$buildName NUMBER_OF_NODES";
+    my $clusterLogMsg = "monitor $serverPath/$buildName/logs/*.log and xxxxx.xxxx.stdout";
+
+    $mgr->exitToCluster($clusterCmdMsg, $clusterLogMsg, 1);
+}
+
+sub copyPipelineDirToCluster {
+
+    my $serverPath = $propertySet->getProp('serverPath');
+
+    my $fromDir = $orthoPipelineDir;
+    my $fromFile = $buildName;
+    
+    my $signal = "dir2cluster";
+    return if $mgr->startStep("Copying $orthoPipelineDir/$buildName to $serverPath on cluster", $signal, 'blastSeqs');
+
+    $mgr->{cluster}->copyTo($fromDir, $fromFile, $serverPath);
+
+    $mgr->endStep($signal);
+}
+
+sub copySimsFromCluster {
+
+    my $serverPath = $propertySet->getProp('serverPath');
+
+    my $signal = "copySimsFromCluster";
+    return if $mgr->startStep("Copying  protein similarities from cluster",
+			 $signal, 'blastSeqs');
+    
+    my $fullName = "extseq-extseq";
+	    
+    $mgr->{cluster}->copyFrom("$serverPath/$buildName/similarity/$fullName/master/mainresult", 
+			      "blastSimilarity.out", 
+			      "$pipelineDir/similarity/$fullName");
+    
+    $mgr->endStep($signal);
+}
+
+sub insertExtSeqExtSeqSimilarities {
+    my $extSeqExtSeqFile = "$pipelineDir/similarity/extseq-extseq/blastSimilarity.out";
+
+    my $args = "--file $extSeqExtSeqFile --queryTable DoTS::ExternalAASequence  --subjectTable DoTS::ExternalAASequence --subjectPvalue 1e-8";
+
+    $mgr->runPlugin("loadExtSeqExtSeqSims", 
+		    "GUS::Common::Plugin::LoadBlastSimFast", $args,
+		    "Loading external sequence-external sequence similarities");
+}
+
+
+sub substitutePlasmoExDbIds{
+    
+    my $stanfordPlasmoReleaseId = $propertySet->getProp('stanfordPlasmoReleaseId');
+    my $tigrPlasmoReleaseId = $propertySet->getProp('tigrPlasmoReleaseId');
+    my $sangerPlasmoReleaseId = $propertySet->getProp('sangerPlasmoReleaseId');
+    my $globalPlasmoReleaseId = $propertySet->getProp('tempPlasmoReleaseId');
+    
+    my $schemaSpace = $propertySet->getProp('sequenceTableSchemaSpace');
+
+    my $gusConfigFile = $propertySet->getProp('gusConfigFile');
+    
+    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
+    
+    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					    $gusconfig->getReadOnlyDatabaseLogin(),
+					    $gusconfig->getReadOnlyDatabasePassword,
+					    1,0,1,
+					    $gusconfig->getCoreSchemaName);
+    my $dbh = $db->getQueryHandle();
+
+    my $sql = "update $schemaSpace" . "OrthoPipelineAASequence set external_database_release_id = $globalPlasmoReleaseId where external_database_release_id in (5201,5202,5203)";
+
+}
+
+sub prepareOrthoMclInputs{
+
+   
+
+
+}
+
+sub getSimAlgInvId{
+
+    my ($queryTableId, $subjectTableId) = @_;
+
+    
+    my $gusConfigFile = $propertySet->getProp('gusConfigFile');
+    
+    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
+    
+    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					    $gusconfig->getReadOnlyDatabaseLogin(),
+					    $gusconfig->getReadOnlyDatabasePassword,
+					    1,0,1,
+					    $gusconfig->getCoreSchemaName);
+    my $dbh = $db->getQueryHandle();
+
+    my $sql  = "select row_alg_invocation_id from dots.similarity where subject_table_id = $subjectTableId";
+    $sql .= " and query_table_id = $queryTableId";
+}
+
+sub getReleaseId{
+    
+    my ($dbId, $version) = @_;
+
+    my $gusConfigFile = $propertySet->getProp('gusConfigFile');
+    
+    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
+    
+    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					    $gusconfig->getReadOnlyDatabaseLogin(),
+					    $gusconfig->getReadOnlyDatabasePassword,
+					    1,0,1,
+					    $gusconfig->getCoreSchemaName);
+    my $dbh = $db->getQueryHandle();
+    
+    my $sql = "select external_database_release_id from sres.externaldatabaserelease where version = '$version' and external_database_id = $dbId";
+    my $sth = $dbh->prepareAndExecute($sql);
+    
+    my ($releaseId) = $sth->fetchrow_array();
+
+    return $releaseId;
+}
+	
+
+sub makeBuildName {
+  
+  return "release" . $propertySet->getProp('orthoRelease');
+}
+
+sub usage {
+    print STDERR "usage:  orthoPipeline propertiesfile\n";
+    exit 1;
+}
+
