@@ -1,0 +1,40 @@
+<project name="OrthoMCL" default="Installation" basedir=".">
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="OrthoMCL-Installation" depends="OrthoMCL/OrthoPipeline-Installation" >
+
+    <ant target="defaultProjectInstall"/>
+  </target>  
+   
+
+
+  <!-- ooooooooooooooooooooooo  Install Components  ooooooooooooooooooooooo -->
+
+  <target name="OrthoMCL/OrthoPipeline-Installation" depends="ProjectTree">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="OrthoMCL"/>
+      <property name="component" value="OrthoPipeline"/>
+    </ant>
+  </target>  
+
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo  ProjectTree  ooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="ProjectTree" if="${checkout}">
+    <ant target="projectCheckOut"/>
+  </target>  
+
+</project>
+
+
