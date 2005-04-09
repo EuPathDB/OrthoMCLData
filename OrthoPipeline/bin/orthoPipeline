@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!@perl@
 
 use strict;
 
@@ -8,9 +8,11 @@ use GUS::Pipeline::MakeTaskDirs;
 use GUS::Pipeline::SshCluster;
 use GUS::Pipeline::NfsCluster;
 use GUS::Common::GusConfig;
-use GUS::Pipeline::ExternalResources::ReleaseIdGetter
+use GUS::Pipeline::ExternalResources::ReleaseIdGetter;
 use GUS::ObjRelP::DbiDatabase;
 use GUS::Pipeline::ExternalResources::Loader;
+use OrthoMCL::BlastDataAdaptor::GusAdaptor;
+use OrthoMCL::Engine;
 use CBIL::Util::PropertySet;
 use File::Basename;
 
@@ -60,11 +62,23 @@ my @properties =
 
  ["gusConfigFile", "$ENV{GUS_CONFIG_FILE}", "user's GUS configuration file for making database connections"],
  ["orthoRelease", "", "Release number of current orthoPipeline run"],
+ 
+ ["externalSequenceTableId", "", "Id in GUS of DoTS.ExternalAASequence table"],
+ ["enginePValueCutoff", "", "p-value cutoff for similarities to use in the Ortho Engine"],
+ ["enginePercentIdCutoff", "", "percent identity cutoff to use for similarities in the Ortho Engine"],
+ ["engineOutputFilePath", "", "directory where files created by Ortho Engine will be placed"], 
 
+ ["insert_similarity_alg_id", "", "algorithm invocation id used to load similarities in the insertExtSeqExtSeqSimilarities() step"],
+
+ ["mclClusterTightness", "", "value of the I parameter to regulate cluster tightness in the MCL algorighm"],
+
+ ["prepareOrthoMclInputs", "", "yes or no"],
  ["downloadAndInsertSeqs", "", "yes or no"],
  ["createOrthoPipelineDir", "", "yes or no"],
  ["extractExternalSeqs", "", "yes or no"],
  ["blastSeqs", "", "yes or no"],
+ ["runMcl", "", "yes or no"],
+ ["insertMclResults", "", "yes or no"],
 
  );
 
@@ -111,7 +125,7 @@ my $mgr = GUS::Pipeline::Manager->new($pipelineDir, $propertySet,
 
 &prepareOrthoMclInputs();
 
-&runOrthomcl();
+&runMcl();
 
 &insertMclResults();
 
@@ -186,7 +200,7 @@ sub extractExternalSeqs{
 
     my $repositoryXml = $propertySet->getProp('fileRepositoryXml');
 
-    my $releaseGetter = GUS::Pipeline::ExternalResources::ReleaseIdGetter->new($xmlFile);
+    my $releaseGetter = GUS::Pipeline::ExternalResources::ReleaseIdGetter->new($repositoryXml);
     
     my $releaseString = $releaseGetter->getIdList();
 
@@ -266,80 +280,91 @@ sub insertExtSeqExtSeqSimilarities {
 }
 
 
-sub substitutePlasmoExDbIds{
-    
-    my $stanfordPlasmoReleaseId = $propertySet->getProp('stanfordPlasmoReleaseId');
-    my $tigrPlasmoReleaseId = $propertySet->getProp('tigrPlasmoReleaseId');
-    my $sangerPlasmoReleaseId = $propertySet->getProp('sangerPlasmoReleaseId');
-    my $globalPlasmoReleaseId = $propertySet->getProp('tempPlasmoReleaseId');
-    
-    my $schemaSpace = $propertySet->getProp('sequenceTableSchemaSpace');
-
-    my $gusConfigFile = $propertySet->getProp('gusConfigFile');
-    
-    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
-    
-    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
-					    $gusconfig->getReadOnlyDatabaseLogin(),
-					    $gusconfig->getReadOnlyDatabasePassword,
-					    1,0,1,
-					    $gusconfig->getCoreSchemaName);
-    my $dbh = $db->getQueryHandle();
-
-    my $sql = "update $schemaSpace" . "OrthoPipelineAASequence set external_database_release_id = $globalPlasmoReleaseId where external_database_release_id in (5201,5202,5203)";
-
-}
-
 sub prepareOrthoMclInputs{
 
-   
-
-
-}
-
-sub getSimAlgInvId{
-
-    my ($queryTableId, $subjectTableId) = @_;
-
+    my $signal = "prepareOrthoMclInputs";
     
+    return if $mgr->startStep("Running Ortho Engine to prepare inputs to MCL algorithm", $signal, 'prepareOrthoMclInputs');
+
+    #release string
     my $gusConfigFile = $propertySet->getProp('gusConfigFile');
-    
-    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
-    
-    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
-					    $gusconfig->getReadOnlyDatabaseLogin(),
-					    $gusconfig->getReadOnlyDatabasePassword,
-					    1,0,1,
-					    $gusconfig->getCoreSchemaName);
-    my $dbh = $db->getQueryHandle();
+    my $repositoryXml = $propertySet->getProp('fileRepositoryXml');
+    my $releaseGetter = GUS::Pipeline::ExternalResources::ReleaseIdGetter->new($repositoryXml);
+    my $releaseString = $releaseGetter->getIdList();
 
-    my $sql  = "select row_alg_invocation_id from dots.similarity where subject_table_id = $subjectTableId";
-    $sql .= " and query_table_id = $queryTableId";
+    #data adaptor
+    my $gusconfig = GUS::Common::GusConfig->new();
+    my $queryTableId = $propertySet->getProp('externalSequenceTableId');
+    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					$gusconfig->getReadOnlyDatabaseLogin(),
+					$gusconfig->getReadOnlyDatabasePassword,
+					1,0,1,
+					$gusconfig->getCoreSchemaName);
+    
+    my $dataAdaptor = OrthoMCL::BlastDataAdaptor::GusAdaptor->new($db, $queryTableId);
+
+    my $enginePValue = $propertySet->getProp('enginePValueCutoff');
+    my $percentId = $propertySet->getProp('enginePercentIdCutoff');
+
+    $dataAdaptor->setPercentIdCutoff($percentId);
+    $dataAdaptor->setPValueCutoff($enginePValue);
+
+    #output file path
+    my $outputFilePath = $propertySet->getProp('engineOutputFilePath');
+
+    #engine
+    my $engine = OrthoMCL::Engine->new($dataAdaptor, $releaseString);
+    $engine->setOutputFilePath($outputFilePath);
+
+    $engine->run();
+
+    $mgr->endStep($signal);
 }
 
-sub getReleaseId{
-    
-    my ($dbId, $version) = @_;
+sub runMcl{
 
+    my $signal = "runMcl";
+    return if $mgr->startStep("Running the MCL algorithm", $signal, 'runMcl');
+    my $outputFilePath = $propertySet->getProp("engineOutputFilePath");
+    my $matrixFile = $outputFilePath . "/ortho_mtx";
+    my $clusterTightness = $propertySet->getProp("mclClusterTightness");
+    my $mclCommand = "mcl $matrixFile I=$clusterTightness";
+
+    $mgr->runCmd($mclCommand);
+    
+    #mcl outputs in same directory you run it in, so move it to expected output directory
+    my $moveCommand = "mv out.mcl $outputFilePath";
+    $mgr->runCmd($moveCommand);
+    $mgr->endStep($signal);
+}
+
+sub insertMclResults{
+
+    my $outputFilePath = $propertySet->getProp("engineOutputFilePath");
+    my $mclResult = $outputFilePath . "/out.mcl";
+    my $indexFile = $outputFilePath . "/ortho_idx";
+    my $enginePValue = $propertySet->getProp('enginePValueCutoff');
+    
+    #add more parameters as necessary; this is just a description of the parameters used
+    #so isn't crucial to plugin operation
+    my $paramString = "pValue cutoff $enginePValue";
+    
+    #release string
     my $gusConfigFile = $propertySet->getProp('gusConfigFile');
-    
-    my $gusconfig = GUS::Common::GusConfig->new($gusConfigFile);
-    
-    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
-					    $gusconfig->getReadOnlyDatabaseLogin(),
-					    $gusconfig->getReadOnlyDatabasePassword,
-					    1,0,1,
-					    $gusconfig->getCoreSchemaName);
-    my $dbh = $db->getQueryHandle();
-    
-    my $sql = "select external_database_release_id from sres.externaldatabaserelease where version = '$version' and external_database_id = $dbId";
-    my $sth = $dbh->prepareAndExecute($sql);
-    
-    my ($releaseId) = $sth->fetchrow_array();
+    my $repositoryXml = $propertySet->getProp('fileRepositoryXml');
+    my $releaseGetter = GUS::Pipeline::ExternalResources::ReleaseIdGetter->new($repositoryXml);
+    my $releaseString = $releaseGetter->getIdList();
 
-    return $releaseId;
+    my $sourceString = "species from external database release ids $releaseString";
+
+    my $algInvocationId = $propertySet->getProp('insert_similarity_alg_id');
+
+    my $args = "--index $indexFile --matrix $mclResult --description $paramString --seqSource $sourceString --alginvoIds $algInvocationId";
+    $mgr->runPlugin("insertMclResults", "GUS::Common::Plugin::OrthologGroupsMCL",
+		    $args, "Inserting ortholog groups", "insertMclResults");
+
+
 }
-	
 
 sub makeBuildName {
   
