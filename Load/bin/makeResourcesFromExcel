@@ -1,0 +1,332 @@
+#!/usr/bin/perl
+
+# Purpose: Generate Orthoresources.xml file automatically from Feng's data sources
+# Excel file.
+# IMPORTANT: Check manually if the generated file is accurate. The Excel file.
+# Usage: <prorgramName> <datasourcesfilename.xls>
+
+use strict;
+use Spreadsheet::ParseExcel;
+use IO::File;
+use IO::String;
+use XML::Writer;
+use LWP::Simple;
+use LWP::UserAgent;
+use Net::FTP;
+
+#print "-" x 50 . "\n";
+#foreach my $index (0 .. $#ARGV) {
+#	print "Argument $index: $ARGV[$index]\n";
+#}
+#print "-" x 50 . "\n\n\n";
+
+my $inputDataSources = $ARGV[0];
+my $outputResources = $ARGV[1];
+(-r $inputDataSources)
+	or printUsage("Unable to open Data Sources File ($inputDataSources) for reading: $!");
+
+my $startTime = time();
+
+my $ensmartAttrs = ["description", "family", "gene_stable_id", "translation_stable_id", "peptide"];
+my $ensmartFilters = {biotype=>"protein_coding"};
+
+my $wormmartAttrs = [""];
+my $wormmartFilters = {};
+
+my $dictymartAttrs = [""];
+my $dictymartFilters = {};
+
+ 
+#my $inputDatasources = "/home/praveenc/projects/orthomcl/datasources/run2_tmp.xls";
+my $sheet = Spreadsheet::ParseExcel::Workbook->Parse($inputDataSources)->{Worksheet}->[0];
+my $ua = new LWP::UserAgent;
+my $writer = initResources ($outputResources, "/files/efr");
+
+my ($category);
+#skip the header row, start at 1
+my $organismCount = 0;
+foreach my $rowIndex (1 .. $sheet->{MaxRow}) {
+	my $row = $sheet->{Cells}[$rowIndex];
+	
+	if ($row->[0] && $row->[0]->Value && $row->[0]->Value !~ /^new/i) {	
+		my $temp = $row->[0]->Value;
+		$temp =~ /[A-Za-z]+/;
+		$category = $&;
+		next;
+	}
+	
+	(!$row->[1] || !$row->[1]->Value) and next;
+	
+	my $tla = $row->[1]->Value;
+	my $organismSciName = $row->[2]->Value;
+	my $group = $row->[3]->Value;
+	#my $ignore = $row->[4]->Value;
+	my $strain = $row->[5]->Value;
+	my $datasourceName = $row->[6]->Value;
+	my $version = $row->[7]->Value;
+	my $url = $row->[8]->Value;
+	#print "$organismSciName: ---" . $version . ", $strain---\n";
+	#my $files = $row->[9]->Value;
+
+	#Prepare resource attributes
+	my $resourceName = $tla;
+	
+	#substitue spaces with dots; wget/copy chokes otherwise.
+	if ($strain) {
+		my $tStrain = $strain;
+		$tStrain =~ s/\s+/./g;
+		$tStrain =~ s/\/+/./g;
+		$tStrain =~ s/\s*\([^\)]+\)//;
+		$resourceName .= "_" . $tStrain;
+	}
+
+	$resourceName .= "_Proteins";
+	
+	my $displayName = $organismSciName . " Proteins";
+	($datasourceName) && ($displayName .= " (" . $datasourceName . ")");
+	
+	my $description = $organismSciName . " ($group) ";
+	$strain && ($description .= " strain $strain ");
+	
+	$version =~ s/[\s\(\:]+/_/g;
+	if ($version !~ /^[d]{4}\-[d]{2}\-[d]{2}$/
+	   && $version !~ /^\d+(\.\d){0,3}$/) {
+      	#RepositoryEntry.pm is picky about the version format! 
+		$version = "";
+	}
+
+	my %resource_attrs = (resource=>"$resourceName", 
+							category=>"$category",
+							displayName=>"$displayName",
+							organisms=>"$organismSciName");
+	
+	#handle different data sources
+	#Only ftp directory resources need to be treated differently, because we may download multiple
+	#files, and what files to download depends on the format of the individual data sources.
+
+	my $wgetArgs = "--tries=5";
+	($url =~ /^https/i) && ($wgetArgs .= " --no-check-certificate");
+
+	#my ($content_type, $document_length, $modified_time, $expires, $server) = LWP::Simple::head ($url);
+	my $response = $ua->head ($url);
+	my $content_type = $response->header("Content-Type");
+	$content_type or ($content_type = "");
+	my $length = $response->header("Content-Length");
+	my $code = $response->code;
+	my @moreWargs;
+	
+	if ($datasourceName !~ /ensembl/i && ($code =~ /404/ || ($url =~ /^ftp:/i && !$length) || ($url =~ /https?:/i && $code !~ /200/)))  {
+		warn "Warning: $url may not be a valid URL. Please fix and rerun this program. Skipping for now...\n";
+		next;
+	}
+	
+	my $lastModDate;
+
+	#wget params for ftp directories
+	my @unpackSteps;
+	my $addUnzipStep = 1;
+	if ($content_type =~ /ftp-dir-listing/) {
+		if ($datasourceName =~ /^genbank/i) {
+			$wgetArgs .= " --mirror --no-parent --no-directories " 
+						. "--no-host-directories --cut-dirs=2 --accept=*.faa";
+			$lastModDate =  getLastModifiedDate($url, "\.faa\$");
+		} elsif ($datasourceName =~ /^japan/i) {
+			$wgetArgs .= " --mirror --no-parent --no-directories " 
+						. "--no-host-directories --cut-dirs=2 --accept=*.pep.gz";
+			#only case where we have multiple zip files						
+			push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/*";
+			$addUnzipStep = 0;
+			$lastModDate =  getLastModifiedDate($url, "\.pep\.gz\$");
+		}
+	} 
+	
+	#More wget args - construct biomart query
+	if ($datasourceName =~ /^ensembl/i) {
+		my ($genus, $species) = split(/\s+/, $organismSciName);
+		$genus =~ /^./;
+		my $datasetName = $&;
+		$datasetName = lc ($datasetName . $species . "_gene_ensembl"); 
+		$url = "http://www.biomart.org/biomart/martservice";
+		my $martQuery = getMartQuery ($datasetName, $ensmartAttrs, $ensmartFilters);
+		$martQuery =~ s/\n//g;
+		push @moreWargs, "--post-data='query=" . $martQuery . "'";
+	} elsif ($datasourceName =~ /^wormbase/i) {
+		
+	} 
+	
+	#output file name not given - generate one.
+	if ($url =~ /www.dictybase.org/i) {
+		$wgetArgs .= " --output-document=ddi_Proteins.faa.gz";
+		push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/ddi_Proteins.faa.gz";
+		$addUnzipStep = 0;
+	} elsif ($url =~ /www.gmod.mbl.edu/i) {
+		$wgetArgs .= " --output-document=orfs_aa.fas.gz";
+		push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/orfs_aa.fas.gz";
+		$addUnzipStep = 0;
+	} 
+	
+	#unpacksteps - unzip
+	if ($addUnzipStep) {
+		if ($url =~ /\.gz$/i) {
+			my $ext = $&;
+			push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/*" . $ext;
+		} elsif ($url =~ /\.zip$/i) {
+			my $ext = $&;
+			push @unpackSteps, "unzip \@downloadDir\@/$resourceName" . $ext 
+								. " -d \@downloadDir\@/$resourceName";
+		}
+	}
+	#Other unpack steps
+	if ($datasourceName =~ /^ensembl/i) {
+		push @unpackSteps, "biomart2fasta \@downloadDir\@/$resourceName/martservice \@downloadDir\@/$resourceName/$resourceName" . ".fa";
+	} elsif ($tla =~ /ago/i){
+		#dont know if we need this for all integr8 in the future.
+		#the proteome FASTA defline doesn't have the gene name, so get uniprot file instead
+		push @unpackSteps, "integr8uniprot2fasta \@downloadDir\@/$resourceName/* \@downloadDir\@/$resourceName/${tla}_Proteins.fa";
+	}
+	
+	
+	#print "before setting last mod date: $lastModDate\n";
+	$lastModDate or ($lastModDate = getLastModifiedDate($url));
+	#print "after setting last mod date: $lastModDate\n"; 
+	$resource_attrs{version} = $version ? $version : $lastModDate;
+
+	print "Adding $organismSciName $version ($datasourceName)\n";
+	$resource_attrs{url} = $url;
+	$resource_attrs{publicUrl} = $url;
+	addResource ($writer,  \%resource_attrs, $description, $wgetArgs, \@unpackSteps, \@moreWargs);
+	$organismCount++;
+}
+
+print "-" x 50 . "\n";
+
+closeResources ($writer);
+
+my $endTime = time();
+
+print "Number of species: $organismCount\n";
+print "Total processing time: " . ($endTime - $startTime) . " seconds\n";
+
+
+sub initResources {
+	my ($outputFilename, $repository) = @_;
+	
+	my $output = new IO::File ("> $outputFilename");
+	my $writer = new XML::Writer (OUTPUT=>$output, NEWLINES=>'true', ENCODING=>'UTF-8');
+	
+	$writer->startTag ("resourcesPipeline", 
+						repository=>"$repository",
+						downloadDir=>'@downloadDir@'); 
+	return $writer;
+}
+
+sub addResource {
+	my ($writer, $attr_ref, $description, $wgetArgs, $unpackStepsRef, $moreWgetArgsRef) = @_;
+	
+	$writer->startTag("resource", %{$attr_ref}, 
+						plugin=>'ApiCommonData::Load::Plugin::LoadNothing',
+						dbCommit=>'@dbcommit@');
+	$writer->dataElement ("wgetArgs", $wgetArgs);
+	foreach my $warg (@{$moreWgetArgsRef}) {
+		$writer->cdataElement ("wgetArg", $warg);
+	}
+	$writer->cdataElement("description", $description);
+	foreach my $unpack (@{$unpackStepsRef}) {
+		$writer->dataElement ("unpack", $unpack);
+	}
+	$writer->endTag("resource");
+}
+
+
+sub closeResources {
+	my ($writer) = @_;
+	$writer->endTag("resourcesPipeline");
+	my $output = $writer->getOutput();
+	$writer->end();
+	$output->close();
+}
+
+sub getLastModifiedDate {
+	my ($url, $filter) = @_;
+	
+	my $modTime = 0;
+	
+	if ($filter) {
+		#url is a ftp directory; fetch the listing, and pick only the files matched by this filter
+		my @files;
+		my $url_rest = (split("://", $url, 2))[1];
+		my ($host, $dir) = split (/\//, $url_rest, 2);
+		do {
+			my $ftp = Net::FTP->new ($host) or last;
+			$ftp->login("anonymous",'-anonymous@') or last;
+			$ftp->cwd($dir) or last;
+			my @files = grep { /$filter/} $ftp->ls() or last;
+		
+			foreach my $file (@files) {
+				my $modified_time = $ftp->mdtm($file);
+				$modTime = ($modified_time > $modTime) ? $modified_time : $modTime;
+			}
+		} while (0);
+	} else {
+		if ($url =~ /^ftp/i) {
+			$url =~ /^ftp:\/\/([^\/]+)\/(.+)\/([^\/]+)$/;
+			my ($host, $dir, $file) = ($1, $2, $3);
+			print "$host, $dir, $file\n";
+			do 	{
+				my $ftp = Net::FTP->new ($host) or last;
+				$ftp->login ("anonymous", "-anonymous") or last;
+				$ftp->cwd ($dir) or last;
+				$modTime = $ftp->mdtm($file);
+			} while (0);
+		} elsif ($url =~ /^http:/i) {    
+			my ($content_type, $document_length, $modified_time, $expires, $server) = head ($url);
+			$modTime = $modified_time;
+		}
+	}
+	#print "modtime: $modTime \n";
+	if (!$modTime) {
+		$modTime = time(); 
+		#print "using current date: ";
+	}	
+	my($sec, $min, $hour, $day, $mon, $year) = localtime($modTime);
+	return sprintf ("%4d-%02d-%02d", ($year+1900), ($mon+1), $day);
+} 
+
+sub printUsage {
+	my ($err) = @_;
+	print STDERR "Error: $err\n";
+	die "Usage: $0 <inputDataSourcesFilename.xls> <outputResourcesFilename.xml>\n";
+}
+
+sub getMartQuery {
+	my ($dataset_name, $attr_ref, $filter_ref) = @_;
+	
+	my $xml;
+	my $xml_str = new IO::String($xml);
+	my $writer = new XML::Writer (OUTPUT=>$xml_str, ENCODING=>'UTF-8');
+	
+	$writer->xmlDecl();
+	$writer->doctype("Query");
+	$writer->startTag("Query", virtualSchemaName=>"default", 
+								header=>"1", 
+								count=>"",
+								softwareVersion=>"0.5");
+	
+	$writer->startTag ("Dataset", name=>"$dataset_name", interface=>"default");
+	
+	foreach my $attr (@{$attr_ref}) {
+		$writer->emptyTag ("Attribute", name=>"$attr");
+	}
+	
+	foreach my $fName (keys %{$filter_ref}) {
+		my $fValue = $filter_ref->{$fName};
+		$writer->emptyTag ("Filter", name=>"$fName", value=>"$fValue");
+	}
+	
+	$writer->endTag("Dataset");
+	$writer->endTag("Query");
+	$writer->end();
+	$xml_str->close();
+	
+	return $xml;
+}

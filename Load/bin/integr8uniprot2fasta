@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+use strict;
+
+my $input_uniprot = $ARGV[0];
+my $output_fasta = $ARGV[1];
+
+open (UNIPROT, "< $input_uniprot")
+	or die "Unable to open input uniprot file: $!\n";
+
+open (FASTA, "> $output_fasta")
+	or die "Unable to open output fasta file: $!\n";
+
+my $line;
+my ($acc, $geneid, $seq, $desc);
+
+while ($line = <UNIPROT>) {
+
+	if ($line =~/^ID/) {
+		$line =~ /\s+([^\s]+)\s+/;
+		$acc = $1;
+	} elsif ($line =~ /^DE/) {
+		my ($junk, $de) = split(/\s+/, $line, 2);		
+		$desc .= $de;
+	} elsif ($line =~ /^GN/) {
+		$line =~ /Name=([^\;]+)/;
+		$geneid = $1;
+	} elsif ($line =~ /^\s+/) {
+		$seq .= $line;
+	} elsif ($line =~ /^\/\//) {
+		#format to fasta and print
+		$seq =~ s/\s+//g;
+		$seq =~ s/.{60}/$&\n/g;
+	
+		$desc =~ s/\n//g;
+		print FASTA ">$acc|$geneid|$desc\n$seq\n";
+
+		$desc = undef;
+		$seq = undef;
+	}
+}
+
+close UNIPROT;
+close FASTA;

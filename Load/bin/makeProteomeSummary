@@ -1,0 +1,91 @@
+#! /usr/bin/perl
+
+use strict;
+my $downloadDir = "/files/cbil/data/cbil/orthoMCL/2.0/resources_pipeline/primary/downloads";
+my $summary_file = $ARGV[0] ? $ARGV[0] : "bae.sum";
+
+open (SUMMARY, "> $summary_file")
+	or die "Unable to open summary output file: $!\n";
+opendir (DOWNLOADS, "$downloadDir")
+	or die "Unable to open dir: $!\n";
+my @orgdirs = grep { /^[a-z][a-z][a-z]_/ } readdir (DOWNLOADS);
+closedir DOWNLOADS;
+
+print SUMMARY "seq_dir\tTotalSequences\tShortSequences\tMSC\n";
+foreach my $org (@orgdirs) {
+	opendir (ORGDIR, "$downloadDir/$org")
+		or die "Unable to open org dir: $!\n";
+
+	print "processing $org\n";
+	my $shortseq_file = $org . ".short";
+	my $msc_file = $org . ".msc";
+	open (SHORT, "> $shortseq_file")
+		or warn "unable to create shortseq file for $org:$! \n";
+	open (MSC, "> $msc_file")
+		or warn "unable to create msc file for $org:$! \n";
+
+	my @seqfiles = grep { /^[a-zA-Z0-9]/ } readdir (ORGDIR);
+	closedir ORGDIR;
+
+	my ($line, $seq, $msc_count, $shortseq_count, $totalseq_count);
+
+	foreach my $seqfile (@seqfiles) {
+		my $absSeqFile = "$downloadDir/$org/$seqfile";
+		if ($absSeqFile =~ /\.gz$/i || $absSeqFile =~ /\.zip$/i
+			|| $absSeqFile =~ /martservice/) {
+			print STDERR "$absSeqFile: Skipping because it's a zip, or raw file\n";
+		}
+
+		open (SEQFILE, "< $absSeqFile")
+			or die "Unable to open seq file $absSeqFile: $!\n";
+	
+		my $def;
+		while ($line = <SEQFILE>) {
+		    $line =~ s/\s+$//;
+		    if ($line =~ /^>/) {
+		        if ($seq) {
+		            if (length ($seq) < 10) {
+		                $shortseq_count++;
+						$seq =~ s/.{60}/$&\n/g;
+						print SHORT "$def\n$seq\n";
+		            } elsif ($seq !~ /^[A-Z]+\*?$/i) {
+		                $msc_count++;
+						$seq =~ s/.{60}/$&\n/g;
+						print MSC "$def\n$seq\n";
+		            }
+       		     $totalseq_count++;
+		        }
+		        $seq = undef;
+				$def = $line;
+		    } else {
+		        $seq .= $line;
+		    }
+		}
+
+		if ($seq) {
+		    if (length ($seq) < 10) {
+				$shortseq_count++;
+		    } elsif ($seq =~ /[^A-Z]/i) {
+		        $msc_count++;
+		    }
+
+			$totalseq_count++;
+		}
+
+		$seq = undef;
+		$def = undef;
+
+		close SEQFILE;
+	}
+
+	printf SUMMARY "%s\t%d\t%d\t%d\n", $org, $totalseq_count,
+					$shortseq_count, $msc_count;
+	close SHORT;
+	close MSC;
+
+	unlink $shortseq_file unless $shortseq_count;
+	unlink $msc_file unless $msc_count;
+	
+}
+
+close SUMMARY;

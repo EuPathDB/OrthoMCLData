@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+
+#Purpose: Convert BioMart output (tab-delimited text) to FASTA that we 
+#can handle using existing plugins.
+#
+
+#Peptide Ensembl Gene ID Ensembl Peptide ID      Description     Ensembl Family ID
+
+use strict;
+use File::Temp;
+
+my $input_biomart = $ARGV[0];
+my $output_fasta = $ARGV[1];
+
+
+open (BIOMART, "< $input_biomart") 
+	or usage ("Error in opening input: $!");
+
+#
+open (FASTA, "> $output_fasta")
+	or usage ("Error in opening output: $!");
+
+
+#skip the header, which is of the format:
+#
+<BIOMART>;
+
+# Sort them first by gene ids, so we can pick the longest protein per gene.
+# Sort takes about 12 seconds for human proteins, while unix sort takes 2
+# seconds. Do we need to use that instead?
+
+#print STDERR "Begin Sort: " . localtime(time()) . "\n";
+my @lines = sort {biomartsort ($a, $b)} (<BIOMART>);
+#print STDERR "Finished Sort: " . localtime(time()) . "\n";
+
+close BIOMART;
+
+my $prev_gene_id = "";
+foreach my $line (@lines) {
+	$line =~ s/\s+$//;
+
+	my ($protein_seq, $gene_id, 
+		$protein_id, $desc, $family_id) = split(/\t/, $line);
+	
+	#print "$gene_id: $protein_id " . length ($protein_seq) . "\n";
+	if ($prev_gene_id ne $gene_id) {
+		#format the current info into fasta and print
+		$protein_seq =~ s/.{60}/$&\n/g;
+		print FASTA ">$protein_id|$gene_id|$family_id|$desc\n"
+			. "$protein_seq\n";
+	}
+
+	$prev_gene_id = $gene_id;
+}
+
+close FASTA;
+
+#print STDERR "Finished All: " . localtime(time()) . "\n";
+
+sub usage {
+	my $msg = @_;
+	print STDERR $msg . "\n";
+	die "Usage: $0 <biomart_result_filename> <fasta_output_filename>\n";
+}
+
+sub biomartsort {
+	my ($first, $second) = @_;
+
+	my ($seq1, $geneid1) = split (/\t/, $first);
+	my ($seq2, $geneid2) = split (/\t/, $second);
+	
+	if ($geneid1 eq $geneid2) {
+		#sort by descending order of sequence lengths
+		return (length ($seq2) <=> length ($seq1));
+	} else {
+		return ($geneid1 cmp $geneid2);
+	}
+}
+
