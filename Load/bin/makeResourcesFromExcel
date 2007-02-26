@@ -159,7 +159,7 @@ foreach my $rowIndex (1 .. $sheet->{MaxRow}) {
 		$wgetArgs .= " --output-document=ddi_Proteins.faa.gz";
 		push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/ddi_Proteins.faa.gz";
 		$addUnzipStep = 0;
-	} elsif ($url =~ /www.gmod.mbl.edu/i) {
+	} elsif ($url =~ /gmod.mbl.edu/i) {
 		$wgetArgs .= " --output-document=orfs_aa.fas.gz";
 		push @unpackSteps, "gunzip \@downloadDir\@/$resourceName/orfs_aa.fas.gz";
 		$addUnzipStep = 0;
