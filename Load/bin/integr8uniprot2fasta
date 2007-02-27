@@ -12,19 +12,19 @@ open (FASTA, "> $output_fasta")
 	or die "Unable to open output fasta file: $!\n";
 
 my $line;
-my ($acc, $geneid, $seq, $desc);
+my ($acc, $secondaryid, $seq, $desc);
 
 while ($line = <UNIPROT>) {
 
 	if ($line =~/^ID/) {
 		$line =~ /\s+([^\s]+)\s+/;
-		$acc = $1;
+		$secondaryid = $1;
 	} elsif ($line =~ /^DE/) {
 		my ($junk, $de) = split(/\s+/, $line, 2);		
 		$desc .= $de;
 	} elsif ($line =~ /^GN/) {
-		$line =~ /Name=([^\;]+)/;
-		$geneid = $1;
+		$line =~ /OrderedLocusNames=([^\;]+)/i;
+		$acc = $1;
 	} elsif ($line =~ /^\s+/) {
 		$seq .= $line;
 	} elsif ($line =~ /^\/\//) {
@@ -33,7 +33,7 @@ while ($line = <UNIPROT>) {
 		$seq =~ s/.{60}/$&\n/g;
 	
 		$desc =~ s/\n//g;
-		print FASTA ">$acc|$geneid|$desc\n$seq\n";
+		print FASTA ">$acc|$secondaryid|$desc\n$seq\n";
 
 		$desc = undef;
 		$seq = undef;
