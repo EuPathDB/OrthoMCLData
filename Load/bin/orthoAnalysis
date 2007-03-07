@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use File::Basename;
+use ApiCommonData::Load::Steps;
+use ApiCommonData::Load::MakeTaskDirs;
+
+my $propertiesFile = $ARGV[0];
+my $printXML = $ARGV[1];
+
+my ($mgr, $projectDir, $release, $allSpecies)
+  = &initOrthomclAnalysis($propertiesFile, $printXML);
+
+
+##############################################################################
+########   The Mini-Pipeline                                          ########
+##############################################################################
+
+my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1000000 -e 1e-5";
+my $minLength = 10;
+my $maxStopCodonPercent = 20;
+my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaasequence";
+
+&documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
+
+&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=23267177","blastx");
+
+&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLengt, $maxStopCodonPercent);
+
+&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+
+&startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
+
+$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
+
+&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+
+#&loadProteinBlast($mgr, "PfalciparumChroms-nr","DoTS::ExternalNASequence", "DoTS::ExternalAASequence","source_id","source_id","Sanger P. falciparum chromosomes","2005-09-26","NRDB","2005_09_29");
+#
+#
+# Last step
+#
+$mgr->goodbye("Pipeline complete!\n");
+
