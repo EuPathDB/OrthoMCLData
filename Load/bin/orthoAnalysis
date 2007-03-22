@@ -4,6 +4,7 @@ use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
 use File::Basename;
 use ApiCommonData::Load::Steps;
+use ApiCommonData::Load::ToxoPlasmoSteps;
 use ApiCommonData::Load::MakeTaskDirs;
 
 my $propertiesFile = $ARGV[0];
@@ -24,9 +25,9 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
-&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=23267177","blastx");
+&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=23267177","blastx", "ncbi");
 
-&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLengt, $maxStopCodonPercent);
+&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
 &copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
@@ -36,7 +37,7 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-#&loadProteinBlast($mgr, "PfalciparumChroms-nr","DoTS::ExternalNASequence", "DoTS::ExternalAASequence","source_id","source_id","Sanger P. falciparum chromosomes","2005-09-26","NRDB","2005_09_29");
+&loadProteinBlast($mgr, "PfalciparumChroms-nr","DoTS::ExternalNASequence", "DoTS::ExternalAASequence","source_id","source_id","Sanger P. falciparum chromosomes","2005-09-26","NRDB","2005_09_29");
 #
 #
 # Last step
