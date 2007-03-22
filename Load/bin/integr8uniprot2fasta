@@ -33,7 +33,7 @@ while ($line = <UNIPROT>) {
 		$seq =~ s/.{60}/$&\n/g;
 	
 		$desc =~ s/\n//g;
-		print FASTA ">$acc|$secondaryid|$desc\n$seq\n";
+		print FASTA ">$acc|$secondaryid|$desc\n$seq\n" if $acc;
 
 		$desc = undef;
 		$seq = undef;
