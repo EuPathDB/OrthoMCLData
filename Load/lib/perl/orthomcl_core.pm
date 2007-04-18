@@ -147,8 +147,8 @@ sub construct_graph_pairwise {
 	%::gindex=();
 
 	if (exists($::setting{'PIPELINE_STOP'}) && $::setting{'PIPELINE_STOP'}==2) {
-		write_log("\nOrthoMCL pipeline stopped after (co-)ortholog identifications, according to user's request (PIPELINE_STOP=$::setting{'PIPELINE_STOP'})\nPlease restart OrthoMCL analysis by commenting out PIPELINE_STOP line and setting FORMER_RUN_SUBDIR to $::setting{'FORMER_RUN_SUBDIR'}.\n");
-		die;
+		write_log("\nOrthoMCL pipeline stopped after (co-)ortholog identifications, according to user's request (PIPELINE_STOP=$::setting{'PIPELINE_STOP'})\nPlease restart OrthoMCL analysis by commenting out PIPELINE_STOP line and setting FORMER_RUN_SUBDIR to $::setting{'RUN_SUBDIR'}.\n");
+		exit(0);
 	}
 
 }

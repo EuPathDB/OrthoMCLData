@@ -132,6 +132,8 @@ sub setup_run {
 		$::setting{'FORMER_GRAPH_COMPLETE'}=confirm_graph_completeness();
 #if graph in the FORMER_RUN_DIR is not complete, skipping creating a new run directory
 		unless ($::setting{'FORMER_GRAPH_COMPLETE'}) {
+			$::setting{'RUN_SUBDIR'}=$::setting{'FORMER_RUN_SUBDIR'};
+			$::setting{'RUN_DIR'}   =$::setting{'FORMER_RUN_DIR'};
 			setup_bpo_idx();
 			if (-e $::setting{'FORMER_RUN_DIR'}.'orthomcl_'.$date.'.log') {
 				my $no=2;
