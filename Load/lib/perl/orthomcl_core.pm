@@ -259,18 +259,142 @@ sub inparalog_weight_normalization {
 
 sub construct_graph_all {
 	write_log("\nConverting OrthoMCL graph into MCL matrix...\n");
-	for(my $i=0;$i<=$#::taxa;$i++) {
-		for(my $j=$i;$j<=$#::taxa;$j++) {
-			my %mtx = %{mtx_file('read',$::taxa[$i],$::taxa[$j])};
-			foreach my $node_1 (keys %mtx) {
-				foreach my $node_2 (keys %{$mtx{$node_1}}) {
-					$::mtx_all{$node_1}->{$node_2}=$mtx{$node_1}->{$node_2};
+	
+	# our approach is to write out smaller files, one per taxon, to optimize on 
+	# memory usage. Each mtx file has hits both ways: a->b as well as b->a. This means
+	# that we need to pick only the ids from the current taxon of interest. We achieve
+	# this by reading in the GG file, and using a result only if the id is present in 
+	# list of ids for a given taxon.
+
+	my (%taxon_idlist, $line);
+	open (GGFILE, "< $::setting{GG_FILE}") 
+		or die "Unable to open GG file: $!\n";
+	while ($line = <GGFILE>) {
+		$line =~ s/\s+$//;
+		my ($taxon, $idlist) = split(/:/, $line);
+		$taxon_idlist{$taxon} = " " . $idlist . " ";
+	}
+
+	print localtime(time()) . " (construct_graph_all) Finished reading GG file";
+
+	close GGFILE;
+
+	my %mtx_local;
+	my $mtxsize = 0;
+	my $mtxlocal_prefix = $::setting{'MTX_DIR'} . "/mcl_input_";
+
+	foreach my $a (0 .. $#::taxa) {
+		my $mtxlocal_filename = $mtxlocal_prefix . $::taxa[$a] . ".part";
+		my $idlist_line = $taxon_idlist{$::taxa[$a]};
+		if (-e $mtxlocal_filename) {
+			if (open (EXISTINGMTX, "< $mtxlocal_filename")) {
+				#count lines to add to the mtxsize
+				my ($line, $tempcount);
+				while ($line = <EXISTINGMTX>) {
+					$tempcount++;
 				}
+				close EXISTINGMTX;
+				$mtxsize += $tempcount;
+				print "$mtxlocal_filename exists. Skipping...\n";
+				next;
+			} else {
+				warn "$mtxlocal_filename exists, but unable to open: $! . Redoing...\n";
 			}
 		}
+		
+		foreach my $b (0 .. $#::taxa) {
+			#Feng says we shouldn't skip!
+			#($a == $b) and next;
+
+			my %mtx;
+			my $mtxlocal_filename;
+
+			print "About to read $::taxa[$a] and $::taxa[$b] \n";
+			
+			if ($a < $b) {
+				%mtx = %{mtx_file('read', $::taxa[$a], $::taxa[$b])};
+			} else {
+				%mtx = %{mtx_file('read', $::taxa[$b], $::taxa[$a])};
+			}
+
+			foreach my $protein_a (keys %mtx) {
+				($idlist_line =~ / $protein_a /) or next;
+				foreach my $protein_b (keys %{$mtx{$protein_a}}) {
+					$mtx_local{$protein_a}->{$protein_b} = $mtx{$protein_a}->{$protein_b}
+				}
+			}
+			print "Finished $::taxa[$a] and $::taxa[$b] \n";
+		}
+		
+		write_mtxlocal_index(\%mtx_local, $mtxlocal_filename);
+		$mtxsize += scalar (keys %mtx_local);
+		undef %mtx_local;
 	}
+	
+	my $timestamp = "[" . localtime(time()) . "]";
+	print "$timestamp Finished generating MCL input files per taxon. Matrix size: $mtxsize\n";
+	write_log("$timestamp Finished generating MCL input files per taxon. Matrix size: $mtxsize\n");
+	
+	print "$::setting{MTX_DIR} \n";
+	opendir (MTXDIRHANDLE, $::setting{'MTX_DIR'}) 
+		or die "Unable to open MTX_DIR (FORMER_RUN_SUBDIR/mtx): $!\n";
+	
+	print "Now combining the MCL files into a single MCL input file...\n";
+
+	my @mtxlocal_files = grep {/^mcl_input_/} readdir MTXDIRHANDLE;
+	closedir MTXDIRHANDLE;
+
+	if (scalar (@mtxlocal_files) != scalar (@::taxa)) {
+		die "The number of mtx local files (" . scalar (@mtxlocal_files) 
+						. ") does not match the taxa number (" . (scalar (@::taxa))
+						. "). Exiting...\n";
+	}
+    open (MTX,"> $::setting{'MTX_FILE'}")
+		or die "cannot write to file $::setting{MTX_FILE}: $!\n";
+    print MTX "(mclheader\nmcltype matrix\ndimensions ".$mtxsize."x".$mtxsize."\n)\n\n(mclmatrix\nbegin\n\n";
+	
+	foreach my $mtxlocal_file (@mtxlocal_files) {
+		my $fullname = $::setting{'MTX_DIR'} . "/" . $mtxlocal_file;
+		open (MTXLOCAL, "< $fullname")
+			or die "Unable to open MTX local file ($fullname): $!\n";
+		while ($line = <MTXLOCAL>) {
+			print MTX "$line";
+		} 
+		
+		close MTXLOCAL;
+	}
+
+	print MTX ")\n\n";
+	close MTX;
+
+	print "Finished generating the MCL input file.\n";
+
 }
 
+
+sub write_mtxlocal_index {
+	my ($mtx_local_ref, $mtxlocal_filename) = @_;
+	my %mtx_local = %{$mtx_local_ref};
+    my $size = scalar(keys %mtx_local);
+
+    print ("\nThere are $size sequences to cluster\n");
+    open (MTX,">$mtxlocal_filename") 
+		or die "cannot write to file $mtxlocal_filename: $!\n";
+
+    foreach my $node_1 (keys %mtx_local) {
+        print MTX $node_1 . "\t";
+        foreach my $node_2 (keys %{$mtx_local{$node_1}}) {
+            print MTX $node_2.":".$mtx_local{$node_1}->{$node_2}->[0]." ";
+        }
+        print MTX "\$\n";
+    }
+    
+    close (MTX);
+	
+	my $timestamp = "[" . localtime(time()) . "]";
+    write_log("$timestamp Matrix ($size) file $mtxlocal_filename generated\n");
+    print "$timestamp Matrix ($size) file $mtxlocal_filename generated\n";
+}
 
 sub make_inparalog {
 	my ($bpo_idx_ref,$taxon_id) = @_;
@@ -489,6 +613,5 @@ sub calc_matchlen {
 
 	return $match_length;
 }
-
 
 1;
