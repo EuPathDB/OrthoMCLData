@@ -1,0 +1,65 @@
+<resourcesPipeline repository="/files/efr"
+                   downloadDir="@downloadDir@">
+    <cleanups>
+    </cleanups>
+
+  <resource resource="GO_evidence_codes" version="1.2"
+        displayName="Gene Ontology evidence codes"        
+        publicUrl="http://www.geneontology.org/GO.evidence.shtml"
+        category="Ontology"            
+      url="http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/evidence_code.obo"
+        plugin="ApiCommonData::Load::Plugin::InsertGOEvidenceCodesFromObo"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5 --output-document=evidence_code.obo</wgetArgs>
+        <pluginArgs>--oboFile @downloadDir@/GO_evidence_codes/evidence_code.obo</pluginArgs>
+        <description>
+            <![CDATA[
+   Gene Ontology annotation uses evidence codes to indicate the type of evidence that supports the annotation.
+          ]]>
+        </description>
+    </resource>
+    
+<resource resource="GO" version="4.162"
+            displayName="Gene Ontology"
+            publicUrl="http://www.geneontology.org"
+            category="Ontology"
+            url="http://www.geneontology.org/ontology/gene_ontology.obo"
+            plugin="ApiCommonData::Load::Plugin::InsertGOTermsFromObo"
+            extDbName="Gene Ontology"
+            extDbRlsVer="4.162"
+            extDbRlsDescrip="The Gene Ontology from Jan. 11, 2007"
+            dbCommit="@dbcommit@">
+      <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
+      <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER% --sqlVerbose</pluginArgs>
+      <description>
+         <![CDATA[
+   The Gene Ontology (GO) project provides a controlled vocabulary to describe gene and gene product attributes in any organism.
+          ]]>
+      </description>
+  </resource>
+    
+    <resource resource="InterproscanData" version="14.1"
+        plugin="ApiCommonData::Load::Plugin::InsertInterproDomainDbs"
+        displayName="InterPro Database"
+        publicUrl="http://www.ebi.ac.uk/interpro"
+        category="Proteome"
+        dbCommit="@dbcommit@">	
+        <manualGet 
+            fileOrDir = "rsync://loquat.rcc.uga.edu:/home/jkissing/mheiges/iprscan/iprscan/data/"
+            contact = "EBI"
+            email = "interhelp@ebi.ac.uk"
+            institution = "EBI"
+        />
+        <unpack>fixSuperfamily @downloadDir@/InterproscanData/</unpack>
+        <pluginArgs>--inPath @downloadDir@/InterproscanData/</pluginArgs>
+        <description>
+            <![CDATA[
+            InterPro is a database of protein families, domains and functional sites in which identifiable features found in known proteins can be applied to unknown protein sequences.
+		]]>
+        </description>
+        <publication pmid="15608177"/>
+    </resource>        
+    
+</resourcesPipeline>
+
+

@@ -1,10 +1,9 @@
-#!/usr/bin/perl
+#!@perl@
 use strict;
 
 use lib "$ENV{GUS_HOME}/lib/perl";
 use File::Basename;
 use ApiCommonData::Load::Steps;
-use ApiCommonData::Load::ToxoPlasmoSteps;
 use ApiCommonData::Load::MakeTaskDirs;
 
 my $propertiesFile = $ARGV[0];
@@ -23,21 +22,35 @@ my $minLength = 10;
 my $maxStopCodonPercent = 20;
 my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaasequence";
 
-&documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
+#&documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
-&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=23267177","blastx", "ncbi");
+#&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=23267177","blastx", "ncbi");
 
-&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
+#&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
-&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+#&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-&startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
+#&startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
-$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
+#$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
 
-&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+#&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-&loadProteinBlast($mgr, "PfalciparumChroms-nr","DoTS::ExternalNASequence", "DoTS::ExternalAASequence","source_id","source_id","Sanger P. falciparum chromosomes","2005-09-26","NRDB","2005_09_29");
+#&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence");
+#&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs', '1790,1861');
+
+
+#my $insertInterproConfig = "$projectDir/$release/resources_pipeline/primary/downloads/InterproscanData/insertInterpro-config.xml";
+
+#&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+
+my $extDbName = "OrthoMCL";
+my $extDbVersion = "2.0";
+
+&createExtDbAndDbRls($mgr, $extDbName, $extDbVersion);
+
+&loadOrthoMCLResults($mgr, $extDbName, $extDbVersion, "all_orthomcl.out");
+
 #
 #
 # Last step
