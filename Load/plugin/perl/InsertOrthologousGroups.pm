@@ -124,9 +124,9 @@ sub _parseGroupFile {
 
     open ORTHO_FILE, "<$orthologFile";
     my $groupCount = 0;
+    my $lineCount = 0;
     while (<ORTHO_FILE>) {
         chomp;
-        next if ($_ == '');
 
         if ($self->_parseGroup($_, $dbReleaseId)) {
             $groupCount++;
@@ -136,6 +136,7 @@ sub _parseGroupFile {
             }
         }
     }
+    $self->log("total $lineCount lines processed, and $groupCount groups loaded.");
     return $groupCount;
 }
 
@@ -159,12 +160,13 @@ sub _parseGroup {
                  external_database_release_id => $dbReleaseId,
                 });
 
+        my $printInfo = '';
         for (@genes) {
             if (/~(\S+)\((\S+)\)/) {
 		my $sequenceId = $1;
 		my $taxonId = $2;
             
-		print "gene=$sequenceId, taxon=$taxonId; ";
+		$printInfo = "$printInfo gene=$sequenceId, taxon=$taxonId;";
 
 		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAASequence->
@@ -172,9 +174,10 @@ sub _parseGroup {
 		      })->setParent($orthoGroup);
 	    }
         }
-        print "\n";
-        # $orthoGroup->submit();
+        $orthoGroup->submit();
         $orthoGroup->undefPointerCache();
+
+        $self->log($printInfo);
     } 
 }
 
