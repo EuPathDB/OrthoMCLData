@@ -89,7 +89,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 16406 $',
+                      cvsRevision       => '$Revision: 9 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -111,9 +111,7 @@ sub run {
     $self->log("Loading ortholog group file");
 
     # parse group file
-    my $groupCount = $self->_parseGroupFile($orthologFile, $dbReleaseId);
-
-    $self->log("Total $groupCount ortholog groups loaded.");
+    $self->_parseGroupFile($orthologFile, $dbReleaseId);
 }
 
 
@@ -127,17 +125,19 @@ sub _parseGroupFile {
     my $lineCount = 0;
     while (<ORTHO_FILE>) {
         chomp;
+        $lineCount++;
 
-        if ($self->_parseGroup($_, $dbReleaseId)) {
+        if (1 == $self->_parseGroup($_, $dbReleaseId)) {
             $groupCount++;
             
-            if ($groupCount % 1000 == 0) {
+            if (($groupCount % 1000) == 0) {
                 $self->log("$groupCount ortholog groups loaded.");
             }
+        } else {
+            $self->log("line cannot be parsed:\n#$lineCount '$_'.");
         }
     }
     $self->log("total $lineCount lines processed, and $groupCount groups loaded.");
-    return $groupCount;
 }
 
 
@@ -145,13 +145,13 @@ sub _parseGroup {
     my ($self, $line, $dbReleaseId) = @_;
     
     # example line: ORTHOMCL79685(2 genes,2 taxa): 81703(spn) 32290(ban)
-    if (/^(\S+)\((\d+) genes\,(\d) taxa\)\:(.*)/) {
+    if ($line = /^(\S+?)\((\d+) genes\,(\d+) taxa\)\:(.*)/) {
         my $groupName = $1;
         my $geneCount = $2;
         my $taxonCount = $3;
         my @genes = split(' ', $4);
 
-        print "group=$groupName, #genes=$geneCount, #taxon=$taxonCount\n";
+        # print "group=$groupName, #genes=$geneCount, #taxon=$taxonCount\n";
 
         # create a OrthlogGroup instance
         my $orthoGroup = GUS::Model::ApiDB::OrthologGroup->
@@ -160,25 +160,25 @@ sub _parseGroup {
                  external_database_release_id => $dbReleaseId,
                 });
 
-        my $printInfo = '';
         for (@genes) {
-            if (/~(\S+)\((\S+)\)/) {
+            if (/(\S+?)\((\S+?)\)/) {
 		my $sequenceId = $1;
-		my $taxonId = $2;
-            
-		$printInfo = "$printInfo gene=$sequenceId, taxon=$taxonId;";
 
 		# create a OrthologGroupAASequence instance
-		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAASequence->
-		    new ({aa_sequence_id => $sequenceId,
+		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
+		    new({aa_sequence_id => $sequenceId,
 		      })->setParent($orthoGroup);
-	    }
+	    } else {
+                $self->log("gene cannot be parsed: '$_'.");
+            }
         }
         $orthoGroup->submit();
         $orthoGroup->undefPointerCache();
 
-        $self->log($printInfo);
-    } 
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
