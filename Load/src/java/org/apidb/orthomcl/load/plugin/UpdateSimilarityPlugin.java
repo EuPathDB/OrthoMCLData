@@ -109,6 +109,7 @@ public class UpdateSimilarityPlugin implements Plugin {
             logger.info("Loading sequence lengths...");
             Map<String, Integer> lengthMap = getLengthMap();
 
+            logger.info("Updating non-overlap match lengths...");
             String line = null, queryId = null, subjectId = null;
             boolean useQuery = true;
             List<Segment> segments = null;
@@ -116,7 +117,7 @@ public class UpdateSimilarityPlugin implements Plugin {
             int lineCount = 0;
             while ((line = reader.readLine()) != null) {
                 lineCount++;
-                if (lineCount % 1000 == 0)
+                if (lineCount % 100000 == 0)
                     logger.debug("Read " + lineCount + " lines.");
 
                 line = line.trim();
@@ -126,7 +127,7 @@ public class UpdateSimilarityPlugin implements Plugin {
                         if (update(queryId, subjectId, segments, psUpdate)) {
                             updateCount++;
                             if (updateCount % 1000 == 0) {
-                                // psUpdate.executeBatch();
+                                psUpdate.executeBatch();
                                 logger.info(updateCount + " pairs updated.");
                             }
                         }
@@ -141,7 +142,7 @@ public class UpdateSimilarityPlugin implements Plugin {
                         if (update(queryId, subjectId, segments, psUpdate)) {
                             updateCount++;
                             if (updateCount % 1000 == 0) {
-                                // psUpdate.executeBatch();
+                                psUpdate.executeBatch();
                                 logger.info(updateCount + " pairs updated.");
                             }
                         }
@@ -149,6 +150,7 @@ public class UpdateSimilarityPlugin implements Plugin {
                     // get next subject
                     String[] parts = line.split(":");
                     subjectId = parts[1].trim();
+                    segments = null;
                     int matchCount = Integer.parseInt(parts[8].trim());
                     // only update the pairs with more than one match
                     if (matchCount > 1) {
@@ -252,8 +254,8 @@ public class UpdateSimilarityPlugin implements Plugin {
             pos = nextPos;
         }
         if (overlap) {
-            logger.debug("Updateing queryId: " + queryId + ", subjectId: "
-                    + subjectId + ", match-length: " + totalLength);
+            //logger.debug("Updating queryId: " + queryId + ", subjectId: "
+            //        + subjectId + ", match-length: " + totalLength);
 
             psUpdate.setInt(1, totalLength);
             psUpdate.setInt(2, Integer.parseInt(queryId));

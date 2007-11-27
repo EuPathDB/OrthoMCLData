@@ -37,7 +37,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             int sign = (value >= 0) ? 1 : -1;
             Exponent = 0;
             Mantissa = Math.abs(value);
-            while (Mantissa < 1 || Mantissa >= 10) {
+            while (Mantissa != 0 && (Mantissa < 1 || Mantissa >= 10)) {
                 if (Mantissa < 1) {
                     Mantissa *= 10;
                     Exponent--;
@@ -65,7 +65,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
     public void invoke() throws OrthoMCLException {
         try {
             PreparedStatement psSelectSimilarity = connection.prepareStatement("SELECT"
-                    + " s.subject_id, s.query_id, s.total_match_length, "
+                    + " s.total_match_length, s.pvalue_mant, s.pvalue_exp, "
                     + " s.non_overlap_match_length, s.number_identical "
                     + " FROM dots.Similarity s "
                     + " WHERE (s.query_id = ? AND s.subject_id = ?) "
@@ -75,28 +75,34 @@ public class UpdateOrthologGroupPlugin implements Plugin {
                     + " FROM apidb.OrthologGroupAaSequence "
                     + " WHERE ortholog_group_id = ?");
             PreparedStatement psUpdateGroup = connection.prepareStatement("UPDATE"
-                    + " apidb.OrthologGroup"
+                    + " apidb.OrthologGroup "
                     + " SET avg_percent_coverage = ?, avg_percent_identity = ?,"
-                    + " avg_evalue_mant = ?, avg_evalue_exp = ?,"
-                    + " avg_connectivity = ?, number_of_match_pairs = ?"
-                    + " multiple_sequence_alignment = ?"
+                    + " avg_evalue_mant = ?, avg_evalue_exp = ?, "
+                    + " avg_connectivity = ?, number_of_match_pairs = ?, "
+                    + " multiple_sequence_alignment = ? "
                     + " WHERE ortholog_group_id = ?");
             PreparedStatement psUpdateSequence = connection.prepareStatement("UPDATE"
                     + " apidb.OrthologGroupAaSequence SET connectivity = ?"
                     + " WHERE ortholog_group_aa_sequence_id = ?");
+            
+            logger.info("loading sequence lengths...");
             Map<Integer, Integer> lengthMap = getSequenceLength();
 
+            logger.info("updating ortholog groups...");
             Statement stSelectGroup = connection.createStatement();
             ResultSet rsGroup = stSelectGroup.executeQuery("SELECT "
                     + "ortholog_group_id, name FROM apidb.OrthologGroup");
             int groupCount =0;
             while (rsGroup.next()) {
+                groupCount++;
+                // skip the finished groups
+                if (groupCount <=44400) continue;
+                
                 int orthologGroupId = rsGroup.getInt("ortholog_group_id");
                 String orthologName = rsGroup.getString("name");
                 updateOrthologGroup(orthologGroupId, orthologName,
                         psSelectSimilarity, psSelectSequence, psUpdateGroup,
                         psUpdateSequence, lengthMap);
-                groupCount++;
                 if (groupCount % 100 == 0)
                     logger.info(groupCount + " ortholog groups updated.");
             }
@@ -227,10 +233,12 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             Map<Integer, Integer> lengthMap) throws SQLException {
         psSelectSimilarity.setInt(1, sequenceId1);
         psSelectSimilarity.setInt(2, sequenceId2);
-        psSelectSimilarity.setInt(3, sequenceId2);
-        psSelectSimilarity.setInt(4, sequenceId1);
+        psSelectSimilarity.setInt(3, sequenceId1);
+        psSelectSimilarity.setInt(4, sequenceId2);
         ResultSet rsSimilarity = psSelectSimilarity.executeQuery();
 
+        int seqLength = Math.max(lengthMap.get(sequenceId1),
+                lengthMap.get(sequenceId2));
         double sumPercentIdentity = 0;
         double sumPercentMatch = 0;
         double sumEvalue = 0;
@@ -243,12 +251,8 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             int identityCount = rsSimilarity.getInt("number_identical");
 
             sumPercentIdentity += 100.0 * identityCount / totalMatchLength;
-
-            int seqLength = Math.max(lengthMap.get(sequenceId1),
-                    lengthMap.get(sequenceId2));
             sumPercentMatch += 100.0 * nonOverlapLength / seqLength;
-
-            sumEvalue += pvalueExp + Math.log(pvalueMant);
+            sumEvalue += pvalueExp + Math.log10(pvalueMant);
 
             count++;
         }

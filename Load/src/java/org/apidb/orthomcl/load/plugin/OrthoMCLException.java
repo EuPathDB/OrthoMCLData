@@ -12,6 +12,11 @@ public class OrthoMCLException extends Exception {
     /**
      * 
      */
+    private static final long serialVersionUID = 1504497969004258294L;
+
+    /**
+     * 
+     */
     public OrthoMCLException() {
         // TEST Auto-generated constructor stub
     }
