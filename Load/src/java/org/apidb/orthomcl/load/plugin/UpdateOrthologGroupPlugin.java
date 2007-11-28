@@ -49,7 +49,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             Mantissa *= sign;
         }
     }
-    
+
     private static final Logger logger = Logger.getLogger(UpdateOrthologGroupPlugin.class);
 
     private Connection connection;
@@ -76,7 +76,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
                     + " WHERE ortholog_group_id = ?");
             PreparedStatement psUpdateGroup = connection.prepareStatement("UPDATE"
                     + " apidb.OrthologGroup "
-                    + " SET avg_percent_coverage = ?, avg_percent_identity = ?,"
+                    + " SET avg_percent_match = ?, avg_percent_identity = ?,"
                     + " avg_evalue_mant = ?, avg_evalue_exp = ?, "
                     + " avg_connectivity = ?, number_of_match_pairs = ?, "
                     + " multiple_sequence_alignment = ? "
@@ -84,20 +84,21 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             PreparedStatement psUpdateSequence = connection.prepareStatement("UPDATE"
                     + " apidb.OrthologGroupAaSequence SET connectivity = ?"
                     + " WHERE ortholog_group_aa_sequence_id = ?");
-            
+
             logger.info("loading sequence lengths...");
             Map<Integer, Integer> lengthMap = getSequenceLength();
 
             logger.info("updating ortholog groups...");
             Statement stSelectGroup = connection.createStatement();
             ResultSet rsGroup = stSelectGroup.executeQuery("SELECT "
-                    + "ortholog_group_id, name FROM apidb.OrthologGroup");
-            int groupCount =0;
+                    + " ortholog_group_id, name FROM apidb.OrthologGroup "
+                    + " WHERE number_of_match_pairs IS NULL");
+            int groupCount = 0;
             while (rsGroup.next()) {
                 groupCount++;
                 // skip the finished groups
-                if (groupCount <=44400) continue;
-                
+                // if (groupCount <=44400) continue;
+
                 int orthologGroupId = rsGroup.getInt("ortholog_group_id");
                 String orthologName = rsGroup.getString("name");
                 updateOrthologGroup(orthologGroupId, orthologName,
@@ -112,7 +113,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             psUpdateGroup.close();
             psSelectSequence.close();
             psSelectSimilarity.close();
-            
+
             logger.info("Total " + groupCount + " ortholog groups updated.");
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
