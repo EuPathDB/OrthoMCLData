@@ -88,27 +88,33 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             logger.info("loading sequence lengths...");
             Map<Integer, Integer> lengthMap = getSequenceLength();
 
-            logger.info("updating ortholog groups...");
+            // load un-finished groups
+            logger.info("checking ortholog groups to be updated...");
             Statement stSelectGroup = connection.createStatement();
             ResultSet rsGroup = stSelectGroup.executeQuery("SELECT "
                     + " ortholog_group_id, name FROM apidb.OrthologGroup "
                     + " WHERE number_of_match_pairs IS NULL");
-            int groupCount = 0;
+            Map<Integer, String> groups = new HashMap<Integer, String>();
             while (rsGroup.next()) {
-                groupCount++;
-                // skip the finished groups
-                // if (groupCount <=44400) continue;
-
                 int orthologGroupId = rsGroup.getInt("ortholog_group_id");
                 String orthologName = rsGroup.getString("name");
-                updateOrthologGroup(orthologGroupId, orthologName,
-                        psSelectSimilarity, psSelectSequence, psUpdateGroup,
-                        psUpdateSequence, lengthMap);
-                if (groupCount % 100 == 0)
-                    logger.info(groupCount + " ortholog groups updated.");
+                groups.put(orthologGroupId, orthologName);
             }
             rsGroup.close();
             stSelectGroup.close();
+
+            // start updating groups
+            logger.info("updating ortholog " + groups.size() + " groups...");
+            int groupCount = 0;
+            for (int orthologGroupId : groups.keySet()) {
+                String orthologName = groups.get(orthologGroupId);
+                updateOrthologGroup(orthologGroupId, orthologName,
+                        psSelectSimilarity, psSelectSequence, psUpdateGroup,
+                        psUpdateSequence, lengthMap);
+                groupCount++;
+                if (groupCount % 100 == 0)
+                    logger.info(groupCount + " ortholog groups updated.");
+            }
             psUpdateSequence.close();
             psUpdateGroup.close();
             psSelectSequence.close();
