@@ -3,23 +3,44 @@
     <cleanups>
     </cleanups>
 
-  <resource resource="GO_evidence_codes" version="1.2"
-        displayName="Gene Ontology evidence codes"        
-        publicUrl="http://www.geneontology.org/GO.evidence.shtml"
-        category="Ontology"            
-      url="http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/evidence_code.obo"
-        plugin="ApiCommonData::Load::Plugin::InsertGOEvidenceCodesFromObo"
-        dbCommit="@dbcommit@">
+    <resource plugin="GUS::Supported::Plugin::LoadTaxon" version="2005-11-15" 
+              publicUrl="ftp://ftp.ncbi.nih.gov/pub/taxonomy/" 
+              resource="taxonomy" 
+              dbCommit="@dbcommit@" 
+              url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/" 
+              category="Ontology" 
+              displayName="NCBI Taxonomy">
+        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=gi_taxid_prot.dmp.gz,taxdump.tar.gz</wgetArgs>
+        <unpack>gunzip @downloadDir@/taxonomy/gi_taxid_prot.dmp.gz</unpack>
+        <unpack>gunzip @downloadDir@/taxonomy/taxdump.tar.gz</unpack>
+        <unpack>tar -xf @downloadDir@/taxonomy/taxdump.tar -C @downloadDir@/taxonomy/</unpack>
+        <unpack>rm -f @downloadDir@/taxonomy/taxdump.tar</unpack>
+        <pluginArgs>--names @downloadDir@/taxonomy/names.dmp --nodes @downloadDir@/taxonomy/nodes.dmp --gencode @downloadDir@/taxonomy/gencode.dmp -merged @downloadDir@/taxonomy/merged.dmp --restart @taxonomy.restart@ --verbose @commit@</pluginArgs>
+        <description>
+            <![CDATA[
+                The NCBI Taxonomy database contains the names of all organisms that are represented in the Entrez genetic databases.
+            ]]>
+        </description>
+    </resource>
+
+
+    <resource resource="GO_evidence_codes" version="1.2"
+              displayName="Gene Ontology evidence codes"        
+              publicUrl="http://www.geneontology.org/GO.evidence.shtml"
+              category="Ontology"            
+              url="http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/evidence_code.obo"
+              plugin="ApiCommonData::Load::Plugin::InsertGOEvidenceCodesFromObo"
+              dbCommit="@dbcommit@">
         <wgetArgs>--tries=5 --output-document=evidence_code.obo</wgetArgs>
         <pluginArgs>--oboFile @downloadDir@/GO_evidence_codes/evidence_code.obo</pluginArgs>
         <description>
             <![CDATA[
-   Gene Ontology annotation uses evidence codes to indicate the type of evidence that supports the annotation.
-          ]]>
+                Gene Ontology annotation uses evidence codes to indicate the type of evidence that supports the annotation.
+            ]]>
         </description>
     </resource>
     
-<resource resource="GO" version="4.162"
+    <resource resource="GO" version="4.162"
             displayName="Gene Ontology"
             publicUrl="http://www.geneontology.org"
             category="Ontology"
@@ -29,14 +50,14 @@
             extDbRlsVer="4.162"
             extDbRlsDescrip="The Gene Ontology from Jan. 11, 2007"
             dbCommit="@dbcommit@">
-      <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
-      <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER% --sqlVerbose</pluginArgs>
-      <description>
-         <![CDATA[
-   The Gene Ontology (GO) project provides a controlled vocabulary to describe gene and gene product attributes in any organism.
-          ]]>
-      </description>
-  </resource>
+        <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
+        <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER% --sqlVerbose</pluginArgs>
+        <description>
+            <![CDATA[
+                The Gene Ontology (GO) project provides a controlled vocabulary to describe gene and gene product attributes in any organism.
+            ]]>
+        </description>
+    </resource>
     
     <resource resource="InterproscanData" version="14.1"
         plugin="ApiCommonData::Load::Plugin::InsertInterproDomainDbs"
@@ -54,11 +75,492 @@
         <pluginArgs>--inPath @downloadDir@/InterproscanData/</pluginArgs>
         <description>
             <![CDATA[
-            InterPro is a database of protein families, domains and functional sites in which identifiable features found in known proteins can be applied to unknown protein sequences.
-		]]>
+                InterPro is a database of protein families, domains and functional sites in which identifiable features found in known proteins can be applied to unknown protein sequences.
+		    ]]>
         </description>
         <publication pmid="15608177"/>
     </resource>        
+  
+  
+    <!-- the following sections are copied from orthoResources.xml.safe -->
+  <resource version="2005-12-04" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Aquifex_aeolicus/" resource="aae_VF5_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Aquifex_aeolicus/" category="BACTERIA" organisms="Aquifex aeolicus" extDbName="TestDB" displayName="Aquifex aeolicus Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/aae_VF5_Proteins --ncbiTaxId 224324</pluginArgs>
+    <description><![CDATA[Aquifex aeolicus (Aquifex)  strain VF5 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Thermotoga_maritima/" resource="tma_MSB8_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Thermotoga_maritima/" organisms="Thermotoga maritima" category="BACTERIA" extDbName="TestDB" displayName="Thermotoga maritima Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tma_MSB8_Proteins --ncbiTaxId 243274</pluginArgs>
+    <description><![CDATA[Thermotoga maritima (Thermotoga)  strain MSB8 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Dehalococcoides_ethenogenes_195/" resource="det_GENERAL_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Dehalococcoides_ethenogenes_195/" organisms="Dehalococcoides ethenogenes" category="BACTERIA" extDbName="TestDB" displayName="Dehalococcoides ethenogenes Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/det_GENERAL_Proteins --ncbiTaxId 243164</pluginArgs>
+    <description><![CDATA[Dehalococcoides ethenogenes (Green nonsulfur bacteria)  strain GENERAL ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Deinococcus_radiodurans/" resource="dra_R1_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Deinococcus_radiodurans/" organisms="Deinococcus radiodurans" category="BACTERIA" extDbName="TestDB" displayName="Deinococcus radiodurans Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/dra_R1_Proteins --ncbiTaxId 243230</pluginArgs>
+    <description><![CDATA[Deinococcus radiodurans (Deinococci)  strain R1 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Treponema_pallidum/" resource="tpa_subsp..pallidum.str..Nichols_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Treponema_pallidum/" organisms="Treponema pallidum" category="BACTERIA" extDbName="TestDB" displayName="Treponema pallidum Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tpa_subsp..pallidum.str..Nichols_Proteins --ncbiTaxId 243276</pluginArgs>
+    <description><![CDATA[Treponema pallidum (Spirochetes)  strain subsp. pallidum str. Nichols ]]></description>
+  </resource>
+  <resource version="2005-12-04" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlorobium_tepidum_TLS/" resource="cte_TLS_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlorobium_tepidum_TLS/" organisms="Chlorobium tepidum" category="BACTERIA" extDbName="TestDB" displayName="Chlorobium tepidum Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cte_TLS_Proteins --ncbiTaxId 194439</pluginArgs>
+    <description><![CDATA[Chlorobium tepidum (Green sulfur bacteria)  strain TLS ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Pirellula_sp/" resource="rba_SH_1_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Pirellula_sp/" organisms="Rhodopirellula baltica" category="BACTERIA" extDbName="TestDB" displayName="Rhodopirellula baltica Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/rba_SH_1_Proteins --ncbiTaxId 243090</pluginArgs>
+    <description><![CDATA[Rhodopirellula baltica (Planctomyces/Pirella)  strain SH_1 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlamydophila_pneumoniae_CWL029/" resource="cpn_CWL029_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlamydophila_pneumoniae_CWL029/" organisms="Chlamydophila pneumoniae" category="BACTERIA" extDbName="TestDB" displayName="Chlamydophila pneumoniae Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cpn_CWL029_Proteins --ncbiTaxId 115713</pluginArgs>
+    <description><![CDATA[Chlamydophila pneumoniae (Chlamydia)  strain CWL029 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Synechococcus_sp_WH8102/" resource="syn_WH8102_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Synechococcus_sp_WH8102/" organisms="Synechococcus sp." category="BACTERIA" extDbName="TestDB" displayName="Synechococcus sp. Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/syn_WH8102_Proteins --ncbiTaxId 84588</pluginArgs>
+    <description><![CDATA[Synechococcus sp. (Cyanobacteria)  strain WH8102 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Mycobacterium_tuberculosis_H37Rv/" resource="mtu_H37Rv_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Mycobacterium_tuberculosis_H37Rv/" organisms="Mycobacterium tuberculosis" category="BACTERIA" extDbName="TestDB" displayName="Mycobacterium tuberculosis Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/mtu_H37Rv_Proteins --ncbiTaxId 83332</pluginArgs>
+    <description><![CDATA[Mycobacterium tuberculosis (Actinobacteria)  strain H37Rv ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Bacillus_anthracis_Ames/" resource="ban_Ames_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Bacillus_anthracis_Ames/" organisms="Bacillus anthracis Ames" category="BACTERIA" extDbName="TestDB" displayName="Bacillus anthracis Ames Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ban_Ames_Proteins --ncbiTaxId 261594</pluginArgs>
+    <description><![CDATA[Bacillus anthracis Ames (Gram-positive, Firmicutes)  strain Ames ]]></description>
+  </resource>
+  <resource version="2007-01-26" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Wolinella_succinogenes/" resource="wsu_DSM.1740_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Wolinella_succinogenes/" organisms="Wolinella succinogenes" category="BACTERIA" extDbName="TestDB" displayName="Wolinella succinogenes Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/wsu_DSM.1740_Proteins --ncbiTaxId 273121</pluginArgs>
+    <description><![CDATA[Wolinella succinogenes (epsilon-proteobacteria)  strain DSM 1740 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Geobacter_sulfurreducens/" resource="gsu_PCA_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Geobacter_sulfurreducens/" organisms="Geobacter sulfurreducens" category="BACTERIA" extDbName="TestDB" displayName="Geobacter sulfurreducens Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/gsu_PCA_Proteins --ncbiTaxId 243231</pluginArgs>
+    <description><![CDATA[Geobacter sulfurreducens (delta-proteobacteria)  strain PCA ]]></description>
+  </resource>
+  <resource version="2006-06-27" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Agrobacterium_tumefaciens_C58_UWash/" resource="atu_C58.Uwash_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Agrobacterium_tumefaciens_C58_UWash/" organisms="Agrobacterium tumefaciens" category="BACTERIA" extDbName="TestDB" displayName="Agrobacterium tumefaciens Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/atu_C58.Uwash_Proteins --ncbiTaxId 176299</pluginArgs>
+    <description><![CDATA[Agrobacterium tumefaciens (alpha-proteobacteria)  strain C58 Uwash ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Ralstonia_solanacearum/" resource="rso_GMI1000_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Ralstonia_solanacearum/" organisms="Ralstonia solanacearum" category="BACTERIA" extDbName="TestDB" displayName="Ralstonia solanacearum Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/rso_GMI1000_Proteins --ncbiTaxId 267608</pluginArgs>
+    <description><![CDATA[Ralstonia solanacearum (beta-proteobacteria)  strain GMI1000 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Escherichia_coli_K12/" resource="eco_K12_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Escherichia_coli_K12/" organisms="Escherichia coli" category="BACTERIA" extDbName="TestDB" displayName="Escherichia coli Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/eco_K12_Proteins --ncbiTaxId 316407</pluginArgs>
+    <description><![CDATA[Escherichia coli (gamma-proteobacteria)  strain K12 ]]></description>
+  </resource>
+  <resource version="2007-01-26" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Francisella_tularensis_tularensis/" resource="ftu_subsp..tularensis.SCHU.S4._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Francisella_tularensis_tularensis/" organisms="Francisella tularensis" category="BACTERIA" extDbName="TestDB" displayName="Francisella tularensis Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ftu_subsp..tularensis.SCHU.S4._Proteins --ncbiTaxId 177416</pluginArgs>
+    <description><![CDATA[Francisella tularensis (gamma-proteobacteria)  strain subsp. tularensis SCHU S4 (first published such species genome in Nature Genetics) ]]></description>
+  </resource>
+  <resource version="2006-12-28" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Yersinia_pestis_CO92/" resource="ype_CO-92._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Yersinia_pestis_CO92/" organisms="Yersinia pestis" category="BACTERIA" extDbName="TestDB" displayName="Yersinia pestis Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ype_CO-92._Proteins --ncbiTaxId 214092</pluginArgs>
+    <description><![CDATA[Yersinia pestis (gamma-proteobacteria)  strain CO-92 (first published in Nature in 2001) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Shigella_flexneri_2a/" resource="sfl_2a.str..301._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Shigella_flexneri_2a/" organisms="Shigella flexneri" category="BACTERIA" extDbName="TestDB" displayName="Shigella flexneri Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sfl_2a.str..301._Proteins --ncbiTaxId 198214</pluginArgs>
+    <description><![CDATA[Shigella flexneri (gamma-proteobacteria)  strain 2a str. 301 (first published in NAR 2002) ]]></description>
+  </resource>
+  <resource version="2006-04-04" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Salmonella_typhi/" resource="sty_sv.Typhi.CT18._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Salmonella_typhi/" organisms="Salmonella typhi / Salmonella enterica" category="BACTERIA" extDbName="TestDB" displayName="Salmonella typhi / Salmonella enterica Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sty_sv.Typhi.CT18._Proteins --ncbiTaxId 220341</pluginArgs>
+    <description><![CDATA[Salmonella typhi / Salmonella enterica (gamma-proteobacteria)  strain sv Typhi CT18 (2001 Nature) ]]></description>
+  </resource>
+  <resource version="2007-01-26" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Staphylococcus_aureus_Mu50/" resource="sau_subsp..Aureus.Mu50_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Staphylococcus_aureus_Mu50/" organisms="Staphylococcus aureus" category="BACTERIA" extDbName="TestDB" displayName="Staphylococcus aureus Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sau_subsp..Aureus.Mu50_Proteins --ncbiTaxId 158878</pluginArgs>
+    <description><![CDATA[Staphylococcus aureus (Gram-positive, Firmicutes)  strain subsp. Aureus Mu50 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Vibrio_cholerae/" resource="vch_.N16961,.Biotype.ElTor._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Vibrio_cholerae/" organisms="Vibrio cholerae" category="BACTERIA" extDbName="TestDB" displayName="Vibrio cholerae Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/vch_.N16961,.Biotype.ElTor._Proteins --ncbiTaxId 243277</pluginArgs>
+    <description><![CDATA[Vibrio cholerae (gamma-proteobacteria)  strain  N16961, Biotype ElTor (2000 Nature) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Listeria_monocytogenes/" resource="lmo_EGD-e._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Listeria_monocytogenes/" organisms="Listeria monocytogenes" category="BACTERIA" extDbName="TestDB" displayName="Listeria monocytogenes Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/lmo_EGD-e._Proteins --ncbiTaxId 169963</pluginArgs>
+    <description><![CDATA[Listeria monocytogenes (Gram-positive, Firmicutes)  strain EGD-e (first published in Science 2001) ]]></description>
+  </resource>
+  <resource version="2006-01-18" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Campylobacter_jejuni/" resource="cje_subsp..jejuni.NCTC.11168._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Campylobacter_jejuni/" organisms="Campylobacter jejuni" category="BACTERIA" extDbName="TestDB" displayName="Campylobacter jejuni Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cje_subsp..jejuni.NCTC.11168._Proteins --ncbiTaxId 192222</pluginArgs>
+    <description><![CDATA[Campylobacter jejuni (epsilon-proteobacteria)  strain subsp. jejuni NCTC 11168 (first published in Nature 2000) ]]></description>
+  </resource>
+  <resource version="2006-11-16" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Streptococcus_pneumoniae_TIGR4/" resource="spn_TIGR4._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Streptococcus_pneumoniae_TIGR4/" organisms="Streptococcus pneumoniae" category="BACTERIA" extDbName="TestDB" displayName="Streptococcus pneumoniae Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/spn_TIGR4._Proteins --ncbiTaxId 170187</pluginArgs>
+    <description><![CDATA[Streptococcus pneumoniae (Gram-positive, Firmicutes)  strain TIGR4 (second published Streptococcus, but published in Science 2001) ]]></description>
+  </resource>
+  <resource version="2006-01-18" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Clostridium_perfringens/" resource="cpe_13._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Clostridium_perfringens/" organisms="Clostridium perfringens" category="BACTERIA" extDbName="TestDB" displayName="Clostridium perfringens Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cpe_13._Proteins --ncbiTaxId 195102</pluginArgs>
+    <description><![CDATA[Clostridium perfringens (Gram-positive, Firmicutes)  strain 13 (first published cpe genome) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Burkholderia_mallei_ATCC_23344/" resource="bur_ATCC23344._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Burkholderia_mallei_ATCC_23344/" organisms="Burkholderia mallei" category="BACTERIA" extDbName="TestDB" displayName="Burkholderia mallei Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/bur_ATCC23344._Proteins --ncbiTaxId 243160</pluginArgs>
+    <description><![CDATA[Burkholderia mallei (beta-proteobacteria)  strain ATCC23344 (first published) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Rickettsia_typhi_wilmington/" resource="rty_Wilmington._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Rickettsia_typhi_wilmington/" organisms="Rickettsia typhi" category="BACTERIA" extDbName="TestDB" displayName="Rickettsia typhi Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/rty_Wilmington._Proteins --ncbiTaxId 257363</pluginArgs>
+    <description><![CDATA[Rickettsia typhi (alpha-proteobacteria)  strain Wilmington (PATRIC REFERENCE GENOME) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Brucella_suis_1330/" resource="bsu_1330._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Brucella_suis_1330/" organisms="Brucella suis/Brucella melitensis bv suis" category="BACTERIA" extDbName="TestDB" displayName="Brucella suis/Brucella melitensis bv suis Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/bsu_1330._Proteins --ncbiTaxId 204722</pluginArgs>
+    <description><![CDATA[Brucella suis/Brucella melitensis bv suis (alpha-proteobacteria)  strain 1330 (PATRIC REFERENCE GENOME) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Coxiella_burnetii/" resource="cbu_RSA.493._Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Coxiella_burnetii/" organisms="Coxiella burnetii" category="BACTERIA" extDbName="TestDB" displayName="Coxiella burnetii Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cbu_RSA.493._Proteins --ncbiTaxId 227377</pluginArgs>
+    <description><![CDATA[Coxiella burnetii (gamma-proteobacteria)  strain RSA 493 (PATRIC REFERENCE GENOME) ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Halobacterium_sp/" resource="hal_NRC-1_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Halobacterium_sp/" organisms="Halobacterium sp. " category="ARCHAEA" extDbName="TestDB" displayName="Halobacterium sp.  Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/hal_NRC-1_Proteins --ncbiTaxId 64091</pluginArgs>
+    <description><![CDATA[Halobacterium sp.  (Euryarchaeota)  strain NRC-1 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Methanococcus_jannaschii/" resource="mja_DSSM.2661_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Methanococcus_jannaschii/" organisms="Methanococcus jannaschii" category="ARCHAEA" extDbName="TestDB" displayName="Methanococcus jannaschii Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/mja_DSSM.2661_Proteins --ncbiTaxId 243232</pluginArgs>
+    <description><![CDATA[Methanococcus jannaschii (Euryarchaeota)  strain DSSM 2661 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Sulfolobus_solfataricus/" resource="sso_P2_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Sulfolobus_solfataricus/" organisms="Sulfolobus solfataricus" category="ARCHAEA" extDbName="TestDB" displayName="Sulfolobus solfataricus Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sso_P2_Proteins --ncbiTaxId 273057</pluginArgs>
+    <description><![CDATA[Sulfolobus solfataricus (Crenarchaeota)  strain P2 ]]></description>
+  </resource>
+  <resource version="2007-01-23" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans/" resource="neq_Kin4-M_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans/" organisms="Nanoarchaeum equitans" category="ARCHAEA" extDbName="TestDB" displayName="Nanoarchaeum equitans Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/neq_Kin4-M_Proteins --ncbiTaxId 228908</pluginArgs>
+    <description><![CDATA[Nanoarchaeum equitans (Nanoarchaeota)  strain Kin4-M ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="http://gmod.mbl.edu/perl/site/giardia?page=download_tool&amp;file=orfs_aa&amp;type=orfs&amp;noheader=T" resource="gla_Proteins" extDbRlsVer="1.1.1" url="http://gmod.mbl.edu/perl/site/giardia?page=download_tool&amp;file=orfs_aa&amp;type=orfs&amp;noheader=T" organisms="Giardia lamblia / Giardia intestinalis" category="EUKARYA" extDbName="TestDB" displayName="Giardia lamblia / Giardia intestinalis Proteins (GiardiaDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --output-document=orfs_aa.fas.gz</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^|]+)" --regexDesc "^&gt;[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/gla_Proteins --ncbiTaxId 184922</pluginArgs>
+    <description><![CDATA[Giardia lamblia / Giardia intestinalis (PROTOZOA-diplomonadida) ]]></description>
+    <unpack>gunzip @downloadDir@/gla_Proteins/orfs_aa.fas.gz</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/e_histolytica/annotation_dbs/EHA1.pep" resource="ehi_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/e_histolytica/annotation_dbs/EHA1.pep" organisms="Entamoeba histolytica" category="EUKARYA" extDbName="TestDB" displayName="Entamoeba histolytica Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ehi_Proteins --ncbiTaxId 294381</pluginArgs>
+    <description><![CDATA[Entamoeba histolytica (PROTOZOA-ENTAMOEBIDAE intestinal parasite and the causative agent of amoebiasis) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="http://www.dictybase.org/db/cgi-bin/dictyBase/download/download.pl?area=blast_databases&amp;ID=dicty_primary_protein.gz&amp;confirm=Y" resource="ddi_Proteins" extDbRlsVer="1.1.1" url="http://www.dictybase.org/db/cgi-bin/dictyBase/download/download.pl?area=blast_databases&amp;ID=dicty_primary_protein.gz&amp;confirm=Y" organisms="Dictyostelium discoideum" category="EUKARYA" extDbName="TestDB" displayName="Dictyostelium discoideum Proteins (dictyBase)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --output-document=ddi_Proteins.faa.gz</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ddi_Proteins --ncbiTaxId 352472</pluginArgs>
+    <description><![CDATA[Dictyostelium discoideum (PROTOZOA-MYCETOZOA social amoebae, slime mold) ]]></description>
+    <unpack>gunzip @downloadDir@/ddi_Proteins/ddi_Proteins.faa.gz</unpack>
+  </resource>
+  <resource version="5.2" publicUrl="http://www.plasmodb.org/download/release-5.2/Pfalciparum/PfalciparumAnnotatedProteins_plasmoDB-5.2.fasta" resource="pfa_3D7_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Pfalciparum/PfalciparumAnnotatedProteins_plasmoDB-5.2.fasta" organisms="Plasmodium falciparum" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium falciparum Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pfa_3D7_Proteins --ncbiTaxId 36329</pluginArgs>
+    <description><![CDATA[Plasmodium falciparum (PROTOZOA-APICOMPLEXA)  strain 3D7 ]]></description>
+  </resource>
+  <resource version="5.2" publicUrl="http://www.plasmodb.org/download/release-5.2/Pyoelii/PyoeliiAnnotatedProteins_plasmoDB-5.2.fasta" resource="pyo_17XNL_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Pyoelii/PyoeliiAnnotatedProteins_plasmoDB-5.2.fasta" organisms="Plasmodium yoelii" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium yoelii Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pyo_17XNL_Proteins --ncbiTaxId 352914</pluginArgs>
+    <description><![CDATA[Plasmodium yoelii (PROTOZOA-APICOMPLEXA)  strain 17XNL ]]></description>
+  </resource>
+  <resource version="5.2" publicUrl="http://www.plasmodb.org/download/release-5.2/Pvivax/PvivaxAnnotatedProteins_plasmoDB-5.2.fasta" resource="pvi_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Pvivax/PvivaxAnnotatedProteins_plasmoDB-5.2.fasta" organisms="Plasmodium vivax" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium vivax Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pvi_Proteins --ncbiTaxId 126793</pluginArgs>
+    <description><![CDATA[Plasmodium vivax (PROTOZOA-APICOMPLEXA) ]]></description>
+  </resource>
+  <resource version="2007-03-06" resource="pkn_Proteins" extDbRlsVer="1.1.1" organisms="Plasmodium knowlesi" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium knowlesi Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit">
+    <pluginArgs>--regexSourceId "\\|([^\\s]+)" --regexDesc "\\|[^\\s]+\\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pkn_Proteins --ncbiTaxId 5851</pluginArgs>
+    <description><![CDATA[Plasmodium knowlesi (PROTOZOA-APICOMPLEXA) ]]></description>
+    <manualGet email="" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/Pknowlesi.fasta" contact="" institution="PlasmoDB"/>
+  </resource>
+  <resource version="5.2" publicUrl="http://www.plasmodb.org/download/release-5.2/Pberghei/PbergheiAnnotatedProteins_plasmoDB-5.2.fasta" resource="pbe_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Pberghei/PbergheiAnnotatedProteins_plasmoDB-5.2.fasta" organisms="Plasmodium berghei" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium berghei Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pbe_Proteins --ncbiTaxId 5821</pluginArgs>
+    <description><![CDATA[Plasmodium berghei (PROTOZOA-APICOMPLEXA) ]]></description>
+  </resource>
+  <resource version="5.2" publicUrl="http://www.plasmodb.org/download/release-5.2/Pchabaudi/PchabaudiAnnotatedProteins_plasmoDB-5.2.fasta" resource="pch_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Pchabaudi/PchabaudiAnnotatedProteins_plasmoDB-5.2.fasta" organisms="Plasmodium chabaudi" category="EUKARYA" extDbName="TestDB" displayName="Plasmodium chabaudi Proteins (PlasmoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pch_Proteins --ncbiTaxId 5825</pluginArgs>
+    <description><![CDATA[Plasmodium chabaudi (PROTOZOA-APICOMPLEXA) ]]></description>
+  </resource>
+  <resource version="3.4" publicUrl="http://www.cryptodb.org/common/downloads/release-3.4/Cparvum/CparvumAnnotatedProtein.fsa.zip" resource="cpa_Iowa._Proteins" extDbRlsVer="1.1.1" url="http://www.cryptodb.org/common/downloads/release-3.4/Cparvum/CparvumAnnotatedProtein.fsa.zip" organisms="Cryptosporidium parvum" category="EUKARYA" extDbName="TestDB" displayName="Cryptosporidium parvum Proteins (CryptoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cpa_Iowa._Proteins --ncbiTaxId 5807</pluginArgs>
+    <description><![CDATA[Cryptosporidium parvum (PROTOZOA-APICOMPLEXA)  strain Iowa (Type2) ]]></description>
+    <unpack>unzip @downloadDir@/cpa_Iowa._Proteins.zip -d @downloadDir@/cpa_Iowa._Proteins</unpack>
+  </resource>
+  <resource version="3.4" publicUrl="http://www.cryptodb.org/common/downloads/release-3.4/Chominis/ChominisAnnotatedProtein.fsa.zip" resource="cho_TU502._Proteins" extDbRlsVer="1.1.1" url="http://www.cryptodb.org/common/downloads/release-3.4/Chominis/ChominisAnnotatedProtein.fsa.zip" organisms="Cryptosporidium hominis" category="EUKARYA" extDbName="TestDB" displayName="Cryptosporidium hominis Proteins (CryptoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cho_TU502._Proteins --ncbiTaxId 237895</pluginArgs>
+    <description><![CDATA[Cryptosporidium hominis (PROTOZOA-APICOMPLEXA)  strain TU502 (Type 1) ]]></description>
+    <unpack>unzip @downloadDir@/cho_TU502._Proteins.zip -d @downloadDir@/cho_TU502._Proteins</unpack>
+  </resource>
+  <resource version="4.1" publicUrl="http://www.plasmodb.org/download/release-5.2/Tgondii/TgondiiAnnotatedProteins_toxoDb-4.1.fasta" resource="tgo_Proteins" extDbRlsVer="1.1.1" url="http://www.plasmodb.org/download/release-5.2/Tgondii/TgondiiAnnotatedProteins_toxoDb-4.1.fasta" organisms="Toxoplasma gondii" category="EUKARYA" extDbName="TestDB" displayName="Toxoplasma gondii Proteins (ToxoDB)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|\\([a-zA-Z\\s_]+\\) (.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tgo_Proteins --ncbiTaxId 5811</pluginArgs>
+    <description><![CDATA[Toxoplasma gondii (PROTOZOA-APICOMPLEXA) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_parva/annotation_dbs/TPA1.pep" resource="the_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_parva/annotation_dbs/TPA1.pep" organisms="Theileria parva" category="EUKARYA" extDbName="TestDB" displayName="Theileria parva Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/the_Proteins --ncbiTaxId 5875</pluginArgs>
+    <description><![CDATA[Theileria parva (PROTOZOA-APICOMPLEXA) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep" resource="tan_Ankara.clone.C9_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep" organisms="Theileria annulata" category="EUKARYA" extDbName="TestDB" displayName="Theileria annulata Proteins (SANGER)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tan_Ankara.clone.C9_Proteins --ncbiTaxId 5874</pluginArgs>
+    <description><![CDATA[Theileria annulata (PROTOZOA-APICOMPLEXA)  strain Ankara clone C9 ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_thermophila/annotation_dbs/TTA1.pep" resource="tth_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_thermophila/annotation_dbs/TTA1.pep" organisms="Tetrahymena thermophila" category="EUKARYA" extDbName="TestDB" displayName="Tetrahymena thermophila Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tth_Proteins --ncbiTaxId 5911</pluginArgs>
+    <description><![CDATA[Tetrahymena thermophila (PROTOZOA, ALVEOLATA, ciliophora) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/private/euk/t_cruzi_q98122/annotation_dbs/TCA1.pep" resource="tcr_CL.Brener.TC3_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/private/euk/t_cruzi_q98122/annotation_dbs/TCA1.pep" organisms="Trypanosoma cruzi" category="EUKARYA" extDbName="TestDB" displayName="Trypanosoma cruzi Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tcr_CL.Brener.TC3_Proteins --ncbiTaxId 5693</pluginArgs>
+    <description><![CDATA[Trypanosoma cruzi (PROTOZOA-EUGLENOZOA)  strain CL Brener TC3 ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_brucei/annotation_dbs/TBA1.pep" resource="tbr_TREU927.4.GUTat10.1_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_brucei/annotation_dbs/TBA1.pep" organisms="Trypanosoma brucei" category="EUKARYA" extDbName="TestDB" displayName="Trypanosoma brucei Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tbr_TREU927.4.GUTat10.1_Proteins --ncbiTaxId 5691</pluginArgs>
+    <description><![CDATA[Trypanosoma brucei (PROTOZOA-EUGLENOZOA)  strain TREU927/4 GUTat10.1 ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.sanger.ac.uk/pub/databases/L.major_sequences/DATASETS/LmjFwholegenome_20060901_V5.2.pep" resource="lma_Friedlin_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.sanger.ac.uk/pub/databases/L.major_sequences/DATASETS/LmjFwholegenome_20060901_V5.2.pep" organisms="Leishmania major" category="EUKARYA" extDbName="TestDB" displayName="Leishmania major Proteins (SANGER)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/lma_Friedlin_Proteins --ncbiTaxId 5664</pluginArgs>
+    <description><![CDATA[Leishmania major (PROTOZOA-EUGLENOZOA)  strain Friedlin ]]></description>
+  </resource>
+  <resource version="2006-07-12" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Encephalitozoon_cuniculi/" resource="ecu_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Encephalitozoon_cuniculi/" organisms="Encephalitozoon cuniculi" category="EUKARYA" extDbName="TestDB" displayName="Encephalitozoon cuniculi Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.faa</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ecu_Proteins --ncbiTaxId 6035</pluginArgs>
+    <description><![CDATA[Encephalitozoon cuniculi (FUNGI) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://genome-ftp.stanford.edu/yeast/data_download/sequence/genomic_sequence/orf_protein/orf_trans_all.fasta.gz" resource="sce_S288C_Proteins" extDbRlsVer="1.1.1" url="ftp://genome-ftp.stanford.edu/yeast/data_download/sequence/genomic_sequence/orf_protein/orf_trans_all.fasta.gz" organisms="Saccharomyces cerevisiae" category="EUKARYA" extDbName="TestDB" displayName="Saccharomyces cerevisiae Proteins (SGD)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexSecondaryId "(SGDID:S[0-9]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sce_S288C_Proteins --ncbiTaxId 4932</pluginArgs>
+    <description><![CDATA[Saccharomyces cerevisiae (FUNGI, budding yeast)  strain S288C ]]></description>
+    <unpack>gunzip @downloadDir@/sce_S288C_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.sanger.ac.uk/pub/yeast/pombe/Protein_data/pompep" resource="spo_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.sanger.ac.uk/pub/yeast/pombe/Protein_data/pompep" organisms="Schizosaccharomyces pombe" category="EUKARYA" extDbName="TestDB" displayName="Schizosaccharomyces pombe Proteins (SANGER)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/spo_Proteins --ncbiTaxId 4896</pluginArgs>
+    <description><![CDATA[Schizosaccharomyces pombe (FUNGI, fission yeast) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/c_neoformans/annotation_dbs/CNA1.pep" resource="cne_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/c_neoformans/annotation_dbs/CNA1.pep" organisms="Cryptococcus neoformans" category="EUKARYA" extDbName="TestDB" displayName="Cryptococcus neoformans Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cne_Proteins --ncbiTaxId 5207</pluginArgs>
+    <description><![CDATA[Cryptococcus neoformans (FUNGI, basidiomycetous yeast) ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.jgi-psf.org/pub/JGI_data/Phanerochaete_chrysosporium/v2.0/BestModels2.1.prot.gz" resource="pha_RP-78_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.jgi-psf.org/pub/JGI_data/Phanerochaete_chrysosporium/v2.0/BestModels2.1.prot.gz" organisms="Phanerochaete chrysosporium" category="EUKARYA" extDbName="TestDB" displayName="Phanerochaete chrysosporium Proteins (JGI)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/pha_RP-78_Proteins --ncbiTaxId 5306</pluginArgs>
+    <description><![CDATA[Phanerochaete chrysosporium (FUNGI, BASIDIOMYCOTA)  strain RP-78 ]]></description>
+    <unpack>gunzip @downloadDir@/pha_RP-78_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2.1" publicUrl="ftp://ftp.ebi.ac.uk/pub/databases/integr8/uniprot/proteomes/982.A_gossypii.dat.gz" resource="ago_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ebi.ac.uk/pub/databases/integr8/uniprot/proteomes/982.A_gossypii.dat.gz" organisms="Ashbya gossypii" category="EUKARYA" extDbName="TestDB" displayName="Ashbya gossypii Proteins (AGD)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ago_Proteins --ncbiTaxId 33169</pluginArgs>
+    <description><![CDATA[Ashbya gossypii (FUNGI, ASCOMYCOTA, filamentous fungus) ]]></description>
+    <unpack>gunzip @downloadDir@/ago_Proteins/*.gz</unpack>
+    <unpack>integr8uniprot2fasta @downloadDir@/ago_Proteins/* @downloadDir@/ago_Proteins/ago_Proteins.fa</unpack>
+  </resource>
+  <resource version="2006-12-22" publicUrl="http://www.broad.mit.edu/annotation/genome/neurospora/assets/neurospora_crassa_7_proteins.fasta.gz" resource="ncr_OR74A_Proteins" extDbRlsVer="1.1.1" url="http://www.broad.mit.edu/annotation/genome/neurospora/assets/neurospora_crassa_7_proteins.fasta.gz" organisms="Neurospora crassa" category="EUKARYA" extDbName="TestDB" displayName="Neurospora crassa Proteins (WI)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ncr_OR74A_Proteins --ncbiTaxId 5141</pluginArgs>
+    <description><![CDATA[Neurospora crassa (FUNGI, filamentous fungus)  strain OR74A ]]></description>
+    <unpack>gunzip @downloadDir@/ncr_OR74A_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2" publicUrl="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Yali-GL2r2.aa" resource="yli_CLIB99_Proteins" extDbRlsVer="1.1.1" url="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Yali-GL2r2.aa" organisms="Yarrowia lipolytica" category="EUKARYA" extDbName="TestDB" displayName="Yarrowia lipolytica Proteins (Genolevures)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;gnl\\|[A-Z]+\\|([^\\s]+)" --regexDesc "^&gt;gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/yli_CLIB99_Proteins --ncbiTaxId 4952</pluginArgs>
+    <description><![CDATA[Yarrowia lipolytica (FUNGI, ASCOMYCOTA)  strain CLIB99 ]]></description>
+  </resource>
+  <resource version="2" publicUrl="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Klla-GL2r2.aa" resource="kla_CLIB210_Proteins" extDbRlsVer="1.1.1" url="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Klla-GL2r2.aa" organisms="Kluyveromyces lactis" category="EUKARYA" extDbName="TestDB" displayName="Kluyveromyces lactis Proteins (Genolevures)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;gnl\\|[A-Z]+\\|([^\\s]+)" --regexDesc "^&gt;gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/kla_CLIB210_Proteins --ncbiTaxId 28985</pluginArgs>
+    <description><![CDATA[Kluyveromyces lactis (FUNGI, ASCOMYCOTA)  strain CLIB210 ]]></description>
+  </resource>
+  <resource version="2" publicUrl="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Deha-GL2r2.aa" resource="dha_CBS767_Proteins" extDbRlsVer="1.1.1" url="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Deha-GL2r2.aa" organisms="Debaryomyces hansenii" category="EUKARYA" extDbName="TestDB" displayName="Debaryomyces hansenii Proteins (Genolevures)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;gnl\\|[A-Z]+\\|([^\\s]+)" --regexDesc "^&gt;gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/dha_CBS767_Proteins --ncbiTaxId 4959</pluginArgs>
+    <description><![CDATA[Debaryomyces hansenii (FUNGI, ASCOMYCOTA)  strain CBS767 ]]></description>
+  </resource>
+  <resource version="2" publicUrl="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Cagl-GL2r2.aa" resource="cgl_CBS138_Proteins" extDbRlsVer="1.1.1" url="http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Cagl-GL2r2.aa" organisms="Candida glabrate" category="EUKARYA" extDbName="TestDB" displayName="Candida glabrate Proteins (Genolevures)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;gnl\\|[A-Z]+\\|([^\\s]+)" --regexDesc "^&gt;gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cgl_CBS138_Proteins --ncbiTaxId 5478</pluginArgs>
+    <description><![CDATA[Candida glabrate (FUNGI, ASCOMYCOTA)  strain CBS138 ]]></description>
+  </resource>
+  <resource version="2005-12-21" publicUrl="ftp://ftp.bio.nite.go.jp/pub/ao/" resource="aor_RIB40_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.bio.nite.go.jp/pub/ao/" organisms="Aspergillus oryzae" category="EUKARYA" extDbName="TestDB" displayName="Aspergillus oryzae Proteins (JAPAN)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=*.pep.gz</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/aor_RIB40_Proteins --ncbiTaxId 5062</pluginArgs>
+    <description><![CDATA[Aspergillus oryzae (FUNGI, ASCOMYCOTA)  strain RIB40 ]]></description>
+    <unpack>gunzip @downloadDir@/aor_RIB40_Proteins/*</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.sanger.ac.uk/pub/pathogens/A_fumigatus/A_fumigatus.GeneDB.pep" resource="afu_Af293_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.sanger.ac.uk/pub/pathogens/A_fumigatus/A_fumigatus.GeneDB.pep" organisms="Aspergillus fumigatus" category="EUKARYA" extDbName="TestDB" displayName="Aspergillus fumigatus Proteins (SANGER)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/afu_Af293_Proteins --ncbiTaxId 5085</pluginArgs>
+    <description><![CDATA[Aspergillus fumigatus (FUNGI, ASCOMYCOTA)  strain Af293 ]]></description>
+  </resource>
+  <resource version="2007-03-06" publicUrl="http://img.jgi.doe.gov/cgi-bin/pub/main.cgi?downloadTaxonFaaFile=1&amp;taxon_oid=638269501" resource="gth_Proteins" extDbRlsVer="1.1.1" url="http://img.jgi.doe.gov/cgi-bin/pub/main.cgi?downloadTaxonFaaFile=1&amp;taxon_oid=638269501" organisms="Guillardia theta" category="EUKARYA" extDbName="TestDB" displayName="Guillardia theta Proteins (JGI)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/gth_Proteins --ncbiTaxId 55529</pluginArgs>
+    <description><![CDATA[Guillardia theta (PLANTS, PROTOZOA-CRYPTOPHYTA) ]]></description>
+  </resource>
+  <resource version="3" publicUrl="ftp://ftp.jgi-psf.org/pub/JGI_data/Chlamy/v3.1/Chlre3_1.GeneCatalogProteins.6JUL06.fasta.gz" resource="cre_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.jgi-psf.org/pub/JGI_data/Chlamy/v3.1/Chlre3_1.GeneCatalogProteins.6JUL06.fasta.gz" organisms="Chlamydomonas reinhardtii" category="EUKARYA" extDbName="TestDB" displayName="Chlamydomonas reinhardtii Proteins (JGI)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;[^|]+\\|+[^|]+\\|([^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cre_Proteins --ncbiTaxId 3055</pluginArgs>
+    <description><![CDATA[Chlamydomonas reinhardtii (PLANTS, CHLOROPHYTA, green algae) ]]></description>
+    <unpack>gunzip @downloadDir@/cre_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="https://bioinformatics.psb.ugent.be/gdb/ostreococcus/ostreo_pep_061206.tfa.gz" resource="ota_Proteins" extDbRlsVer="1.1.1" url="https://bioinformatics.psb.ugent.be/gdb/ostreococcus/ostreo_pep_061206.tfa.gz" organisms="Ostreococcus tauri" category="EUKARYA" extDbName="TestDB" displayName="Ostreococcus tauri Proteins (Laboratoire Arago, France)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5 --no-check-certificate</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ota_Proteins --ncbiTaxId 70448</pluginArgs>
+    <description><![CDATA[Ostreococcus tauri (PLANTS, CHLOROPHYTA) ]]></description>
+    <unpack>gunzip @downloadDir@/ota_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2005-09-17" publicUrl="http://merolae.biol.s.u-tokyo.ac.jp/download/cds.fasta" resource="cme_10D_Proteins" extDbRlsVer="1.1.1" url="http://merolae.biol.s.u-tokyo.ac.jp/download/cds.fasta" organisms="Cyanidioschyzon merolae" category="EUKARYA" extDbName="TestDB" displayName="Cyanidioschyzon merolae Proteins (UTOKYO)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;gnl\\|[A-Z]+\\|([^\\s]+)" --regexDesc "^&gt;gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cme_10D_Proteins --ncbiTaxId 45157</pluginArgs>
+    <description><![CDATA[Cyanidioschyzon merolae (PLANTS, red algae PROTOZOA-RHODOPHYTA  )  strain 10D ]]></description>
+  </resource>
+  <resource version="1" publicUrl="ftp://ftp.jgi-psf.org/pub/JGI_data/Diatom/thaps1/thaps1Prots.fasta.gz" resource="tps_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.jgi-psf.org/pub/JGI_data/Diatom/thaps1/thaps1Prots.fasta.gz" organisms="Thalassiosira pseudonana" category="EUKARYA" extDbName="TestDB" displayName="Thalassiosira pseudonana Proteins (JGI)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tps_Proteins --ncbiTaxId 35128</pluginArgs>
+    <description><![CDATA[Thalassiosira pseudonana (PLANTS, diatom PROTOZOA-STRAMENOPILES ) ]]></description>
+    <unpack>gunzip @downloadDir@/tps_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/pub/data/a_thaliana/ath1/SEQUENCES/ATH1.pep.gz" resource="ath_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/a_thaliana/ath1/SEQUENCES/ATH1.pep.gz" organisms="Arabidopsis thaliana" category="EUKARYA" extDbName="TestDB" displayName="Arabidopsis thaliana Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/ath_Proteins --ncbiTaxId 3702</pluginArgs>
+    <description><![CDATA[Arabidopsis thaliana (PLANTS) ]]></description>
+    <unpack>gunzip @downloadDir@/ath_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="4" publicUrl="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_5.0/all.chrs/all.pep" resource="osa_ssp..Indica.or.ssp..Japonica_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_5.0/all.chrs/all.pep" organisms="Oryza sativa" category="EUKARYA" extDbName="TestDB" displayName="Oryza sativa Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "\\|([^\|]+)\\|" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/osa_ssp..Indica.or.ssp..Japonica_Proteins --ncbiTaxId 4530</pluginArgs>
+    <description><![CDATA[Oryza sativa (PLANTS, rice)  strain ssp. Indica or ssp. Japonica ]]></description>
+  </resource>
+  <resource version="42" resource="cel_Proteins" extDbRlsVer="1.1.1" organisms="Caenorhabditis elegans" category="EUKARYA" extDbName="TestDB" displayName="Caenorhabditis elegans Proteins (Wormbase)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit">
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexSecondaryId "\\|(.+)\$" --regexDesc "^&gt;[^\\s|]+\\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cel_Proteins --ncbiTaxId 6239</pluginArgs>
+    <description><![CDATA[Caenorhabditis elegans (NEMATODES) ]]></description>
+    <manualGet email="" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/c_elegans_peptide.fasta" contact="" institution="Wormbase"/>
+  </resource>
+  <resource version="2007-03-06" resource="cbr_Proteins" extDbRlsVer="1.1.1" organisms="Caenorhabditis briggsae" category="EUKARYA" extDbName="TestDB" displayName="Caenorhabditis briggsae Proteins (Wormbase)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit">
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexSecondaryId "\\|(.+)\$" --regexDesc "^&gt;[^\\s|]+\\s+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cbr_Proteins --ncbiTaxId 6238</pluginArgs>
+    <description><![CDATA[Caenorhabditis briggsae (NEMATODES) ]]></description>
+    <manualGet email="" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/c_briggsae_peptide.fasta" contact="" institution="Wormbase"/>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.tigr.org/private/euk/b_malayi_fh574/annotation_dbs/BMA1.pep" resource="bma_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.tigr.org/private/euk/b_malayi_fh574/annotation_dbs/BMA1.pep" organisms="Brugia malayi" category="EUKARYA" extDbName="TestDB" displayName="Brugia malayi Proteins (TIGR)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/bma_Proteins --ncbiTaxId 6279</pluginArgs>
+    <description><![CDATA[Brugia malayi (NEMATODES) ]]></description>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="dme_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Drosophila melanogaster" category="EUKARYA" extDbName="TestDB" displayName="Drosophila melanogaster Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="dmelanogaster_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/dme_Proteins --ncbiTaxId 7227</pluginArgs>
+    <description><![CDATA[Drosophila melanogaster (ARTHROPODA, fruit fly) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/dme_Proteins/martservice @downloadDir@/dme_Proteins/dme_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="aga_PEST_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Anopheles gambiae" category="EUKARYA" extDbName="TestDB" displayName="Anopheles gambiae Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="agambiae_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/aga_PEST_Proteins --ncbiTaxId 7165</pluginArgs>
+    <description><![CDATA[Anopheles gambiae (ARTHROPODA, mosquito)  strain PEST ]]></description>
+    <unpack>biomart2fasta @downloadDir@/aga_PEST_Proteins/martservice @downloadDir@/aga_PEST_Proteins/aga_PEST_Proteins.fa</unpack>
+  </resource>
+  <resource version="4" publicUrl="ftp://ftp.sanger.ac.uk/pub/pathogens/Schistosoma/mansoni/genome/gene_predictions/GeneDB_Smansoni_Proteins.v4.0.gz" resource="sma_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.sanger.ac.uk/pub/pathogens/Schistosoma/mansoni/genome/gene_predictions/GeneDB_Smansoni_Proteins.v4.0.gz" organisms="Schistosoma mansoni" category="EUKARYA" extDbName="TestDB" displayName="Schistosoma mansoni Proteins (sanger)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/sma_Proteins --ncbiTaxId 6183</pluginArgs>
+    <description><![CDATA[Schistosoma mansoni (PLATYHELMINTHES) ]]></description>
+    <unpack>gunzip @downloadDir@/sma_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="aed_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Aedes aegypti" category="EUKARYA" extDbName="TestDB" displayName="Aedes aegypti Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="aaegypti_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/aed_Proteins --ncbiTaxId 7159</pluginArgs>
+    <description><![CDATA[Aedes aegypti (ARTHOPODA, mosquito) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/aed_Proteins/martservice @downloadDir@/aed_Proteins/aed_Proteins.fa</unpack>
+  </resource>
+  <resource version="2007-03-06" publicUrl="ftp://ftp.ncbi.nih.gov/genomes/Apis_mellifera/protein/protein.fa.gz" resource="htt_Proteins" extDbRlsVer="1.1.1" url="ftp://ftp.ncbi.nih.gov/genomes/Apis_mellifera/protein/protein.fa.gz" organisms="Apis mellifera " category="EUKARYA" extDbName="TestDB" displayName="Apis mellifera  Proteins (GenBank)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <pluginArgs>--regexSourceId "(ref\\|[^|]+)" --regexSecondaryId "(gi\\|[^|]+)" --regexDesc "\\|([^|]+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/htt_Proteins --ncbiTaxId 7460</pluginArgs>
+    <description><![CDATA[Apis mellifera  (ARTHROPODA, honey bee) ]]></description>
+    <unpack>gunzip @downloadDir@/htt_Proteins/*.gz</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="cin_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Ciona intestinalis" category="EUKARYA" extDbName="TestDB" displayName="Ciona intestinalis Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="cintestinalis_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/cin_Proteins --ncbiTaxId 7719</pluginArgs>
+    <description><![CDATA[Ciona intestinalis (FISH, sea squirt) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/cin_Proteins/martservice @downloadDir@/cin_Proteins/cin_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="fru_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Takifugu rubripes" category="EUKARYA" extDbName="TestDB" displayName="Takifugu rubripes Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="trubripes_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/fru_Proteins --ncbiTaxId 31033</pluginArgs>
+    <description><![CDATA[Takifugu rubripes (FISH, fugu) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/fru_Proteins/martservice @downloadDir@/fru_Proteins/fru_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="tni_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Tetraodon nigroviridis" category="EUKARYA" extDbName="TestDB" displayName="Tetraodon nigroviridis Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="tnigroviridis_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/tni_Proteins --ncbiTaxId 99883</pluginArgs>
+    <description><![CDATA[Tetraodon nigroviridis (FISH, teleost fish ) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/tni_Proteins/martservice @downloadDir@/tni_Proteins/tni_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="dre_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Danio rerio" category="EUKARYA" extDbName="TestDB" displayName="Danio rerio Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="drerio_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/dre_Proteins --ncbiTaxId 7955</pluginArgs>
+    <description><![CDATA[Danio rerio (FISH, zebrafish) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/dre_Proteins/martservice @downloadDir@/dre_Proteins/dre_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="gga_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Gallus gallus" category="EUKARYA" extDbName="TestDB" displayName="Gallus gallus Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="ggallus_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/gga_Proteins --ncbiTaxId 9031</pluginArgs>
+    <description><![CDATA[Gallus gallus (BIRDS, chicken) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/gga_Proteins/martservice @downloadDir@/gga_Proteins/gga_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="mmu_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Mus musculus" category="EUKARYA" extDbName="TestDB" displayName="Mus musculus Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="mmusculus_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/mmu_Proteins --ncbiTaxId 10090</pluginArgs>
+    <description><![CDATA[Mus musculus (MAMMALS, mouse) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/mmu_Proteins/martservice @downloadDir@/mmu_Proteins/mmu_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="rno_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Rattus norvegicus" category="EUKARYA" extDbName="TestDB" displayName="Rattus norvegicus Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="rnorvegicus_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/rno_Proteins --ncbiTaxId 10116</pluginArgs>
+    <description><![CDATA[Rattus norvegicus (MAMMALS, Brown Norway Rat) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/rno_Proteins/martservice @downloadDir@/rno_Proteins/rno_Proteins.fa</unpack>
+  </resource>
+  <resource version="42" publicUrl="http://www.biomart.org/biomart/martservice" resource="has_Proteins" extDbRlsVer="1.1.1" url="http://www.biomart.org/biomart/martservice" organisms="Homo sapiens" category="EUKARYA" extDbName="TestDB" displayName="Homo sapiens Proteins (ensembl)" plugin="GUS::Supported::Plugin::LoadFastaSequences" dbCommit="@dbcommit@">
+    <wgetArgs>--tries=5</wgetArgs>
+    <wgetArg><![CDATA[--post-data='query=<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE Query><Query virtualSchemaName="default" header="1" count="" softwareVersion="0.5"><Dataset name="hsapiens_gene_ensembl" interface="default"><Attribute name="description" /><Attribute name="family" /><Attribute name="gene_stable_id" /><Attribute name="translation_stable_id" /><Attribute name="peptide" /><Filter name="biotype" value="protein_coding" /></Dataset></Query>']]></wgetArg>
+    <pluginArgs>--regexSourceId "^&gt;([^\\s|]+)" --regexDesc "^&gt;[^\\s|]+\\s*\\|(.+)\$" --tableName Dots::ExternalAASequence --externalDatabaseName "TestDB" --externalDatabaseVersion "1.1.1" --seqFileDir @downloadDir@/has_Proteins --ncbiTaxId 9606</pluginArgs>
+    <description><![CDATA[Homo sapiens (PRIMATES, human) ]]></description>
+    <unpack>biomart2fasta @downloadDir@/has_Proteins/martservice @downloadDir@/has_Proteins/has_Proteins.fa</unpack>
+  </resource>
     
 </resourcesPipeline>
 

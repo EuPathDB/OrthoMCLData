@@ -36,20 +36,22 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 #&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-#&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence");
+#&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs');
 #&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs', '1790,1861');
 
 
-#my $insertInterproConfig = "$projectDir/$release/resources_pipeline/primary/downloads/InterproscanData/insertInterpro-config.xml";
+my $insertInterproConfig = "$projectDir/$release/resources_pipeline/primary/downloads/InterproscanData/insertInterpro-config.xml";
 
 #&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
 my $extDbName = "OrthoMCL";
 my $extDbVersion = "2.0";
 
-&createExtDbAndDbRls($mgr, $extDbName, $extDbVersion);
+#&createExtDbAndDbRls($mgr, $extDbName, $extDbVersion);
 
-&loadOrthoMCLResults($mgr, $extDbName, $extDbVersion, "all_orthomcl.out");
+#&loadOrthoMCLResults($mgr, $extDbName, $extDbVersion, "all_orthomcl.out");
+
+&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence", "muscle3.6");
 
 #
 #

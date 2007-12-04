@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use WDK::Model::CommandHelper;
+use GUS::Supported::GusConfig;
+
+
+my $GUS_HOME = $ENV{GUS_HOME};
+my $CLASSPATH = &WDK::Model::CommandHelper::getJavaClasspath($GUS_HOME);
+my $sysProps = &WDK::Model::CommandHelper::getSystemProps($GUS_HOME, 'orthoPlugin');
+my $gusConfigFile = shift @ARGV;
+my $args = &WDK::Model::CommandHelper::getJavaArgs(@ARGV);
+
+my $gusConfig = GUS::Supported::GusConfig->new($gusConfigFile);
+
+my $connString = $gusConfig->{propertySet}->getProp("jdbcDsn");
+my $login = $gusConfig->getDatabaseLogin();
+my $password = $gusConfig->getDatabasePassword();
+
+
+my $cmd = "java $sysProps -classpath $CLASSPATH org.apidb.orthomcl.load.plugin.PluginLoader $args $connString $login $password";
+
+system($cmd);
