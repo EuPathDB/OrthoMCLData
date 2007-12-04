@@ -1,0 +1,111 @@
+ALL
+|  Archea
+|  |  hal
+|  |  mja
+|  |  neq
+|  |  sso
+|  Bacteria
+|  |  aae
+|  |  ban
+|  |  cpe
+|  |  cpn
+|  |  cte
+|  |  det
+|  |  dra
+|  |  lmo
+|  |  mtu
+|  |  rba
+|  |  sau
+|  |  spn
+|  |  syn
+|  |  tma
+|  |  tpa
+|  |  Protobacteria
+|  |  |  atu
+|  |  |  bsu
+|  |  |  bur
+|  |  |  cbu
+|  |  |  cje
+|  |  |  eco
+|  |  |  ftu
+|  |  |  gsu
+|  |  |  ftu
+|  |  |  gsu
+|  |  |  rso
+|  |  |  rty
+|  |  |  sfl
+|  |  |  sty
+|  |  |  vch
+|  |  |  wsu
+|  |  |  ype
+|  Eukaryota 
+|  |  ddi
+|  |  ehi
+|  |  gla
+|  |  Alveolates
+|  |  |  Ciliates
+|  |  |  |  tth
+|  |  |  Apicomplexa
+|  |  |  |  Coccidia
+|  |  |  |  |  cho
+|  |  |  |  |  cpa
+|  |  |  |  |  tgo
+|  |  |  |  Haemosporida
+|  |  |  |  |  pbe
+|  |  |  |  |  pch
+|  |  |  |  |  pfa
+|  |  |  |  |  pvi
+|  |  |  |  |  pyo
+|  |  |  |  |  pkn
+|  |  |  |  Piroplasmida
+|  |  |  |  |  the
+|  |  |  |  |  tan
+|  |  Kinetoplastida
+|  |  |  lma
+|  |  |  tbr
+|  |  |  tcr
+|  |  Plants/Algae
+|  |  |  ath
+|  |  |  cre
+|  |  |  cme
+|  |  |  gth
+|  |  |  osa
+|  |  |  ota
+|  |  |  tps
+|  |  Fungi
+|  |  |  ago
+|  |  |  aor
+|  |  |  cgl
+|  |  |  cne
+|  |  |  dha
+|  |  |  ecu
+|  |  |  kla
+|  |  |  ncr
+|  |  |  pha
+|  |  |  sce
+|  |  |  sme
+|  |  |  spo
+|  |  |  yli
+|  |  Animals
+|  |  |  Nematodes
+|  |  |  |  bma
+|  |  |  |  cel
+|  |  |  |  cbr
+|  |  |  Arthropoda
+|  |  |  |  aed
+|  |  |  |  aga
+|  |  |  |  ame
+|  |  |  |  dme
+|  |  |  Vertebrates
+|  |  |  |  Bony Fish
+|  |  |  |  |  cin
+|  |  |  |  |  dre
+|  |  |  |  |  fru
+|  |  |  |  |  tni
+|  |  |  |  Tetrapoda
+|  |  |  |  |  Birds
+|  |  |  |  |  |  gga
+|  |  |  |  |  Mammals
+|  |  |  |  |  |  hsa
+|  |  |  |  |  |  mmu
+|  |  |  |  |  |  rno
