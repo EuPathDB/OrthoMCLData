@@ -1,10 +1,10 @@
 ALL
-|  Archea
+|  ARC Archea
 |  |  hal
 |  |  mja
 |  |  neq
 |  |  sso
-|  Bacteria
+|  BAC Bacteria
 |  |  aae
 |  |  ban
 |  |  cpe
@@ -20,7 +20,7 @@ ALL
 |  |  syn
 |  |  tma
 |  |  tpa
-|  |  Protobacteria
+|  |  PRO Protobacteria
 |  |  |  atu
 |  |  |  bsu
 |  |  |  bur
@@ -38,33 +38,33 @@ ALL
 |  |  |  vch
 |  |  |  wsu
 |  |  |  ype
-|  Eukaryota 
+|  EUK Eukaryota 
 |  |  ddi
 |  |  ehi
 |  |  gla
-|  |  Alveolates
-|  |  |  Ciliates
+|  |  ALV Alveolates
+|  |  |  CIL Ciliates
 |  |  |  |  tth
-|  |  |  Apicomplexa
-|  |  |  |  Coccidia
+|  |  |  API Apicomplexa
+|  |  |  |  COC Coccidia
 |  |  |  |  |  cho
 |  |  |  |  |  cpa
 |  |  |  |  |  tgo
-|  |  |  |  Haemosporida
+|  |  |  |  HAE aemosporida
 |  |  |  |  |  pbe
 |  |  |  |  |  pch
 |  |  |  |  |  pfa
 |  |  |  |  |  pvi
 |  |  |  |  |  pyo
 |  |  |  |  |  pkn
-|  |  |  |  Piroplasmida
+|  |  |  |  PIR Piroplasmida
 |  |  |  |  |  the
 |  |  |  |  |  tan
-|  |  Kinetoplastida
+|  |  KIN Kinetoplastida
 |  |  |  lma
 |  |  |  tbr
 |  |  |  tcr
-|  |  Plants/Algae
+|  |  PLA Plants/Algae
 |  |  |  ath
 |  |  |  cre
 |  |  |  cme
@@ -72,7 +72,7 @@ ALL
 |  |  |  osa
 |  |  |  ota
 |  |  |  tps
-|  |  Fungi
+|  |  FUN Fungi
 |  |  |  ago
 |  |  |  aor
 |  |  |  cgl
@@ -86,26 +86,26 @@ ALL
 |  |  |  sme
 |  |  |  spo
 |  |  |  yli
-|  |  Animals
-|  |  |  Nematodes
+|  |  ANI Animals
+|  |  |  NEM Nematodes
 |  |  |  |  bma
 |  |  |  |  cel
 |  |  |  |  cbr
-|  |  |  Arthropoda
+|  |  |  ART Arthropoda
 |  |  |  |  aed
 |  |  |  |  aga
 |  |  |  |  ame
 |  |  |  |  dme
-|  |  |  Vertebrates
-|  |  |  |  Bony Fish
+|  |  |  VER Vertebrates
+|  |  |  |  FSH Bony Fish
 |  |  |  |  |  cin
 |  |  |  |  |  dre
 |  |  |  |  |  fru
 |  |  |  |  |  tni
-|  |  |  |  Tetrapoda
+|  |  |  |  TET Tetrapoda
 |  |  |  |  |  Birds
 |  |  |  |  |  |  gga
-|  |  |  |  |  Mammals
+|  |  |  |  |  MAM Mammals
 |  |  |  |  |  |  hsa
 |  |  |  |  |  |  mmu
 |  |  |  |  |  |  rno
