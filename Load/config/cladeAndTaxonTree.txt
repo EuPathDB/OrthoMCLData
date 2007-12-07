@@ -1,111 +1,22 @@
 ALL All
 |  ARC Archea
-|  |  hal
-|  |  mja
-|  |  neq
-|  |  sso
 |  BAC Bacteria
-|  |  aae
-|  |  ban
-|  |  cpe
-|  |  cpn
-|  |  cte
-|  |  det
-|  |  dra
-|  |  lmo
-|  |  mtu
-|  |  rba
-|  |  sau
-|  |  spn
-|  |  syn
-|  |  tma
-|  |  tpa
 |  |  PRO Protobacteria
-|  |  |  atu
-|  |  |  bsu
-|  |  |  bur
-|  |  |  cbu
-|  |  |  cje
-|  |  |  eco
-|  |  |  ftu
-|  |  |  gsu
-|  |  |  ftu
-|  |  |  gsu
-|  |  |  rso
-|  |  |  rty
-|  |  |  sfl
-|  |  |  sty
-|  |  |  vch
-|  |  |  wsu
-|  |  |  ype
 |  EUK Eukaryota 
-|  |  ddi
-|  |  ehi
-|  |  gla
 |  |  ALV Alveolates
 |  |  |  CIL Ciliates
-|  |  |  |  tth
 |  |  |  API Apicomplexa
 |  |  |  |  COC Coccidia
-|  |  |  |  |  cho
-|  |  |  |  |  cpa
-|  |  |  |  |  tgo
-|  |  |  |  HAE aemosporida
-|  |  |  |  |  pbe
-|  |  |  |  |  pch
-|  |  |  |  |  pfa
-|  |  |  |  |  pvi
-|  |  |  |  |  pyo
-|  |  |  |  |  pkn
+|  |  |  |  HAE Haemosporida
 |  |  |  |  PIR Piroplasmida
-|  |  |  |  |  the
-|  |  |  |  |  tan
 |  |  KIN Kinetoplastida
-|  |  |  lma
-|  |  |  tbr
-|  |  |  tcr
-|  |  PLA Plants/Algae
-|  |  |  ath
-|  |  |  cre
-|  |  |  cme
-|  |  |  gth
-|  |  |  osa
-|  |  |  ota
-|  |  |  tps
+|  |  PLA Plants and Algae
 |  |  FUN Fungi
-|  |  |  ago
-|  |  |  aor
-|  |  |  cgl
-|  |  |  cne
-|  |  |  dha
-|  |  |  ecu
-|  |  |  kla
-|  |  |  ncr
-|  |  |  pha
-|  |  |  sce
-|  |  |  sme
-|  |  |  spo
-|  |  |  yli
 |  |  ANI Animals
 |  |  |  NEM Nematodes
-|  |  |  |  bma
-|  |  |  |  cel
-|  |  |  |  cbr
 |  |  |  ART Arthropoda
-|  |  |  |  aed
-|  |  |  |  aga
-|  |  |  |  ame
-|  |  |  |  dme
 |  |  |  VER Vertebrates
 |  |  |  |  FSH Bony Fish
-|  |  |  |  |  cin
-|  |  |  |  |  dre
-|  |  |  |  |  fru
-|  |  |  |  |  tni
 |  |  |  |  TET Tetrapoda
-|  |  |  |  |  Birds
-|  |  |  |  |  |  gga
+|  |  |  |  |  BIR Birds
 |  |  |  |  |  MAM Mammals
-|  |  |  |  |  |  hsa
-|  |  |  |  |  |  mmu
-|  |  |  |  |  |  rno
