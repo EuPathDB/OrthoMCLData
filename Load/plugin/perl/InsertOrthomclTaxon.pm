@@ -94,7 +94,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 9 $',
+                      cvsRevision       => '$Revision: 19493 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -185,7 +185,7 @@ sub parseSpeciesFile {
 	    $clade || die "can't find clade with code '$3' for species '$1'\n";
 	    $species->setParent($clade);
 	    $species->setIsSpecies(1);
-	    $species->setName('fake name');
+	    $species->setName(' ');
 	    $species->setDepthFirstIndex($clade->getDepthFirstIndex());
 	}  else {
 	    $self->userError("invalid line in species file: '$_'");
