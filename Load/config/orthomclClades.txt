@@ -20,4 +20,3 @@ ALL All
 |  |  |  |  TET Tetrapoda
 |  |  |  |  |  BIR Birds
 |  |  |  |  |  MAM Mammals
-
