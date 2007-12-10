@@ -94,7 +94,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19493 $',
+                      cvsRevision       => '$Revision: 19496 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -168,7 +168,7 @@ sub parseSpeciesFile {
     open(FILE, $speciesFile) || $self->userError("can't open species file '$speciesFile'");
 
     my $dbh = $self->getQueryHandle();
-    my $sql = "SELECT taxon_id, name 
+    my $sql = "SELECT t.taxon_id, tn.name
                FROM sres.taxon t, sres.taxonname tn
                WHERE ncbi_tax_id = ?
                AND t.taxon_id = tn.taxon_id
@@ -199,15 +199,15 @@ sub parseSpeciesFile {
 }
 
 sub getTaxonId {
-    my ($self, $stmt, $ncbiTaxId) = @_;
+  my ($self, $stmt, $ncbiTaxId) = @_;
 
 
   my @ids = $self->sqlAsArray( Handle => $stmt, Bind => [$ncbiTaxId] );
 
-  if(scalar @ids != 1) {
+  if(scalar @ids != 2) {
     $self->error("Should return one value for ncbi_tax_id '$ncbiTaxId'");
   }
-  return $ids[0];
+  return @ids;
 
 }
 
