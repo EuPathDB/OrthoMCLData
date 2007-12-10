@@ -1,0 +1,23 @@
+ALL All
+|  ARC Archea
+|  BAC Bacteria
+|  |  PRO Protobacteria
+|  EUK Eukaryota 
+|  |  ALV Alveolates
+|  |  |  CIL Ciliates
+|  |  |  API Apicomplexa
+|  |  |  |  COC Coccidia
+|  |  |  |  HAE Haemosporida
+|  |  |  |  PIR Piroplasmida
+|  |  KIN Kinetoplastida
+|  |  PLA Plants and Algae
+|  |  FUN Fungi
+|  |  ANI Animals
+|  |  |  NEM Nematodes
+|  |  |  ART Arthropoda
+|  |  |  VER Vertebrates
+|  |  |  |  FSH Bony Fish
+|  |  |  |  TET Tetrapoda
+|  |  |  |  |  BIR Birds
+|  |  |  |  |  MAM Mammals
+
