@@ -129,6 +129,7 @@ sub parseCladeFile {
     my $lastCladePerLevel = [];
     my $cladeHash = {};
     my $rootClade;
+
     while(<FILE>) {
 	chomp;
 	$depth_first_index++;
@@ -167,8 +168,11 @@ sub parseSpeciesFile {
     open(FILE, $speciesFile) || $self->userError("can't open species file '$speciesFile'");
 
     my $dbh = $self->getQueryHandle();
-    my $sql = "SELECT taxon_id FROM sres.taxon
-             WHERE  ncbi_tax_id = ?";
+    my $sql = "SELECT taxon_id, name 
+               FROM sres.taxon t, sres.taxonname tn
+               WHERE ncbi_tax_id = ?
+               AND t.taxon_id = tn.taxon_id
+               AND tn.name_class = 'scientific name'";
 
     my $stmt = $dbh->prepare($sql);
  
@@ -181,11 +185,12 @@ sub parseSpeciesFile {
 	if (/([a-z]{3})\t([A-Z]{3})\t(\d+)/) {
 	    $species->setThreeLetterAbbrev($1);
 	    my $clade = $cladeHash->{$2};
-	    $species->setTaxonId($self->getTaxonId($stmt, $3));
+            my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $3);
+	    $species->setTaxonId($taxonId);
 	    $clade || die "can't find clade with code '$3' for species '$1'\n";
 	    $species->setParent($clade);
 	    $species->setIsSpecies(1);
-	    $species->setName(' ');
+	    $species->setName($taxonName);
 	    $species->setDepthFirstIndex($clade->getDepthFirstIndex());
 	}  else {
 	    $self->userError("invalid line in species file: '$_'");
