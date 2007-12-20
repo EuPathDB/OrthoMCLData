@@ -32,6 +32,8 @@ public class PluginLoader {
         System.arraycopy(args, 1, pluginArgs, 0, pluginArgs.length);
 
         invokePlugin(pluginClassName, pluginArgs);
+        
+        System.exit(0);
     }
 
     /**

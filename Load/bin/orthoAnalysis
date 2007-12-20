@@ -44,6 +44,7 @@ my $insertInterproConfig = "$projectDir/$release/resources_pipeline/primary/down
 
 #&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
+
 my $extDbName = "OrthoMCL";
 my $extDbVersion = "2.0";
 
@@ -53,7 +54,11 @@ my $extDbVersion = "2.0";
 
 #&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence", "muscle3.6");
 
-&createBioLayoutFiles($mgr, "dots.ExternalAaSequence", "biolayout-1.21");
+
+my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomcl/master/mainresult/orthomcl.rbh";
+my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
+
+&createBiolayoutData($mgr, $rbhFile, $svgTemplate);
 
 #
 #

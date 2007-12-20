@@ -3,11 +3,12 @@
  */
 package org.apidb.orthomcl.load.plugin;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -17,9 +18,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+
+import oracle.sql.BLOB;
+import oracle.sql.CLOB;
 
 import org.apache.log4j.Logger;
 
@@ -29,13 +31,16 @@ import org.apache.log4j.Logger;
  */
 public class GenerateBioLayoutPlugin implements Plugin {
 
-    private class Pair {
-        int queryId;
-        int subjectId;
+    public static class Taxon {
 
-        public Pair(int queryId, int subjectId) {
-            this.queryId = queryId;
-            this.subjectId = subjectId;
+        public int Id;
+        public String Abbreviation;
+        public String Name;
+
+        public Taxon(int id, String abbreviation, String name) {
+            Id = id;
+            Abbreviation = abbreviation.intern();
+            Name = name.intern();
         }
 
         /*
@@ -45,10 +50,9 @@ public class GenerateBioLayoutPlugin implements Plugin {
          */
         @Override
         public boolean equals(Object obj) {
-            if (obj instanceof Pair) {
-                Pair p = (Pair) obj;
-                return this.queryId == p.queryId
-                        && this.subjectId == p.subjectId;
+            if (obj instanceof Taxon) {
+                Taxon taxon = (Taxon) obj;
+                return this.Id == taxon.Id;
             } else return false;
         }
 
@@ -59,32 +63,93 @@ public class GenerateBioLayoutPlugin implements Plugin {
          */
         @Override
         public int hashCode() {
-            return queryId ^ subjectId;
+            return Id;
+        }
+    }
+
+    public enum EdgeType {
+        BestHit, BetterHit, General
+    }
+
+    public static class Sequence {
+        public int SequenceId;
+        public String SourceId;
+        public int TaxonId;
+        public String Description;
+
+        public Sequence(int sequenceId, String sourceId, int taxonId,
+                String description) {
+            SequenceId = sequenceId;
+            SourceId = sourceId.intern();
+            TaxonId = taxonId;
+            Description = description;
+        }
+    }
+
+    public static class OrthomclEdge {
+
+        public int EdgeId;
+        public int QueryId;
+        public int SubjectId;
+        public EdgeType Type = EdgeType.General;
+        public double PValueMant;
+        public int PValueExp;
+        /**
+         * The weight is a function of pvalue, scaling into [0, 255]
+         */
+        public double Weight;
+
+        public OrthomclEdge(int queryId, int subjectId) {
+            QueryId = queryId;
+            SubjectId = subjectId;
         }
 
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Object#equals(java.lang.Object)
+         */
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof OrthomclEdge) {
+                OrthomclEdge edge = (OrthomclEdge) obj;
+                return (QueryId == edge.QueryId && SubjectId == edge.SubjectId)
+                        || (QueryId == edge.SubjectId && SubjectId == edge.QueryId);
+            }
+            return false;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see java.lang.Object#hashCode()
+         */
+        @Override
+        public int hashCode() {
+            return QueryId ^ SubjectId;
+        }
     }
 
     private static final Logger logger = Logger.getLogger(GenerateBioLayoutPlugin.class);
 
-    private Object hiddenFrame;
+    private Object processor;
     private Method saveMethod;
 
     private Connection connection;
-    private String sequenceTable;
-    private File inDir;
-    private File outDir;
-    private File imgDir;
+    private File rbhFile;
+    private File svgFile;
+    private File signalFile;
 
     public GenerateBioLayoutPlugin() throws ClassNotFoundException,
             InstantiationException, IllegalAccessException, SecurityException,
             NoSuchMethodException {
-        Class<?> frameClass = Class.forName("HiddenLayoutFrame");
-        hiddenFrame = frameClass.newInstance();
+        Class<?> processorClass = Class.forName("BiolayoutProcessor");
+        processor = processorClass.newInstance();
 
         // get the handle to the method
-        Class<?>[] params = { File.class, File.class, File.class };
-        saveMethod = hiddenFrame.getClass().getDeclaredMethod("saveFile",
-                params);
+        Class<?>[] params = { Map.class, Map.class, Map.class, String[].class,
+                OutputStream.class, OutputStream.class };
+        saveMethod = processor.getClass().getDeclaredMethod("saveData", params);
     }
 
     /*
@@ -92,37 +157,41 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
-    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
-        if (args.length != 5) {
-            throw new OrthoMCLException("The args should be: <sequence_table> "
-                    + "<bl_output_dir> <connection_string> <login> <password>");
+        if (args.length != 6) {
+            throw new OrthoMCLException(
+                    "The args should be: <rbh_file> "
+                            + "<svg_template> <signal_file> <connection_string> <login> <password>");
         }
 
-        sequenceTable = args[0];
-        String blDirName = args[1];
-        String connectionString = args[2];
-        String login = args[3];
-        String password = args[4];
+        String rbhFileName = args[0];
+        String svgFileName = args[1];
+        String signalFileName = args[2];
+        String connectionString = args[3];
+        String login = args[4];
+        String password = args[5];
 
         try {
+            // create connection
             DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
             connection = DriverManager.getConnection(connectionString, login,
                     password);
-            File blDir = new File(blDirName);
-            if (!blDir.exists() || !blDir.isDirectory())
-                throw new FileNotFoundException(blDirName);
 
-            // prepare directory structure
-            inDir = new File(blDir, "/input/");
-            if (!inDir.exists()) inDir.mkdirs();
-            outDir = new File(blDir, "/master/mainresult/bl/");
-            if (!outDir.exists()) outDir.mkdirs();
-            imgDir = new File(blDir, "/master/mainresult/img/");
-            if (!imgDir.exists()) imgDir.mkdirs();
+            // check if RBH file exists
+            rbhFile = new File(rbhFileName);
+            if (!rbhFile.exists() || !rbhFile.isFile())
+                throw new FileNotFoundException(rbhFileName);
+
+            // check if SVG template file exists
+            svgFile = new File(svgFileName);
+            if (!svgFile.exists() || !svgFile.isFile())
+                throw new FileNotFoundException(svgFileName);
+
+            signalFile = new File(signalFileName);
+            if (signalFile.exists()) signalFile.delete();
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
-        } catch (FileNotFoundException ex) {
+        } catch (IOException ex) {
             throw new OrthoMCLException(ex);
         }
     }
@@ -132,46 +201,71 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
-    @Override
     public void invoke() throws OrthoMCLException {
         try {
             PreparedStatement psSimilarity = connection.prepareStatement("SELECT "
-                    + "  s.query_id, s.subject_id, s.pvalue_mant, s.pvalue_exp "
+                    + "  s.pvalue_mant, s.pvalue_exp "
                     + " FROM dots.Similarity s "
-                    + " WHERE query_id != subject_id "
-                    + "   AND query_id IN (SELECT aa_sequence_id "
-                    + "                    FROM apidb.OrthologGroupAaSequence "
-                    + "                    WHERE ortholog_group_id = ?) "
-                    + " AND subject_id IN (SELECT aa_sequence_id "
-                    + "                    FROM apidb.OrthologGroupAaSequence "
-                    + "                    WHERE ortholog_group_id = ?) ");
+                    + " WHERE (query_id = ? AND subject_id = ?) "
+                    + "  OR (query_id = ? AND subject_id = ?) ");
             PreparedStatement psSequence = connection.prepareStatement("SELECT"
-                    + "      ogs.aa_sequence_id, eas.taxon_id "
+                    + "      ogs.aa_sequence_id, eas.source_id, eas.taxon_id, "
+                    + "      eas.description "
                     + " FROM apidb.OrthologGroupAaSequence ogs, "
-                    + sequenceTable + " eas "
+                    + "      dots.ExternalAaSequence eas "
                     + " WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
                     + "   AND ogs.ortholog_group_id = ?");
+            PreparedStatement psUpdateImage = connection.prepareStatement("UPDATE "
+                    + "  apidb.OrthologGroup "
+                    + " SET biolayout_image = ?, svg_content = ? "
+                    + " WHERE ortholog_group_id = ?");
 
+            // read SVG template
+            logger.debug("Loading SVG template...");
+            String[] svgTemplate = loadSVGTemplate(svgFile);
+
+            // read RBH file
+            logger.debug("Loading RBH file...");
+            Map<OrthomclEdge, OrthomclEdge> rbhEdges = loadRBHFile(rbhFile);
+
+            // load taxons
+            logger.debug("Loading taxon info...");
+            Map<Integer, Taxon> taxons = loadTaxons();
+
+            logger.debug("Getting unfinished groups...");
             Statement stGroup = connection.createStatement();
             ResultSet rsGroup = stGroup.executeQuery("SELECT og.name, "
                     + "      og.ortholog_group_id "
-                    + " FROM apidb.OrthologGroup og ");
+                    + " FROM apidb.OrthologGroup og "
+                    + " WHERE biolayout_image IS NULL");
             int groupCount = 0;
+            boolean hasMore = false;
             while (rsGroup.next()) {
+                // only run 2000 for each run
+                if (groupCount >= 2000) {
+                    hasMore = true;
+                    break;
+                }
                 int groupId = rsGroup.getInt("ortholog_group_id");
                 String groupName = rsGroup.getString("name");
-                createLayout(groupId, groupName, psSequence, psSimilarity);
+                createLayout(groupId, groupName, taxons, rbhEdges, svgTemplate,
+                        psSequence, psSimilarity, psUpdateImage);
 
                 groupCount++;
                 if (groupCount % 100 == 0) {
+                    // psUpdateImage.executeBatch();
                     logger.debug(groupCount + " groups created...");
                 }
             }
-            logger.info("Total " + groupCount + " groups created at "
-                    + outDir.getAbsolutePath());
+            if (groupCount % 100 != 0) psUpdateImage.executeBatch();
+
+            logger.info("Total " + groupCount + " groups created.");
             rsGroup.close();
             stGroup.close();
             psSimilarity.close();
+
+            // create signal id finished
+            if (!hasMore) signalFile.createNewFile();
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
         } catch (IllegalArgumentException ex) {
@@ -182,78 +276,233 @@ public class GenerateBioLayoutPlugin implements Plugin {
             throw new OrthoMCLException(ex);
         } catch (IOException ex) {
             throw new OrthoMCLException(ex);
+        } catch (SecurityException ex) {
+            throw new OrthoMCLException(ex);
         }
+    }
+
+    private String[] loadSVGTemplate(File svgFile) throws IOException {
+        String[] template = new String[3];
+        BufferedReader reader = new BufferedReader(new FileReader(svgFile));
+        StringBuffer buffer = new StringBuffer();
+        String line;
+
+        // read header
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
+            if (line.equals("$$DataSection$$")) break;
+            buffer.append(line);
+            buffer.append("\n");
+        }
+        template[0] = buffer.toString();
+
+        // read middle part
+        buffer = new StringBuffer();
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
+            if (line.equals("$$DisplaySection$$")) break;
+            buffer.append(line);
+            buffer.append("\n");
+        }
+        template[1] = buffer.toString();
+
+        // read footer
+        buffer = new StringBuffer();
+        while ((line = reader.readLine()) != null) {
+            buffer.append(line.trim());
+            buffer.append("\n");
+        }
+        template[2] = buffer.toString();
+
+        reader.close();
+        return template;
+    }
+
+    private Map<OrthomclEdge, OrthomclEdge> loadRBHFile(File rbhFile)
+            throws IOException {
+        Map<OrthomclEdge, OrthomclEdge> edges = new HashMap<OrthomclEdge, OrthomclEdge>();
+        BufferedReader reader = new BufferedReader(new FileReader(rbhFile));
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            line = line.trim().toLowerCase();
+            if (line.length() == 0 || line.charAt(0) == '#') continue;
+
+            String[] parts = line.split("\\s+");
+            int queryId = Integer.parseInt(parts[0]);
+            int subjectId = Integer.parseInt(parts[1]);
+            OrthomclEdge edge = new OrthomclEdge(queryId, subjectId);
+
+            int pos = parts[3].toLowerCase().indexOf('e');
+            if (pos >= 0) {
+                edge.PValueMant = Double.parseDouble(parts[3].substring(0, pos));
+                edge.PValueExp = Integer.parseInt(parts[3].substring(pos + 1));
+            } else {
+                edge.PValueMant = Double.parseDouble(parts[3]);
+                edge.PValueExp = 0;
+            }
+
+            if (parts[2].equalsIgnoreCase("o")) {
+                edge.Type = EdgeType.BestHit;
+            } else if (parts[2].equalsIgnoreCase("i")) {
+                edge.Type = EdgeType.BetterHit;
+            }
+            if (!edges.containsKey(edge)) edges.put(edge, edge);
+        }
+        reader.close();
+        return edges;
+    }
+
+    private Map<Integer, Taxon> loadTaxons() throws SQLException {
+        Statement stTaxon = connection.createStatement();
+        ResultSet rsTaxon = stTaxon.executeQuery("SELECT ot.taxon_id, "
+                + "      ot.three_letter_abbrev, ot.name "
+                + " FROM apidb.OrthomclTaxon ot " + " WHERE ot.is_species = 1");
+        Map<Integer, Taxon> taxons = new HashMap<Integer, Taxon>();
+        while (rsTaxon.next()) {
+            int taxonId = rsTaxon.getInt("taxon_id");
+            String abbrev = rsTaxon.getString("three_letter_abbrev");
+            String taxonName = rsTaxon.getString("name");
+            taxons.put(taxonId, new Taxon(taxonId, abbrev, taxonName));
+        }
+        rsTaxon.close();
+        stTaxon.close();
+        return taxons;
     }
 
     private void createLayout(int groupId, String groupName,
-            PreparedStatement psSequence, PreparedStatement psSimilarity)
-            throws IllegalArgumentException, IllegalAccessException,
-            InvocationTargetException, SQLException, IOException {
-        // decide output file
-        File inFile = new File(inDir, groupName + ".in");
-        File outFile = new File(outDir, groupName + ".bl");
-        File imgFile = new File(imgDir, groupName + ".png");
+            Map<Integer, Taxon> taxons,
+            Map<OrthomclEdge, OrthomclEdge> rbhEdges, String[] svgTemplate,
+            PreparedStatement psSequence, PreparedStatement psSimilarity,
+            PreparedStatement psUpdateImage) throws IllegalArgumentException,
+            IllegalAccessException, InvocationTargetException, SQLException,
+            IOException {
+        // get a sequence-taxon map
+        Map<Integer, Sequence> sequenceMap = getSequences(groupId, psSequence);
+        int[] sequences = new int[sequenceMap.size()];
+        int index = 0;
+        for (int sequence : sequenceMap.keySet())
+            sequences[index++] = sequence;
 
-        PrintWriter inWriter = new PrintWriter(new FileWriter(inFile));
+        // enumerate all pairs
+        Map<OrthomclEdge, OrthomclEdge> edges = new HashMap<OrthomclEdge, OrthomclEdge>();
+        int edgeIndex = 0;
+        for (int i = 0; i < sequences.length - 1; i++) {
+            for (int j = i + 1; j < sequences.length; j++) {
+                int queryId = sequences[i];
+                int subjectId = sequences[j];
 
-        // extract pairs and create input file
-        extractPairs(groupId, psSimilarity, inWriter);
+                OrthomclEdge edge = rbhEdges.get(new OrthomclEdge(queryId,
+                        subjectId));
 
-        // extract node classes and append to the input file
-        extractNodes(groupId, psSequence, inWriter);
+                // try to extract general edge if it's not in RBH
+                if (edge == null)
+                    edge = extractEdge(queryId, subjectId, psSimilarity);
 
-        inWriter.close();
+                if (edge != null) {
+                    edge.EdgeId = edgeIndex++;
+                    edges.put(edge, edge);
+                }
+            }
+        }
+        // normalize the weights to be in [0..1]
+        normalizeWeights(edges);
+
+        CLOB clob = CLOB.createTemporary(connection, false,
+                CLOB.DURATION_SESSION);
+        OutputStream svgStream = clob.setAsciiStream(1);
+        BLOB blob = BLOB.createTemporary(connection, false,
+                BLOB.DURATION_SESSION);
+        OutputStream imgStream = blob.setBinaryStream(1);
+
+        // TEST
+        // logger.debug("Group: " + groupName);
+        // OutputStream svgStream = new FileOutputStream(new File("/tmp/"
+        // + groupName + ".svg"));
+        // OutputStream imgStream = new FileOutputStream(new File("/tmp/"
+        // + groupName + ".png"));
+
+        saveMethod.invoke(processor, taxons, sequenceMap, edges, svgTemplate,
+                svgStream, imgStream);
+
+        svgStream.close();
+        imgStream.close();
+        // System.exit(0);
 
         // save the layout and image though BioLayout
-        saveMethod.invoke(hiddenFrame, inFile, outFile, imgFile);
+
+        psUpdateImage.setBlob(1, blob);
+        psUpdateImage.setClob(2, clob);
+        psUpdateImage.setInt(3, groupId);
+        // psUpdateImage.addBatch();
+        psUpdateImage.execute();
     }
 
-    private void extractPairs(int groupId, PreparedStatement psSimilarity,
-            PrintWriter inWriter) throws SQLException {
+    private Map<Integer, Sequence> getSequences(int groupId,
+            PreparedStatement psSequence) throws SQLException {
+        psSequence.setInt(1, groupId);
+        ResultSet rsSequence = psSequence.executeQuery();
+        Map<Integer, Sequence> sequenceMap = new HashMap<Integer, Sequence>();
+        while (rsSequence.next()) {
+            int sequenceId = rsSequence.getInt("aa_sequence_id");
+            String sourceId = rsSequence.getString("source_id");
+            int taxonId = rsSequence.getInt("taxon_id");
+            String description = rsSequence.getString("description");
+            sequenceMap.put(sequenceId, new Sequence(sequenceId, sourceId,
+                    taxonId, description));
+        }
+        rsSequence.close();
+        return sequenceMap;
+    }
+
+    private OrthomclEdge extractEdge(int queryId, int subjectId,
+            PreparedStatement psSimilarity) throws SQLException {
         // get all pairs
-        psSimilarity.setInt(1, groupId);
-        psSimilarity.setInt(2, groupId);
+        psSimilarity.setInt(1, queryId);
+        psSimilarity.setInt(2, subjectId);
+        psSimilarity.setInt(3, subjectId);
+        psSimilarity.setInt(4, queryId);
         ResultSet rsSimilarity = psSimilarity.executeQuery();
-        Map<Pair, Double> pairs = new HashMap<Pair, Double>();
+        int count = 0;
+        double mantMax = 0;
+        int expMax = Integer.MIN_VALUE;
         while (rsSimilarity.next()) {
-            int queryId = rsSimilarity.getInt("query_id");
-            int subjectId = rsSimilarity.getInt("subject_id");
-            double pValueMant = rsSimilarity.getDouble("pvalue_mant");
             int pValueExp = rsSimilarity.getInt("pvalue_exp");
-            double score = (pValueMant == 0) ? 181
-                    : (-Math.log10(pValueMant) - pValueExp);
-            pairs.put(new Pair(queryId, subjectId), score);
+            if (expMax < pValueExp) {
+                mantMax = rsSimilarity.getDouble("pvalue_mant");
+                expMax = pValueExp;
+            }
+            count++;
         }
         rsSimilarity.close();
 
-        // output both-way pairs
-        Set<Pair> skipPairs = new HashSet<Pair>();
-        for (Pair pair : pairs.keySet()) {
-            // skip the pair that has been used
-            if (skipPairs.contains(pair)) continue;
-            
-            // check if backward pair exists; if not, skip to the next
-            Pair backPair = new Pair(pair.subjectId, pair.queryId);
-            if (pairs.containsKey(backPair)) {
-                skipPairs.add(backPair);
-                double score = (pairs.get(pair) + pairs.get(backPair)) / 2;
-                inWriter.println(String.format("%1$d\t%2$d\t%3$6.2f",
-                        pair.queryId, pair.subjectId, score));
-            }
+        // only output 2-way matches
+        if (count != 2) return null;
+        else {
+            OrthomclEdge edge = new OrthomclEdge(queryId, subjectId);
+            edge.PValueMant = mantMax;
+            edge.PValueExp = expMax;
+            return edge;
         }
-        inWriter.flush();
     }
 
-    private void extractNodes(int groupId, PreparedStatement psSequence,
-            PrintWriter inWriter) throws SQLException {
-        psSequence.setInt(1, groupId);
-        ResultSet rsSequence = psSequence.executeQuery();
-        while (rsSequence.next()) {
-            int sequenceId = rsSequence.getInt("aa_sequence_id");
-            int taxonId = rsSequence.getInt("taxon_id");
-            inWriter.println("//NODECLASS\t" + sequenceId + "\t" + taxonId);
+    private void normalizeWeights(Map<OrthomclEdge, OrthomclEdge> edges) {
+        // compute weights
+        double min = Double.MAX_VALUE;
+        double max = -Double.MAX_VALUE;
+        for (OrthomclEdge edge : edges.values()) {
+            if (edge.PValueMant == 0) {
+                edge.Weight = 181;
+            } else {
+                edge.Weight = -Math.log10(edge.PValueMant) - edge.PValueExp;
+            }
+            if (edge.Weight > max) max = edge.Weight;
+            if (edge.Weight < min) min = edge.Weight;
         }
-        rsSequence.close();
-        inWriter.flush();
+        // normalize weights
+        double range = (max == min) ? 1 : (max - min);
+        for (OrthomclEdge edge : edges.values()) {
+            edge.Weight = (edge.Weight - min) / range;
+        }
     }
 }

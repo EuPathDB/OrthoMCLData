@@ -61,7 +61,6 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
-    @Override
     public void invoke() throws OrthoMCLException {
         try {
             PreparedStatement psSelectSimilarity = connection.prepareStatement("SELECT"
@@ -133,7 +132,6 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
-    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
         if (args.length != 5) {
@@ -181,7 +179,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         double sumPercentMatch = 0;
         double sumEvalue = 0;
         int[] connectivities = new int[sequences.size()];
-        for (int i = 0; i < sequences.size(); i++) {
+        for (int i = 0; i < sequences.size() - 1; i++) {
             for (int j = i + 1; j < sequences.size(); j++) {
                 int sequence1 = sequences.get(i);
                 int sequence2 = sequences.get(j);
