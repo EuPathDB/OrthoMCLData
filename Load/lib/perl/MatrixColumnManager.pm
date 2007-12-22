@@ -1,8 +1,10 @@
-package OrthoMCLWebsite::Model::Ppe::ColumnManager;
+package OrthoMCLData::Load::MatrixColumnManager;
 
 use strict;
 use Data::Dumper;
 
+# an object that maps species and clades onto the generic columns
+# in the apidb.grouptaxonmatrix table
 
 sub new {
     my ($class, $dbh) = @_;
@@ -18,12 +20,19 @@ sub new {
 # use it to generate a column name for a particular taxon
 # each taxon gets two columns, one for protein count, one for taxon count.
 # to get column number, double the index.  if taxon count desired, add 1.
-sub getColumnName {
+sub getColumnNumber {
     my ($self, $taxonAbbrev, $proteinOrTaxonFlag) = @_;
 
     my $colNum = $self->getValidTaxonAbbrevs()->{$taxonAbbrev} * 2
 	+ ($proteinOrTaxonFlag eq 'T'? 1 : 0);
 
+    return $colNum;
+}
+
+sub getColumnName {
+    my ($self, $taxonAbbrev, $proteinOrTaxonFlag) = @_;
+
+    my $colNum = $self->getColumnNumber($taxonAbbrev, $proteinOrTaxonFlag);
     return "column$colNum";
 }
 
