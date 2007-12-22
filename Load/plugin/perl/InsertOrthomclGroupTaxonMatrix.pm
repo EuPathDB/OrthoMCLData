@@ -64,7 +64,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19527 $',
+                      cvsRevision       => '$Revision: 19729 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -91,38 +91,6 @@ sub run {
     return "inserted $count rows"
 }
 
-sub insertRows {
-    my ($self, $dbh, $columnManager) = @_;
-    my $sql = "
-SELECT g.ortholog_group_id, t.three_letter_abbrev, gs.aa_sequence_id
-FROM apidb.orthologgroup g, apidb.orthomcltaxon t,
-     apidb.orthologgroupaasequence gs, dots.aasequence s
-WHERE gs.ortholog_group_id = g.ortholog_group_id
-  AND s.aa_sequence_id = gs.aa_sequence_id
-  AND t.taxon_id = s.taxon_id
-ORDER BY g.ortholog_group_id
-";
-
-    my $prevGroupId;
-    my $firstRow = 1;
-    my $groupProteinsPerSpecies;
-    my $count;
-    my $stmt = $dbh->prepareAndExecute($sql);
-    while (my ($groupId,$species) = $stmt->fetchrow_array()) {
-      if ($groupId != $prevGroupId && !$firstRow) {
-	$self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
-				     $columnManager);
-	$count++;
-	$prevGroupId = $groupId;
-	$groupProteinsPerSpecies = {};
-      }
-      $groupProteinsPerSpecies->{$species} += 1;
-    }
-    $self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
-				 $columnManager);
-    return $count+1;
-}
-
 # get a map of species to clades (transitive), plus a total count of species
 # and clades
 sub getSpeciesClades {
@@ -146,7 +114,7 @@ WHERE is_species = 0
   my $sql= "
 SELECT three_letter_abbrev, depth_first_index, sibling_depth_first_index
 FROM apidb.orthomcltaxon
-WHERE is_species = 0
+WHERE is_species = 1
 ";
   my $stmt = $dbh->prepareAndExecute($sql);
 
@@ -160,6 +128,45 @@ WHERE is_species = 0
     }
   }
   return ($species,$taxaCount);
+}
+
+sub insertRows {
+    my ($self, $dbh, $columnManager) = @_;
+    my $sql = "
+SELECT g.ortholog_group_id, t.three_letter_abbrev, gs.aa_sequence_id
+FROM apidb.orthologgroup g, apidb.orthomcltaxon t,
+     apidb.orthologgroupaasequence gs, dots.aasequence s
+WHERE gs.ortholog_group_id = g.ortholog_group_id
+  AND s.aa_sequence_id = gs.aa_sequence_id
+  AND t.taxon_id = s.taxon_id
+ORDER BY g.ortholog_group_id
+";
+
+    my $prevGroupId;
+    my $firstRow = 1;
+    my $groupProteinsPerSpecies;
+    my $count;
+    my $stmt = $dbh->prepareAndExecute($sql);
+    while (my ($groupId,$species) = $stmt->fetchrow_array()) {
+      if ($firstRow) {
+	$prevGroupId = $groupId;
+	$firstRow = 0;
+      }
+
+      elsif ($groupId != $prevGroupId) {
+#	return if $count == 2;
+	$self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
+				     $columnManager);
+	$count++;
+	$self->log("inserted $count rows") if $count % 1000 == 0;
+	$prevGroupId = $groupId;
+	$groupProteinsPerSpecies = {};
+      }
+      $groupProteinsPerSpecies->{$species} += 1;
+    }
+    $self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
+				 $columnManager);
+    return $count+1;
 }
 
 sub insertGroupIntoMatrix {
@@ -177,28 +184,37 @@ sub insertGroupIntoMatrix {
       $cladesP->{$cladeWithThisSpecies} += $groupProteinsPerSpecies->{$species};
       $cladesT->{$cladeWithThisSpecies} += 1;
     }
-    my $speciesPCol = $columnManager->getColumnName($species, 'P');
-    my $speciesTCol = $columnManager->getColumnName($species, 'T');
-    eval "$dbRow->setColumn$speciesPCol($species)";
-    eval "$dbRow->setColumn$speciesTCol(1)";
+    my $speciesPCol = $columnManager->getColumnNumber($species, 'P');
+    my $speciesTCol = $columnManager->getColumnNumber($species, 'T');
+    my $methodP = "setColumn$speciesPCol";
+    my $methodT = "setColumn$speciesTCol";
+    $dbRow->$methodP($groupProteinsPerSpecies->{$species});
+    $dbRow->$methodT(1);
   }
 
   # now populate clade columns with accumulated counts
   foreach my $cladeWithThisSpecies (keys(%$cladesP)) {
-    my $cladePCol = $columnManager->getColumnName($cladeWithThisSpecies, 'P');
-    my $cladeTCol = $columnManager->getColumnName($cladeWithThisSpecies, 'T');
-    eval "$dbRow->setColumn$cladePCol($cladesP->{$cladeWithThisSpecies})";
-    eval "$dbRow->setColumn$cladeTCol($cladesT->{$cladeWithThisSpecies})";
+    my $cladePCol = $columnManager->getColumnNumber($cladeWithThisSpecies, 'P');
+    my $cladeTCol = $columnManager->getColumnNumber($cladeWithThisSpecies, 'T');
+    my $methodP = "setColumn$cladePCol";
+    my $methodT = "setColumn$cladeTCol";
+    $dbRow->$methodP($cladesP->{$cladeWithThisSpecies});
+    $dbRow->$methodT($cladesT->{$cladeWithThisSpecies});
   }
+  $dbRow->submit();
+  $self->undefPointerCache();
 }
 
 sub getInitializedRow {
   my ($self, $groupId) = @_;
   my $row = GUS::Model::ApiDB::GroupTaxonMatrix->new();
   $row->setOrthologGroupId($groupId);
+
   for (my $i=0; $i<$self->{taxaCount}*2; $i++) {
+#    next if $i > 5;
     my $colNum = $i + 1;
-    eval "$row->setColumn$colNum(0)";
+    my $method = "setColumn$colNum";
+    $row->$method(0);
   }
   return $row;
 }
