@@ -237,12 +237,14 @@ public class GenerateBioLayoutPlugin implements Plugin {
             ResultSet rsGroup = stGroup.executeQuery("SELECT og.name, "
                     + "      og.ortholog_group_id "
                     + " FROM apidb.OrthologGroup og "
-                    + " WHERE biolayout_image IS NULL");
+                    + " WHERE biolayout_image IS NULL "
+                    + "   AND number_of_members <= 500 "
+                    + " ORDER BY number_of_members ASC");
             int groupCount = 0;
             boolean hasMore = false;
             while (rsGroup.next()) {
-                // only run 2000 for each run
-                if (groupCount >= 2000) {
+                // only run 1000 for each run
+                if (groupCount >= 100) {
                     hasMore = true;
                     break;
                 }

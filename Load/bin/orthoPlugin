@@ -20,6 +20,6 @@ my $login = $gusConfig->getDatabaseLogin();
 my $password = $gusConfig->getDatabasePassword();
 
 
-my $cmd = "java -Xmx1280m $sysProps -classpath $CLASSPATH org.apidb.orthomcl.load.plugin.PluginLoader $args $connString $login $password";
+my $cmd = "java -Xmx1900m $sysProps -classpath $CLASSPATH org.apidb.orthomcl.load.plugin.PluginLoader $args $connString $login $password";
 
 system($cmd);
