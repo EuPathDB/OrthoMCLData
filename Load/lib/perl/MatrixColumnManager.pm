@@ -23,7 +23,7 @@ sub new {
 sub getColumnNumber {
     my ($self, $taxonAbbrev, $proteinOrTaxonFlag) = @_;
 
-    my $colNum = $self->getValidTaxonAbbrevs()->{$taxonAbbrev} * 2
+    my $colNum = $self->getValidTaxonAbbrevs()->{$taxonAbbrev} * 2 + 1
 	+ ($proteinOrTaxonFlag eq 'T'? 1 : 0);
 
     return $colNum;
@@ -34,6 +34,19 @@ sub getColumnName {
 
     my $colNum = $self->getColumnNumber($taxonAbbrev, $proteinOrTaxonFlag);
     return "column$colNum";
+}
+
+sub getTaxonAbbrev {
+  my ($self, $columnName) = @_;
+
+  $columnName =~ /column(\d+)/ or die "'$columnName' is an invalid column name";
+  my $colNum = $1 - 1;
+
+  my $index = int($colNum / 2);
+  my $taxonAbbrev = $self->getValidTaxonAbbrevs()->[$index];
+
+
+  return ($taxonAbbrev, $colNum % 2 == 0? 'P' : 'T');
 }
 
 sub checkTaxonAbbrev {
@@ -56,15 +69,23 @@ order by three_letter_abbrev
       my $stmt = $self->{dbh}->prepare($sql) || die "Can't open statement";
       my $orderedTaxonAbbrevs;
       my $validTaxonAbbrevs;
-      my $order = 1;
+      my $order = 0;
       $stmt->execute();
       while (my $row = $stmt->fetchrow_hashref()) {
 
 	$self->{validTaxonAbbrevs}->{$row->{THREE_LETTER_ABBREV}} = $order++;
       }
+#      $self->printFullMapping();   # for debugging
     }
 
     return $self->{validTaxonAbbrevs};
 }
 
+sub printFullMapping {
+  my ($self) = @_;
+  foreach my $tax (keys %{$self->{validTaxonAbbrevs}}) {
+    print "$tax P: " . $self->getColumnName($tax, 'P') . "\n";
+    print "$tax T: " . $self->getColumnName($tax, 'T') . "\n";
+  }
+}
 1;
