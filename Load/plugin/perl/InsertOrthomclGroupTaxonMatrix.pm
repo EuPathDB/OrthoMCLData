@@ -64,7 +64,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19729 $',
+                      cvsRevision       => '$Revision: 19732 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -123,7 +123,7 @@ WHERE is_species = 1
     $taxaCount++;
     foreach my $clade (keys(%$clades)) {
       push(@{$species->{$tla}}, $clade)
-	if ($index >= $clades->{$clade}->[0] 
+	if ($index >= $clades->{$clade}->[0]
 	    && $index < $clades->{$clade}->[1]);
     }
   }
@@ -145,7 +145,8 @@ ORDER BY g.ortholog_group_id
     my $prevGroupId;
     my $firstRow = 1;
     my $groupProteinsPerSpecies;
-    my $count;
+    my $rowCount;
+    my $proteinCount;
     my $stmt = $dbh->prepareAndExecute($sql);
     while (my ($groupId,$species) = $stmt->fetchrow_array()) {
       if ($firstRow) {
@@ -157,16 +158,17 @@ ORDER BY g.ortholog_group_id
 #	return if $count == 2;
 	$self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
 				     $columnManager);
-	$count++;
-	$self->log("inserted $count rows") if $count % 1000 == 0;
+	$rowCount++;
+	$self->log("inserted $rowCount rows") if $rowCount % 1000 == 0;
 	$prevGroupId = $groupId;
 	$groupProteinsPerSpecies = {};
       }
+
       $groupProteinsPerSpecies->{$species} += 1;
     }
     $self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
 				 $columnManager);
-    return $count+1;
+    return $rowCount+1;
 }
 
 sub insertGroupIntoMatrix {
@@ -179,6 +181,7 @@ sub insertGroupIntoMatrix {
   # and while we're at it, populate species columns in db row
   my $cladesT;
   my $cladesP;
+
   foreach my $species (keys(%$groupProteinsPerSpecies)) {
     foreach my $cladeWithThisSpecies (@{$self->{speciesClades}->{$species}}) {
       $cladesP->{$cladeWithThisSpecies} += $groupProteinsPerSpecies->{$species};
@@ -191,6 +194,7 @@ sub insertGroupIntoMatrix {
     $dbRow->$methodP($groupProteinsPerSpecies->{$species});
     $dbRow->$methodT(1);
   }
+
 
   # now populate clade columns with accumulated counts
   foreach my $cladeWithThisSpecies (keys(%$cladesP)) {
@@ -211,7 +215,6 @@ sub getInitializedRow {
   $row->setOrthologGroupId($groupId);
 
   for (my $i=0; $i<$self->{taxaCount}*2; $i++) {
-#    next if $i > 5;
     my $colNum = $i + 1;
     my $method = "setColumn$colNum";
     $row->$method(0);
