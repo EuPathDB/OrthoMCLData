@@ -129,7 +129,7 @@ sub parseCladeFile {
     my $lastCladePerLevel = [];
     my $cladeHash = {};
     my $rootClade;
-
+    my @clades;
     while(<FILE>) {
 	chomp;
 	$depth_first_index++;
@@ -138,7 +138,7 @@ sub parseCladeFile {
 	my $clade = GUS::Model::ApiDB::OrthomclTaxon->
 	  new({depth_first_index => $depth_first_index,
 	       sibling_depth_first_index => 99999});
- 
+ push(@clades, $clade);
 	# handle a clade, which looks like the following:
 	# |  |  PRO Protobacteria
 	if (/^([\|\s\s]*)([A-Z]{3}) ([A-Z]\w+.*)/) {
@@ -157,6 +157,13 @@ sub parseCladeFile {
 	}
 	$lastCladePerLevel->[$level] = $clade;
 	$clade->setParent($lastCladePerLevel->[$level-1]) if $level;
+    }
+    foreach my $lastClade (@{$lastCladePerLevel}) {
+      $lastClade->setSiblingDepthFirstIndex($depth_first_index+1);
+    }
+    foreach my $clade (@clades) {
+	$clade->getDepthFirstIndex() . " " .
+	$clade->getSiblingDepthFirstIndex() . "\n";
     }
 
     return ($rootClade, $cladeHash);
