@@ -2,7 +2,7 @@ ALL All
 |  ARC Archea
 |  BAC Bacteria
 |  |  PRO Protobacteria
-|  EUK Eukaryota 
+|  SEU Single-cell Eukaryota 
 |  |  ALV Alveolates
 |  |  |  CIL Ciliates
 |  |  |  API Apicomplexa
@@ -10,6 +10,7 @@ ALL All
 |  |  |  |  HAE Haemosporida
 |  |  |  |  PIR Piroplasmida
 |  |  KIN Kinetoplastida
+|  EUK Multi-cell Eukaryota 
 |  |  PLA Plants and Algae
 |  |  FUN Fungi
 |  |  ANI Animals
