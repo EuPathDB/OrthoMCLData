@@ -144,8 +144,6 @@ sub makeTree {
   push(@{$self->{cladeList}}, $parentClade);
 
   # assume the parent is a leaf clade
-  $parentClade->setDepthFirstIndex($self->{nextLeafIndex});
-  $parentClade->setSiblingDepthFirstIndex($self->{nextLeafIndex} + 1);
   my $parentIsLeaf = 1;
 
   while (my $clade = $self->parseCladeLine()) {
@@ -159,14 +157,19 @@ sub makeTree {
       # handle a child
       $parentIsLeaf = 0;
       $self->makeTree($clade);
-      if ($clade->getDepthFirstIndex() < $parentClade->getDepthFirstIndex()) {
-	  $parentClade->setDepthFirstIndex($clade->getDepthFirstIndex());
+      if ($clade->getDepthFirstIndex()-1 < $parentClade->getDepthFirstIndex()) {
+	  $parentClade->setDepthFirstIndex($clade->getDepthFirstIndex()-1);
       }
       if ($clade->getSiblingDepthFirstIndex() > $parentClade->getSiblingDepthFirstIndex()) {
 	  $parentClade->setSiblingDepthFirstIndex($clade->getSiblingDepthFirstIndex());
       }
   }
-  $self->{nextLeafIndex}++ if $parentIsLeaf; 
+  if ($parentIsLeaf) {
+      $self->{nextLeafIndex} += $self->{newCladeCount};
+      $self->{newCladeCount} = 0;
+      $parentClade->setDepthFirstIndex($self->{nextLeafIndex});
+      $parentClade->setSiblingDepthFirstIndex($self->{nextLeafIndex} + 1);
+  }
 }
 
 sub parseCladeLine {
@@ -190,6 +193,7 @@ sub parseCladeLine {
     } else {
       $self->userError("invalid line in clade file: '$line'");
     }
+    $self->{newCladeCount}++;
     return $clade;
 }
 
