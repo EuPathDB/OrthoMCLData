@@ -111,10 +111,12 @@ sub run {
     my $speciesFile = $self->getArgs()->{speciesFile};
 
     # make taxon tree with clades only
-    my ($taxonTree, $cladeHash) = $self->parseCladeFile($cladeFile);
+    my $taxonTree = $self->parseCladeFile($cladeFile);
 
     # add species to it
-    $self->parseSpeciesFile($cladeHash, $speciesFile);
+    $self->parseSpeciesFile($speciesFile);
+
+    $self->printCladeList(); # for debugging
  
     # off you go to the database, and behave yourself
     $taxonTree->submit();
@@ -125,52 +127,74 @@ sub parseCladeFile {
 
     open(FILE, $cladeFile) || $self->userError("can't open clade file '$cladeFile'");
 
-    my $depth_first_index = 0;
-    my $lastCladePerLevel = [];
-    my $cladeHash = {};
-    my $rootClade;
-    my @clades;
     while(<FILE>) {
-	chomp;
-	$depth_first_index++;
-	my $level;
+      chomp;
+      push(@{$self->{cladeLines}}, $_);
+    }
+    $self->{cladeLinesCursor} = 0;
+    $self->{nextLeafIndex} = 1;
 
-	my $clade = GUS::Model::ApiDB::OrthomclTaxon->
-	  new({depth_first_index => $depth_first_index,
-	       sibling_depth_first_index => 99999});
- push(@clades, $clade);
-	# handle a clade, which looks like the following:
-	# |  |  PRO Protobacteria
-	if (/^([\|\s\s]*)([A-Z]{3}) ([A-Z]\w+.*)/) {
-	    $rootClade = $clade unless $rootClade;
-	    $level = length($1)/3; #count of pipe chars
-	    $clade->setThreeLetterAbbrev($2);
-	    $clade->setName($3);
-	    $clade->setIsSpecies(0);
-	    $clade->setTaxonId(undef);
-	    $cladeHash->{$clade->getThreeLetterAbbrev()} = $clade;
-	} else {
-	    $self->userError("invalid line in clade file: '$_'");
-	}
-	foreach my $lastClade (@{$lastCladePerLevel}) {
-	    $lastClade->setSiblingDepthFirstIndex($depth_first_index);
-	}
-	$lastCladePerLevel->[$level] = $clade;
-	$clade->setParent($lastCladePerLevel->[$level-1]) if $level;
-    }
-    foreach my $lastClade (@{$lastCladePerLevel}) {
-      $lastClade->setSiblingDepthFirstIndex($depth_first_index+1);
-    }
-    foreach my $clade (@clades) {
-	$clade->getDepthFirstIndex() . " " .
-	$clade->getSiblingDepthFirstIndex() . "\n";
-    }
+    my $clade = $self->parseCladeLine();
+    $self->makeTree($clade);
+    return $clade;
+}
 
-    return ($rootClade, $cladeHash);
+sub makeTree {
+  my ($self, $parentClade) = @_;
+  push(@{$self->{cladeList}}, $parentClade);
+
+  # assume the parent is a leaf clade
+  $parentClade->setDepthFirstIndex($self->{nextLeafIndex});
+  $parentClade->setSiblingDepthFirstIndex($self->{nextLeafIndex} + 1);
+  my $parentIsLeaf = 1;
+
+  while (my $clade = $self->parseCladeLine()) {
+
+      # done with parent's children
+      if ($clade->{level} <= $parentClade->{level}) {
+	  $self->{cladeLinesCursor}--;
+	  last;
+      } 
+
+      # handle a child
+      $parentIsLeaf = 0;
+      $self->makeTree($clade);
+      if ($clade->getDepthFirstIndex() < $parentClade->getDepthFirstIndex()) {
+	  $parentClade->setDepthFirstIndex($clade->getDepthFirstIndex());
+      }
+      if ($clade->getSiblingDepthFirstIndex() > $parentClade->getSiblingDepthFirstIndex()) {
+	  $parentClade->setSiblingDepthFirstIndex($clade->getSiblingDepthFirstIndex());
+      }
+  }
+  $self->{nextLeafIndex}++ if $parentIsLeaf; 
+}
+
+sub parseCladeLine {
+    my ($self) = @_;
+
+    my $clade = GUS::Model::ApiDB::OrthomclTaxon->
+      new({depth_first_index => 999999,
+	   sibling_depth_first_index => -99999});
+    my $level;
+    my $line = $self->{cladeLines}->[$self->{cladeLinesCursor}++];
+    return undef unless $line;
+    # handle a clade, which looks like the following:
+    # |  |  PRO Protobacteria
+    if ($line =~ /^([\|\s\s]*)([A-Z]{3}) ([A-Z]\w+.*)/) {
+      $clade->{level} = length($1)/3; #count of pipe chars
+      $clade->setThreeLetterAbbrev($2);
+      $clade->setName($3);
+      $clade->setIsSpecies(0);
+      $clade->setTaxonId(undef);
+      $self->{clades}->{$clade->getThreeLetterAbbrev()} = $clade;
+    } else {
+      $self->userError("invalid line in clade file: '$line'");
+    }
+    return $clade;
 }
 
 sub parseSpeciesFile {
-    my ($self, $cladeHash, $speciesFile) = @_;
+    my ($self, $speciesFile) = @_;
 
     open(FILE, $speciesFile) || $self->userError("can't open species file '$speciesFile'");
 
@@ -191,10 +215,10 @@ sub parseSpeciesFile {
 	# pfa 123345 API
 	if (/([a-z]{3})\t([A-Z]{3})\t(\d+)/) {
 	    $species->setThreeLetterAbbrev($1);
-	    my $clade = $cladeHash->{$2};
+	    my $clade = $self->{clades}->{$2};
             my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $3);
 	    $species->setTaxonId($taxonId);
-	    $clade || die "can't find clade with code '$3' for species '$1'\n";
+	    $clade || die "can't find clade with code '$2' for species '$1'\n";
 	    $species->setParent($clade);
 	    $species->setIsSpecies(1);
 	    $species->setName($taxonName);
@@ -216,6 +240,18 @@ sub getTaxonId {
   }
   return @ids;
 
+}
+
+sub printCladeList {
+  my ($self) = @_;
+  my $pipes = '|  |  |  |  |  |  |  |  |  |  |  |  |  |  ';
+
+  foreach my $clade (@{$self->{cladeList}}) {
+    my $indent = substr($pipes,0,$clade->{level}*3);
+    print STDERR join(" ", ($indent.$clade->getThreeLetterAbbrev(), 
+		     $clade->getDepthFirstIndex(),
+		     $clade->getSiblingDepthFirstIndex()), "\n");
+  }
 }
 
 sub undoTables {
