@@ -94,7 +94,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19743 $',
+                      cvsRevision       => '$Revision: 19796 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -155,6 +155,7 @@ sub makeTree {
       } 
 
       # handle a child
+      $self->{newCladeCount}++;
       $parentIsLeaf = 0;
       $self->makeTree($clade);
       if ($clade->getDepthFirstIndex()-1 < $parentClade->getDepthFirstIndex()) {
@@ -169,7 +170,7 @@ sub makeTree {
       $self->{newCladeCount} = 0;
       $parentClade->setDepthFirstIndex($self->{nextLeafIndex});
       $parentClade->setSiblingDepthFirstIndex($self->{nextLeafIndex} + 1);
-  }
+  } 
 }
 
 sub parseCladeLine {
@@ -193,7 +194,7 @@ sub parseCladeLine {
     } else {
       $self->userError("invalid line in clade file: '$line'");
     }
-    $self->{newCladeCount}++;
+
     return $clade;
 }
 
