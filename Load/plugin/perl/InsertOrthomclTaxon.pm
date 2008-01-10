@@ -94,7 +94,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19796 $',
+                      cvsRevision       => '$Revision: 19800 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -155,6 +155,7 @@ sub makeTree {
       } 
 
       # handle a child
+      $clade->setParent($parentClade);
       $self->{newCladeCount}++;
       $parentIsLeaf = 0;
       $self->makeTree($clade);
