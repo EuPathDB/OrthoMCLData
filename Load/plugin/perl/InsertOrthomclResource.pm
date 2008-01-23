@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertOrthomclTaxon;
+package OrthoMCLData::Load::Plugin::InsertOrthomclResource;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -95,26 +95,26 @@ sub run {
 
     while(<FILE>) {
 	chomp;
-	my $resource = parseResourceLine($_);
+	my $resource = $self->parseResourceLine($_);
 	$resource->submit();
     }
 }
 
 sub parseResourceLine {
     my ($self, $line) = @_;
-
+    
     my $resource = GUS::Model::ApiDB::OrthomclResource->new();
     my @resData = split('\t',$line);
-
+    
     my $dbh = $self->getQueryHandle();
     my $sql = "SELECT orthomcl_taxon_id
                FROM ApiDB.OrthomclTaxon
                WHERE three_letter_abbrev = ?";
-   
-    my ($stmt) = $dbh->prepare($sql);
-
-    if (length($resData) == 3) {
-	my $taxonId = $self->getTaxonId($stmt, $resData[0]);
+    
+    my $stmt = $dbh->prepare($sql);
+    
+    if (scalar @resData == 3) {
+	my ($taxonId) = $self->getTaxonId($stmt, $resData[0]);
 	$resource->setOrthomclTaxonId($taxonId);
 	$resource->setResourceName($resData[1]);
 	$resource->setResourceUrl($resData[2]);
@@ -128,9 +128,9 @@ sub parseResourceLine {
 
 sub getTaxonId {
     my ($self, $stmt, $abbrev) = @_;
-
+    
     my @id = $self->sqlAsArray( Handle => $stmt, Bind => [$abbrev] );
-
+    
     if (scalar @id != 1) {
 	$self->error("Should return one value for three_letter_abbrev '$abbrev'");
     }
@@ -138,10 +138,10 @@ sub getTaxonId {
 }
 
 sub undoTables {
-  my ($self) = @_;
-
-  return ('ApiDB.OrthomclResource',
-	 );
+    my ($self) = @_;
+    
+    return ('ApiDB.OrthomclResource',
+	    );
 }
 
 
