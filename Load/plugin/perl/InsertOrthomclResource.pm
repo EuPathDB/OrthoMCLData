@@ -98,6 +98,8 @@ sub run {
 	my $resource = $self->parseResourceLine($_);
 	$resource->submit();
     }
+
+    return "Done adding resources.";
 }
 
 sub parseResourceLine {
