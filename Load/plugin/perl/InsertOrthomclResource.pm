@@ -115,11 +115,14 @@ sub parseResourceLine {
     
     my $stmt = $dbh->prepare($sql);
     
-    if (scalar @resData == 3) {
+    if (scalar @resData == 6) {
 	my ($taxonId) = $self->getTaxonId($stmt, $resData[0]);
 	$resource->setOrthomclTaxonId($taxonId);
-	$resource->setResourceName($resData[1]);
-	$resource->setResourceUrl($resData[2]);
+	$resource->setDescription($resData[1]);
+	$resource->setStrain($resData[2]);
+	$resource->setResourceName($resData[3]);
+	$resource->setResourceVersion($resData[4]);
+	$resource->setResourceUrl($resData[5]);
     }
     else {
 	$self->userError("invalid line in resource file: '$line'");
