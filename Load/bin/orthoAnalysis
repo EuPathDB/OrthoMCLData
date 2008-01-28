@@ -55,7 +55,7 @@ my $extDbVersion = "2.0";
 #&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence", "muscle3.6");
 
 
-my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomcl/master/mainresult/orthomcl.rbh";
+my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh";
 my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
 
 &createBiolayoutData($mgr, $rbhFile, $svgTemplate);
