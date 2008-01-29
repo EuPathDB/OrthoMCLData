@@ -1,7 +1,4 @@
 package OrthoMCLData::Load::Plugin::InsertGroupKeywords;
-use strict;
-require Exporter;
-
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -15,6 +12,8 @@ use GUS::Model::ApiDB::OrthomclGroupKeyword;
 
 use ApiCommonData::Load::Util;
 use Data::Dumper;
+
+require Exporter;
 
 my $argsDeclaration =
 [
