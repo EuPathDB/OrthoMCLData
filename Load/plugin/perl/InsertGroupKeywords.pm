@@ -94,7 +94,7 @@ sub run {
     while (my @data = $stmt->fetchrow_array()) {
 	if ($cur_group && $cur_group ne $data[0]) {
 	    my %keywords = FunKeyword(@lines);
-	    submitKeywords(%keywords, $cur_group);
+	    submitKeywords(\%keywords, $cur_group);
 	    @lines = ();
 	}
 	elsif (!$cur_group || $cur_group ne $data[0]) {
@@ -107,7 +107,9 @@ sub run {
 }
 
 sub submitKeywords {
-    my ($self, %keywords, $group_id) = @_;
+    my ($self, $keywordsref, $group_id) = @_;
+    
+    my %keywords = %$keywordsref;
 
     foreach my $k (keys %keywords) {
 	my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
