@@ -56,16 +56,6 @@ my $documentation = { purpose          => $purpose,
                       howToRestart     => $howToRestart,
                       failureCases     => $failureCases };
 
-
-
-SELECT eas.description 
-FROM apidb.OrthologGroupAaSequence ogs, 
-dots.ExternalAaSequence eas
-WHERE ogs.aa_sequence_id = eas.aa_sequence_id
-AND ogs.ortholog_group_id = 80476;
-
-
-
 # ----------------------------------------------------------------------
 
 sub new {
