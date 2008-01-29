@@ -107,7 +107,7 @@ sub run {
 }
 
 sub submitKeywords {
-    my ($self, $keywordsref, $group_id) = @_;
+    my ($keywordsref, $group_id) = @_;
     
     my %keywords = %$keywordsref;
 
@@ -180,7 +180,7 @@ foreach (@capitalword) {$word_filter{capitalword}->{$_}=1;}
 
 
 sub FunKeyword {
-	my ($self,@funlines) = $_;
+	my (@funlines) = $_;
 
 	my $n_words=10; # define the max number of words for keyword phrases
 	my $freq_cutoff=0.5; # define the smallest frequency cutoff for returned keyword or keyword phrases
