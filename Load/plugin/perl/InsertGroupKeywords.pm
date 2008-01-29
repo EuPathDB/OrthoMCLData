@@ -93,8 +93,8 @@ sub run {
 
     while (my @data = $stmt->fetchrow_array()) {
 	if ($cur_group && $cur_group ne $data[0]) {
-	    my %keywords = FunKeyword(\@lines);
-	    submitKeywords(\%keywords, $cur_group);
+	    my %keywords = FunKeyword(@lines);
+	    submitKeywords(%keywords, $cur_group);
 	    @lines = ();
 	}
 	elsif (!$cur_group || $cur_group ne $data[0]) {
@@ -178,7 +178,7 @@ foreach (@capitalword) {$word_filter{capitalword}->{$_}=1;}
 
 
 sub FunKeyword {
-	my @funlines = @{$_[0]};
+	my ($self,@funlines) = $_;
 
 	my $n_words=10; # define the max number of words for keyword phrases
 	my $freq_cutoff=0.5; # define the smallest frequency cutoff for returned keyword or keyword phrases
