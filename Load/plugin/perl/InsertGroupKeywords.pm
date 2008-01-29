@@ -100,9 +100,6 @@ sub run {
 	elsif (!$cur_group || $cur_group ne $data[0]) {
 	    $cur_group = $data[0];
 	}
-	else {
-	    $self->error("Unexpected error:\tcur_group=$cur_group\tdata[0]=$data[0]");
-	}
 	push(@lines, @data[1]);   
     }
 
