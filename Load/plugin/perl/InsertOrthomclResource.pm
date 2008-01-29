@@ -36,6 +36,8 @@ PURPOSE_BRIEF
 my $notes = <<NOTES;
 The speciesFile is a columnar file with these columns:
   - three_letter_abbrev
+  - description
+  - strain
   - source_name
   - source_url
 
