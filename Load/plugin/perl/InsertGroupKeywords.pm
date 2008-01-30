@@ -94,7 +94,17 @@ sub run {
     while (my @data = $stmt->fetchrow_array()) {
 	if ($cur_group && $cur_group ne $data[0]) {
 	    my %keywords = FunKeyword(@lines);
-	    submitKeywords(\%keywords, $cur_group);
+	
+	    foreach my $k (keys %keywords) {
+		my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
+		
+		$keyword->setOrthologGroupId($group_id);
+		$keyword->setKeyword($k);
+		$keyword->setFrequency($keywords{$k});
+		
+		$keyword->submit();
+	    }
+
 	    @lines = ();
 	}
 	elsif (!$cur_group || $cur_group ne $data[0]) {
@@ -104,22 +114,6 @@ sub run {
     }
 
     return "Done adding group keywords.";
-}
-
-sub submitKeywords {
-    my ($keywordsref, $group_id) = @_;
-    
-    my %keywords = %$keywordsref;
-
-    foreach my $k (keys %keywords) {
-	my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
-	
-	$keyword->setOrthologGroupId($group_id);
-	$keyword->setKeyword($k);
-	$keyword->setFrequency($keywords{$k});
-
-	$keyword->submit();
-    }
 }
 
 sub undoTables {
