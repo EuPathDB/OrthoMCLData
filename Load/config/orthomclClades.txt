@@ -1,23 +1,35 @@
 ALL All
-|  ARC Archea
-|  BAC Bacteria
-|  |  PRO Protobacteria
-|  SEU Single-cell Eukaryota 
-|  |  ALV Alveolates
-|  |  |  CIL Ciliates
-|  |  |  API Apicomplexa
-|  |  |  |  COC Coccidia
-|  |  |  |  HAE Haemosporida
-|  |  |  |  PIR Piroplasmida
-|  |  KIN Kinetoplastida
-|  EUK Multi-cell Eukaryota 
-|  |  PLA Plants and Algae
-|  |  FUN Fungi
-|  |  ANI Animals
-|  |  |  NEM Nematodes
-|  |  |  ART Arthropoda
-|  |  |  VER Vertebrates
-|  |  |  |  FSH Bony Fish
-|  |  |  |  TET Tetrapoda
-|  |  |  |  |  BIR Birds
-|  |  |  |  |  MAM Mammals
+|  BACT Bacteria
+|  |  FIRM Firmicutes
+|  |  PROT Protobacteria
+|  |  |  PROA alpha-Proteobacteria
+|  |  |  PROB beta-Proteobacteria
+|  |  |  PROD detla-Proteobacteria
+|  |  |  PROG gama-Proteobacteria
+|  |  |  PROE epsilon-Proteobacteria
+|  ARCH Archea
+|  |  EURY Euryarchaeota
+|  |  CREN Crenarchaeota
+|  |  NANO Nanoarchaeota
+|  EUKA Eukaryota 
+|  |  PLAL Plants and Algae
+|  |  KINE Kinetoplastida
+|  |  ALVE Alveolates
+|  |  |  CILI Ciliates
+|  |  |  APIC Apicomplexa
+|  |  |  |  COCC Coccidia
+|  |  |  |  HAEM Haemosporida
+|  |  |  |  PIRO Piroplasmida
+|  |  FUNG Fungi
+|  |  |  MICR Microsporidia
+|  |  |  BASI Basidiomycota
+|  |  |  ASCO Ascomycota
+|  |  META Metazoa
+|  |  |  PLAT Platyhelminthes
+|  |  |  NEMA Nematodes
+|  |  |  ARTH Arthropoda
+|  |  |  CHOR Chordata
+|  |  |  |  FISH Bony Fish
+|  |  |  |  BIRD Birds
+|  |  |  |  MAMM Mammals
+
