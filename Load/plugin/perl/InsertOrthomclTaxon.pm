@@ -48,15 +48,15 @@ Both input files are both constructed manually as part of the Orthomcl-DB genome
 The speciesFile is a columnar file with these columns:
   - three_letter_abbrev
   - ncbi_tax_id
-  - clade_three_letter_abbrev  # an index into the cladeFile
+  - clade_four_letter_abbrev  # an index into the cladeFile
 
 The cladesFile is a depth first serialization of the clade tree.  Each clade hasa three letter abbreviation, a display name, and a depth indicated by pipe characters
 
 The head of a sample cladesFile looks like this: 
 ALL All
-|  ARC Archea
-|  BAC Bacteria
-|  |  PRO Protobacteria
+|  ARCH Archea
+|  BACT Bacteria
+|  |  PROT Protobacteria
 
 
 NOTES
@@ -94,7 +94,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19800 $',
+                      cvsRevision       => '$Revision$',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -185,10 +185,13 @@ sub parseCladeLine {
     return undef unless $line;
     # handle a clade, which looks like the following:
     # |  |  PRO Protobacteria
-    if ($line =~ /^([\|\s\s]*)([A-Z]{3}) ([A-Z]\w+.*)/) {
-      $clade->{level} = length($1)/3; #count of pipe chars
-      $clade->setThreeLetterAbbrev($2);
-      $clade->setName($3);
+    if ($line =~ /^([\|\s\s]*)(ALL|[A-Z]{4}) (\S+)/) {
+      my $pipes = $1;
+      my $cladeAbbrev = $2;
+      my $cladeName = $3;
+      $clade->{level} = length($pipes)/3; #count of pipe chars
+      $clade->setThreeLetterAbbrev($cladeAbbrev);
+      $clade->setName($cladeName);
       $clade->setIsSpecies(0);
       $clade->setTaxonId(undef);
       $self->{clades}->{$clade->getThreeLetterAbbrev()} = $clade;
@@ -212,25 +215,31 @@ sub parseSpeciesFile {
                AND tn.name_class = 'scientific name'";
 
     my $stmt = $dbh->prepare($sql);
- 
+    my $speciesOrder = 1;
+    my $speciesAbbrevs = {};
     while(<FILE>) {
 	chomp;
 
 	my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
 
-	# pfa 123345 API
-	if (/([a-z]{3})\t([A-Z]{3})\t(\d+)/) {
-	    $species->setThreeLetterAbbrev($1);
-	    my $clade = $self->{clades}->{$2};
-            my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $3);
-	    $species->setTaxonId($taxonId);
-	    $clade || die "can't find clade with code '$2' for species '$1'\n";
-	    $species->setParent($clade);
-	    $species->setIsSpecies(1);
-	    $species->setName($taxonName);
-	    $species->setDepthFirstIndex($clade->getDepthFirstIndex());
+	# pfa APIC 123345
+	if (/([a-z]{3})\t([A-Z]{4})\t(\d+)/) {
+	  my $speciesAbbrev = $1;
+	  my $cladeAbbrev = $2;
+	  my $ncbiTaxonId = $3;
+	  $self->error("duplicate species abbrev '$speciesAbbrev'") if $speciesAbbrevs->{$speciesAbbrev};
+	  $speciesAbbrevs->{$speciesAbbrev} = 1;
+	  $species->setThreeLetterAbbrev($speciesAbbrev);
+	  my $clade = $self->{clades}->{$cladeAbbrev};
+	  my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $ncbiTaxonId);
+	  $species->setTaxonId($taxonId);
+	  $clade || die "can't find clade with code '$cladeAbbrev' for species '$speciesAbbrev'\n";
+	  $species->setParent($clade);
+	  $species->setIsSpecies($speciesOrder++);  # temporarily till order has its own column
+	  $species->setName($taxonName);
+	  $species->setDepthFirstIndex($clade->getDepthFirstIndex());
 	}  else {
-	    $self->userError("invalid line in species file: '$_'");
+	  $self->userError("invalid line in species file: '$_'");
 	}
     }
 }
