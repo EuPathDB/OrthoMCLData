@@ -39,11 +39,12 @@ sub getColumnName {
 sub getTaxonAbbrev {
   my ($self, $columnName) = @_;
 
-  $columnName =~ /column(\d+)/ or die "'$columnName' is an invalid column name";
+  $columnName =~ /column(\d+)/i or die "'$columnName' is an invalid column name";
   my $colNum = $1 - 1;
+  $self->getValidTaxonAbbrevs();
 
   my $index = int($colNum / 2);
-  my $taxonAbbrev = $self->getValidTaxonAbbrevs()->[$index];
+  my $taxonAbbrev = $self->{taxonAbbrevsArray}->[$index];
 
 
   return ($taxonAbbrev, $colNum % 2 == 0? 'P' : 'T');
@@ -73,7 +74,9 @@ order by three_letter_abbrev
       $stmt->execute();
       while (my $row = $stmt->fetchrow_hashref()) {
 
-	$self->{validTaxonAbbrevs}->{$row->{THREE_LETTER_ABBREV}} = $order++;
+	$self->{validTaxonAbbrevs}->{$row->{THREE_LETTER_ABBREV}} = $order;
+	$self->{taxonAbbrevsArray}->[$order] = $row->{THREE_LETTER_ABBREV};
+	$order++;
       }
 #      $self->printFullMapping();   # for debugging
     }
