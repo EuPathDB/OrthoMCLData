@@ -64,7 +64,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 19744 $',
+                      cvsRevision       => '$Revision$',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -114,7 +114,7 @@ WHERE is_species = 0
   my $sql= "
 SELECT three_letter_abbrev, depth_first_index, sibling_depth_first_index
 FROM apidb.orthomcltaxon
-WHERE is_species = 1
+WHERE is_species != 0
 ";
   my $stmt = $dbh->prepareAndExecute($sql);
 
