@@ -1,10 +1,10 @@
-ALL All
+ALL Root
 |  BACT Bacteria
 |  |  FIRM Firmicutes
 |  |  PROT Protobacteria
 |  |  |  PROA alpha-Proteobacteria
 |  |  |  PROB beta-Proteobacteria
-|  |  |  PROD detla-Proteobacteria
+|  |  |  PROD delta-Proteobacteria
 |  |  |  PROG gama-Proteobacteria
 |  |  |  PROE epsilon-Proteobacteria
 |  ARCH Archea
