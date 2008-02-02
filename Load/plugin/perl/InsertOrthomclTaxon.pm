@@ -161,6 +161,7 @@ sub makeTree {
       $self->makeTree($clade);
       if ($clade->getDepthFirstIndex()-1 < $parentClade->getDepthFirstIndex()) {
 	  $parentClade->setDepthFirstIndex($clade->getDepthFirstIndex()-1);
+	  $parentClade->setOrderNum($parentClade->getDepthFirstIndex());
       }
       if ($clade->getSiblingDepthFirstIndex() > $parentClade->getSiblingDepthFirstIndex()) {
 	  $parentClade->setSiblingDepthFirstIndex($clade->getSiblingDepthFirstIndex());
@@ -170,6 +171,7 @@ sub makeTree {
       $self->{nextLeafIndex} += $self->{newCladeCount};
       $self->{newCladeCount} = 0;
       $parentClade->setDepthFirstIndex($self->{nextLeafIndex});
+      $parentClade->setOrderNum($parentClade->getDepthFirstIndex());
       $parentClade->setSiblingDepthFirstIndex($self->{nextLeafIndex} + 1);
   } 
 }
@@ -235,7 +237,8 @@ sub parseSpeciesFile {
 	  $species->setTaxonId($taxonId);
 	  $clade || die "can't find clade with code '$cladeAbbrev' for species '$speciesAbbrev'\n";
 	  $species->setParent($clade);
-	  $species->setIsSpecies($speciesOrder++);  # temporarily till order has its own column
+	  $species->setIsSpecies(1);
+	  $species->setOrderNum($speciesOrder++);
 	  $species->setName($taxonName);
 	  $species->setDepthFirstIndex($clade->getDepthFirstIndex());
 	}  else {
