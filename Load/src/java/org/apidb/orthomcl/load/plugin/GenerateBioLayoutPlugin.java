@@ -39,8 +39,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
 
         public Taxon(int id, String abbreviation, String name) {
             Id = id;
-            Abbreviation = abbreviation.intern();
-            Name = name.intern();
+            Abbreviation = abbreviation.replaceAll("\\s+", " ").trim().intern();
+            Name = name.replaceAll("\\s+", " ").trim().intern();
         }
 
         /*
@@ -80,9 +80,9 @@ public class GenerateBioLayoutPlugin implements Plugin {
         public Sequence(int sequenceId, String sourceId, int taxonId,
                 String description) {
             SequenceId = sequenceId;
-            SourceId = sourceId.intern();
+            SourceId = sourceId.replaceAll("\\s+", " ").trim().intern();
             TaxonId = taxonId;
-            Description = description;
+            Description = description.replaceAll("\\s+", " ").trim().intern();
         }
     }
 
@@ -159,9 +159,9 @@ public class GenerateBioLayoutPlugin implements Plugin {
      */
     public void setArgs(String[] args) throws OrthoMCLException {
         if (args.length != 6) {
-            throw new OrthoMCLException(
-                    "The args should be: <rbh_file> "
-                            + "<svg_template> <signal_file> <connection_string> <login> <password>");
+            throw new OrthoMCLException("The args should be: <rbh_file> "
+                    + " <svg_template> <signal_file> <connection_string> "
+                    + " <login> <password>");
         }
 
         String rbhFileName = args[0];
@@ -235,21 +235,25 @@ public class GenerateBioLayoutPlugin implements Plugin {
             logger.debug("Getting unfinished groups...");
             Statement stGroup = connection.createStatement();
             ResultSet rsGroup = stGroup.executeQuery("SELECT og.name, "
-                    + "      og.ortholog_group_id "
+                    + "      og.ortholog_group_id, og.number_of_members "
                     + " FROM apidb.OrthologGroup og "
                     + " WHERE biolayout_image IS NULL "
                     + "   AND number_of_members <= 500 "
                     + " ORDER BY number_of_members ASC");
             int groupCount = 0;
+            int sequenceCount = 0;
             boolean hasMore = false;
             while (rsGroup.next()) {
+                int groupId = rsGroup.getInt("ortholog_group_id");
+                String groupName = rsGroup.getString("name");
+                sequenceCount += rsGroup.getInt("number_of_members");
+
                 // only run 1000 for each run
-                if (groupCount >= 100) {
+                if (sequenceCount >= 10000) {
                     hasMore = true;
                     break;
                 }
-                int groupId = rsGroup.getInt("ortholog_group_id");
-                String groupName = rsGroup.getString("name");
+                
                 createLayout(groupId, groupName, taxons, rbhEdges, svgTemplate,
                         psSequence, psSimilarity, psUpdateImage);
 
@@ -259,7 +263,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
                     logger.debug(groupCount + " groups created...");
                 }
             }
-            if (groupCount % 100 != 0) psUpdateImage.executeBatch();
+            // if (groupCount % 10 != 100) psUpdateImage.executeBatch();
 
             logger.info("Total " + groupCount + " groups created.");
             rsGroup.close();
@@ -291,8 +295,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
 
         // read header
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            if (line.equals("$$DataSection$$")) break;
+            if (line.trim().equals("$$DataSection$$")) break;
             buffer.append(line);
             buffer.append("\n");
         }
@@ -301,8 +304,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
         // read middle part
         buffer = new StringBuffer();
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            if (line.equals("$$DisplaySection$$")) break;
+            if (line.trim().equals("$$DisplaySection$$")) break;
             buffer.append(line);
             buffer.append("\n");
         }
@@ -311,7 +313,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
         // read footer
         buffer = new StringBuffer();
         while ((line = reader.readLine()) != null) {
-            buffer.append(line.trim());
+            buffer.append(line);
             buffer.append("\n");
         }
         template[2] = buffer.toString();
@@ -359,7 +361,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
         Statement stTaxon = connection.createStatement();
         ResultSet rsTaxon = stTaxon.executeQuery("SELECT ot.taxon_id, "
                 + "      ot.three_letter_abbrev, ot.name "
-                + " FROM apidb.OrthomclTaxon ot " + " WHERE ot.is_species = 1");
+                + " FROM apidb.OrthomclTaxon ot WHERE ot.is_species != 0");
         Map<Integer, Taxon> taxons = new HashMap<Integer, Taxon>();
         while (rsTaxon.next()) {
             int taxonId = rsTaxon.getInt("taxon_id");

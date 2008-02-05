@@ -80,7 +80,7 @@ public class BiolayoutProcessor {
      */
     private static final long serialVersionUID = -418177851347137182L;
 
-    private static final Logger logger = Logger.getLogger(BiolayoutProcessor.class);
+    //private static final Logger logger = Logger.getLogger(BiolayoutProcessor.class);
 
     private LayoutClasses classes;
     private NetworkContainer network;
@@ -186,13 +186,11 @@ public class BiolayoutProcessor {
 
             // get the color for this taxon
             Color color = vertexClass.m_classColor;
-            String strColor = Integer.toHexString(color.getRGB() & 0xFFFFFF);
+            String strColor = String.format("%1$06x",
+                    (color.getRGB() & 0xFFFFFF));
 
             writer.print("<g id=\"node_genome" + taxon.Id);
-            writer.print("\" style=\"stroke:black;fill:#");
-            for (int i = strColor.length(); i < 6; i++)
-                writer.print('0');
-            writer.println(strColor + "\">");
+            writer.println("\" style=\"stroke:black;fill:#" + strColor + "\">");
 
             // draw the sequences in the taxon
             for (Object obj : graph.getGraphNodeSet()) {
@@ -202,13 +200,12 @@ public class BiolayoutProcessor {
                 if (sequence.TaxonId != taxon.Id) continue;
 
                 String nodeName = taxon.Abbreviation + sequenceId;
-                logger.debug("sequence: " + sequenceId + ", node: " + nodeName);
 
                 writer.print("\t<circle id=\"" + nodeName);
                 writer.print("\" cx=\"" + node.getX());
                 writer.print("\" cy=\"" + node.getY());
-                writer.println("\" r=\"5\" onmouseover=\"highlightNode(evt)\""
-                        + " onmouseout=\"unhighlightNode(evt)\"/>");
+                writer.print("\" r=\"5\" onmouseover=\"highlightNode(evt)\"");
+                writer.println(" onmouseout=\"unhighlightNode(evt)\"/>");
             }
             writer.println("</g>");
         }
@@ -228,8 +225,6 @@ public class BiolayoutProcessor {
     private void writeNodes(String[] svgTemplate, Map<Integer, Taxon> taxons,
             Map<Integer, Sequence> sequences,
             Map<OrthomclEdge, OrthomclEdge> edges, PrintWriter writer) {
-        writer.println("\tvar nodeArray = [");
-        boolean isFirst = true;
         Iterator<?> itVertex = graph.getGraphNodeSet().iterator();
         while (itVertex.hasNext()) {
             GraphNode vertex = (GraphNode) itVertex.next();
@@ -238,10 +233,7 @@ public class BiolayoutProcessor {
             Taxon taxon = taxons.get(sequence.TaxonId);
             String nodeName = taxon.Abbreviation + sequenceId;
 
-            if (isFirst) isFirst = false;
-            else writer.println(", ");
-
-            writer.print("\tnew node('" + nodeName + "','");
+            writer.print("nodeArray.push(new node('" + nodeName + "','");
             writer.print(sequence.SourceId + "',\"");
             writer.print((sequence.Description != null ? sequence.Description
                     : sequence.SourceId)
@@ -269,21 +261,12 @@ public class BiolayoutProcessor {
                     writer.print(edge.EdgeId);
                 }
             }
-            writer.print("])");
+            writer.println("]));");
         }
-        writer.println("\n\t];");
     }
 
     private void writeEdges(Map<OrthomclEdge, OrthomclEdge> edges,
             PrintWriter writer) {
-        writer.println("\tvar edgeRbesthArray = new Array();");
-        writer.println("\tvar edgeRbetterhArray = new Array();");
-        writer.println("\tvar edgeGeneralArray = new Array();");
-        writer.println();
-
-        int bestIndex = 0;
-        int betterIndex = 0;
-        int generalIndex = 0;
         for (Object obj : graph.getGraphEdges()) {
             GraphEdge gEdge = (GraphEdge) obj;
             GraphNode firstNode = gEdge.getNodeFirst();
@@ -294,16 +277,13 @@ public class BiolayoutProcessor {
             OrthomclEdge oEdge = edges.get(new OrthomclEdge(queryId, subjectId));
 
             if (oEdge.Type == EdgeType.BestHit) {
-                writer.print("\tedgeRbesthArray[" + bestIndex);
-                bestIndex++;
+                writer.print("edgeRbesthArray.push(");
             } else if (oEdge.Type == EdgeType.BetterHit) {
-                writer.print("\tedgeRbetterhArray[" + betterIndex);
-                betterIndex++;
+                writer.print("edgeRbetterhArray.push(");
             } else {
-                writer.print("\tedgeGeneralArray[" + generalIndex);
-                generalIndex++;
+                writer.print("edgeGeneralArray.push(");
             }
-            writer.print("] = new edge(" + oEdge.EdgeId);
+            writer.print("new edge(" + oEdge.EdgeId);
             writer.print(", [" + firstNode.getX());
             writer.print(", " + firstNode.getY());
             writer.print(", " + secondNode.getX());
@@ -313,7 +293,7 @@ public class BiolayoutProcessor {
             } else {
                 writer.print(oEdge.PValueMant + "e" + oEdge.PValueExp);
             }
-            writer.println("');");
+            writer.println("'));");
         }
     }
 
