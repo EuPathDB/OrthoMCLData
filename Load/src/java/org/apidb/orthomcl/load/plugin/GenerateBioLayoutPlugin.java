@@ -248,19 +248,19 @@ public class GenerateBioLayoutPlugin implements Plugin {
                 String groupName = rsGroup.getString("name");
                 sequenceCount += rsGroup.getInt("number_of_members");
 
-                // only run 1000 for each run
-                if (sequenceCount >= 10000) {
-                    hasMore = true;
-                    break;
-                }
-                
                 createLayout(groupId, groupName, taxons, rbhEdges, svgTemplate,
                         psSequence, psSimilarity, psUpdateImage);
 
                 groupCount++;
-                if (groupCount % 100 == 0) {
+                if (groupCount % 10 == 0) {
                     // psUpdateImage.executeBatch();
                     logger.debug(groupCount + " groups created...");
+                }
+
+                // only run 10000 seqs for each run
+                if (sequenceCount >= 10000) {
+                    hasMore = true;
+                    break;
                 }
             }
             // if (groupCount % 10 != 100) psUpdateImage.executeBatch();
