@@ -1,0 +1,32 @@
+PROCESS_ID	REGEX_SOURCEID	REGEX_DESC	REGEX_SECONDARYID	DEFLINE REPRESENTATIVE SAMPLES	NOTES
+GenBank	(ref\\|[^|]+)	\\|([^|]+)\$	(gi\\|[^|]+)	>gi|15605613|ref|NP_212986.1| elongation factor EF-G [Aquifex aeolicus VF5]	
+MBL	^>([^|]+)	^>[^|]+\\|([^|]+)		>347 |Hypothetical Protein|	
+TIGR1	^>([^\\s|]+)	^>[^\\s|]+(.+)\$		">Tb927.1.05 variant surface glycoprotein (VSG), putative [1961 - 381] MW:55643.66
+>12392.m00015      C2 domain containing protein
+>1.m00607 hypothetical protein 1.t00010 AAFB01000001
+>At1g01010.1 68414.m00001 no apical meristem (NAM) family protein contains Pfam PF02365: No apical meristem (NAM) domain; similar to NAC domain protein NAM GB: AAD17313 GI:43 25282 from [Arabidopsis thaliana]   
+>AO090009000001 predicted protein 
+>Ot01g00050 [7386..9416] Sodium/hydrogen exchanger protein (ISS)
+>638269970 Missing locus_tag:NC_002751.cds1.9177..9509 orf110 hypothetical protein [Guillardia theta]"	"Some of them have secondary Ids too, but let's start with something simple"
+TIGR2_Sanger	^>([^\\s|]+)	^>[^|]+\\|+[^|]+\\|[^|]+\\|([^|]+)		">1016.m00001 ||Tc00.1047053415187.10|hypothetical protein|t_cruzi|chr_0|1047053415187|116
+>127.m00055 |||hypothetical protein|T. thermophilia|chr_0|8254670|127
+>547.m00089 |TP05_0002|TP05_0002|ribosomal protein L4, putative|Theileria parva|chr_5|c5m547|547
+>162.m02116 |CNI04420||hypothetical protein|Cryptococcus neoformans|chr_9|chr9|162
+>Smp_176370 ||29660.m000203|conserved hypothetical protein|Schistosoma mansoni|chr unknown01|||Auto
+>AfA24A6.045c |||4-coumarate-coa ligase, putative|Aspergillus fumigatus|chr 1|||Manual
+>TA09295 |||exonuclease 1, putative|Theileria annulata|chr 04|||Manual
+>SPCC5E4.05c |||serine hydrolase |Schizosaccharomyces pombe|chr 3|||Manual
+>LmjF06.0710 |||hypothetical protein, unknown function|Leishmania major|chr 6|||Manual"	"Some of them have secondary Ids too, but let's start with something simple"
+TIGR_Rice	\\|([^\|]+)\\|	\\|([^|]+)\$		">LOC_Os01g01010.1|12001.m06748|protein TBC domain containing protein, expressed"	
+Dicty_Broad	^>([^\\s|]+)	([^|]+)\$		">NCU00001 | Neurospora crassa predicted protein (translation) (55 aa)
+>DDB0216439 |Protein| gene: JC1V2_0_00005 on chromosome: 1 position 5505 to 7769"	
+ApiDB	^>[^|]+\\|+[^|]+\\|([^|]+)	\\|\\([a-zA-Z\\s_]+\\) (.+)\$		>Plasmodium_falciparum_3D7|MAL13|MAL13P1.133|Pf Annotation|Plasmodium_falciparum_Sanger|(protein coding) hypothetical protein	
+Pknowlesi	\\|([^\\s]+)	\\|[^\\s]+\\s+(.+)\$		">84166|PKH_040010-1 hypothetical protein, conserved in Plasmodium species"	"This probably will change in the future, and matches with the rest of the ApiDB"
+SGD	^>([^\\s|]+)	^>[^\\s|]+(.+)\$	(SGDID:S[0-9]+)	">YAL001C TFC3 SGDID:S000000001, Chr I from 151168-151099,151008-147596, reverse complement, Verified ORF, ""Largest of six subunits of the RNA polymerase III transcription initiation factor complex (TFIIIC); part of the TauB domain of TFIIIC that binds DNA at the BoxB promoter sites of tRNA and similar genes; cooperates with Tfc6p in DNA binding"""	
+NoAnnotation	^>(.+)\$			>427	
+JGI	^>[^|]+\\|+[^|]+\\|([^|]+)	\\|([^|]+)\$		">jgi|Chlre3|196827|OVA_OVA_fgenesh2_pg.C_scaffold_27000092 {GOX10 putative glyoxal or galactose oxidase
+>jgi|Phchr1|9833|fgenesh1_pm.C_scaffold_1000003"	
+Integr8Uniprot	^>([^|]+)	\\|([^|]+)\$		>ADL066C|ACEA_ASHGO|Isocitrate lyase (EC 4.1.3.1) (Isocitrase) (Isocitratase) (ICL).	
+Genolevures	^>gnl\\|[A-Z]+\\|([^\\s]+)	^>gnl\\|[A-Z]+\\|[^\\s]+\s+(.+)\$		">gnl|GLV|YALI0A00110g weakly similar to tr|Q06593 Saccharomyces cerevisiae YPR194c OPT2, start by similarity [Yarrowia lipolytica] Complete CDS. YALI0A00110g|YALI-IPF10652|YALI-CDS0663.1"	
+EnsMart	^>([^\\s|]+)	^>[^\\s|]+\\s*\\|(.+)\$		>ENSP00000362111|ENSG00000000003|ENSF00000001020|Tetraspanin-6 (Tspan-6) (Transmembrane 4 superfamily member 6) (T245 protein) (Tetraspanin TM4-D) (A15 homolog). [Source:Uniprot/SWISSPROT;Acc:O43657]	
+Wormbase	^>([^\\s|]+)	^>[^\\s|]+\\s+(.+)\$	\\|(.+)\$	>WBGene00007064|2RSSE.1|2RSSE.1|WP:CE32785	

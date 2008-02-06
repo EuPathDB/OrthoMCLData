@@ -1,0 +1,166 @@
+DOMAIN	SPECIES	ABREVATION	"Expected, from source"	OthoMCL 1.0	Downloaded Seqs	Short	MSC	Seqs in DB	Used in BLAST																																																																																																																																																																																																																																																						
+BACTERIA (30=16+14 NEW)								(load short and MSC)	(short and MSC >20% filtered)																																																																																																																																																																																																																																																						
+	Aquifex aeolicus	aae	1560	1560	1560	0	0	1560																																																																																																																																																																																																																																																							
+	Thermotoga maritima	tma	1858	1858	1858	0	0	1858																																																																																																																																																																																																																																																							
+	Dehalococcoides ethenogenes	det	1580	1580	1580	0	0	1580																																																																																																																																																																																																																																																							
+	Deinococcus radiodurans	dra	3181	3182	3181	0	0	3181																																																																																																																																																																																																																																																							
+	Treponema pallidum	tpa	1036	1036	1036	0	0	1036																																																																																																																																																																																																																																																							
+	Chlorobium tepidum	cte	2252	2252	2252	0	0	2252																																																																																																																																																																																																																																																							
+	Rhodopirellula baltica	rba	7325	7325	7325	0	0	7325																																																																																																																																																																																																																																																							
+	Chlamydophila pneumoniae	cpn	1052	1052	1052	0	0	1052																																																																																																																																																																																																																																																							
+	Synechococcus sp.	syn	2519	2517	2519	0	0	2519																																																																																																																																																																																																																																																							
+	Mycobacterium tuberculosis	mtu	3989	3991	3989	0	0	3989																																																																																																																																																																																																																																																							
+	Bacillus anthracis Ames	ban	5311	5311	5311	0	0	5311																																																																																																																																																																																																																																																							
+	Wolinella succinogenes	wsu	2043	2044	2043	0	0	2043																																																																																																																																																																																																																																																							
+	Geobacter sulfurreducens	gsu	3446	3446	3446	0	0	3446																																																																																																																																																																																																																																																							
+	Agrobacterium tumefaciens	atu	5402	5402	5402	0	0	5402																																																																																																																																																																																																																																																							
+	Ralstonia solanacearum	rso	5116	5116	5116	0	0	5116
+	Escherichia coli	eco	4243	4242	4243	0	0	4243
+NEW(BioHealthBase)	Francisella tularensis	ftu	1603		1603	0	0	1603
+NEW(ERIC)	Yersinia pestis	ype	4066		4066	0	0	4066
+NEW(ERIC)	Shigella flexneri	sfl	4443		4443	0	0	4443
+NEW(ERIC)	Salmonella typhi / Salmonella enterica	sty	4758		4758	0	0	4758
+NEW(NMPDR)	Staphylococcus aureus	sau	2731		2731	0	0	2731
+NEW(NMPDR)	Vibrio cholerae	vch	3835		3835	0	0	3835
+NEW(NMPDR)	Listeria monocytogenes	lmo	2846		2846	0	0	2846
+NEW(NMPDR)	Campylobacter jejuni	cje	1629		1629	0	0	1629
+NEW(NMPDR)	Streptococcus pneumoniae	spn	2105		2105	0	0	2105
+NEW(Pathesma)	Clostridium perfringens	cpe	2723		2723	0	0	2723
+NEW(Pathesma)	Burkholderia mallei	bur	5025		5025	0	0	5025
+NEW(Patric)	Rickettsia typhi	rty	838		838	0	0	838
+NEW(Patric)	Brucella suis/Brucella melitensis bv suis	bsu	3271		3271	0	0	3271
+NEW(Patric)	Coxiella burnetii	cbu	2052		2052	0	0	2052
+ARCHAEA (4)									
+	Halobacterium sp. 	hal	2622	2622	2622	0	0	2622	
+	Methanococcus jannaschii	mja	1786	1786	1786	0	0	1786	
+	Sulfolobus solfataricus	sso	2977	2977	2977	0	0	2977	
+	Nanoarchaeum equitans	neq	536	536	536	0	0	536	
+EUKARYA (53=35+18 NEW)									
+NEW(BioHealthBase)	Giardia lamblia / Giardia intestinalis	gla	9649		9646	0	2	9646	
+	Entamoeba histolytica	ehi	9772	9772	9772	0	0	9772	
+	Dictyostelium discoideum	ddi	13331	13678	13534	1	4	13534	
+	Plasmodium falciparum	pfa		5363	5411	0	3	5411	
+	Plasmodium yoelii	pyo		7850	7861	49	59	7861	
+NEW	Plasmodium vivax	pvi			5352	2	10	5352	
+	Plasmodium knowlesi	pkn		6890	4921	0	0	4921	"Hopefully, though less number of proteins, this is a more accurate one."
+NEW	Plasmodium berghei	pbe			12235	19	588	12235	
+NEW	Plasmodium chabaudi	pch			15007	30	512	15007	
+	Cryptosporidium parvum	cpa		3396	3806	0	0	3806	
+	Cryptosporidium hominis	cho		3886	3886	0	0	3886	
+	Toxoplasma gondii	tgo		7793	7793	0	1	7793	
+	Theileria parva	the		4035	4079	0	1	4079	
+NEW	Theileria annulata	tan			3795	0	0	3795	
+NEW	Tetrahymena thermophila	tth			27424	85	5	27424	
+NEW	Trypanosoma cruzi	tcr			25041	0	1	25041	
+NEW	Trypanosoma brucei	tbr			8758	0	1	8758	
+NEW	Leishmania major	lma			8304	0	11	8304	
+	Encephalitozoon cuniculi	ecu		1996	1996	0	0	1996	
+	Saccharomyces cerevisiae	sce		6702	6718	0	6	6718	
+	Schizosaccharomyces pombe	spo		4984	5004	0	0	5004	
+	Cryptococcus neoformans	cne		5882	5882	0	1	5882	
+NEW	Phanerochaete chrysosporium	pha			10048	0	45	10048	
+	Ashbya gossypii	ago		4726	4721	0	1	4703	dont have source id
+	Neurospora crassa	ncr		10617	9845	0	1	9845	
+	Yarrowia lipolytica	yli		6665	6436	0	1	6436	Why less now? checked size and downloaded again
+	Kluyveromyces lactis	kla		5331	5327	0	0	5327	
+	Debaryomyces hansenii	dha		6896	6319	0	0	6319	
+	Candida glabrate	cgl		5272	5215	0	0	5215	Why less now? checked size and downloaded again
+NEW	Aspergillus oryzae	aor			12074	0	0	12074	
+NEW	Aspergillus fumigatus	afu			341	0	3	341	
+NEW	Guillardia theta	gth			485	0	0	485	
+NEW	Chlamydomonas reinhardtii	cre			15143	0	267	15143	
+NEW	Ostreococcus tauri	ota			7885	12	1	7885	
+	Cyanidioschyzon merolae	cme		5013	5014	0	0	5014	
+	Thalassiosira pseudonana	tps		11397	11397	0	1	11397	
+	Arabidopsis thaliana	ath		28952	28952	0	1	28952	
+	Oryza sativa	osa		88149	66710	0	1	66710	
+	Caenorhabditis elegans	cel	20084	22420	27322	1	1	20084	picked only one protein per gene
+	Caenorhabditis briggsae	cbr	19522	19334	19522	0	66	19522	
+NEW (TDR)	Brugia malayi	bma			11675	17	49	11675	
+	Drosophila melanogaster	dme		19177	19781	0	20	14034	picked only one protein per gene
+	Anopheles gambiae	aga		15802	13632	0	0	13267	picked only one protein per gene
+NEW(TDR)	Schistosoma mansoni	sma			13283	0	460	13283	
+NEW(VectorBase)	Aedes aegypti 	aed			15411	0	1	15411	
+NEW	Apis mellifera	ame			9257	0	0	9257	
+	Ciona intestinalis	cin		15852	19992	0	0	14274	picked only one protein per gene
+	Takifugu rubripes	fru		33003	22096	0	0	21995	picked only one protein per gene
+	Tetraodon nigroviridis	tni		28005	27997	0	1	27993	picked only one protein per gene
+	Danio rerio	dre		32062	36061	0	4	24943	picked only one protein per gene
+	Gallus gallus	gga		28416	22178	0	0	16707	picked only one protein per gene
+	Mus musculus	mmu		31535	32070	0	1	24435	picked only one protein per gene
+	Rattus norvegicus	rno		32543	33736	1	1	23291	picked only one protein per gene
+	Homo sapiens	has		33869	43595	0	2	22799	picked only one protein per gene
+									
+									
+									
+									
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
