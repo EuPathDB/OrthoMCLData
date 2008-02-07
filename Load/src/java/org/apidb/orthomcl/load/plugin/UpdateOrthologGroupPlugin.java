@@ -33,6 +33,11 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         double Mantissa;
         int Exponent;
 
+	PValue() {
+	    Exponent = 0;
+	    Mantissa = 0;
+	}
+
         PValue(double value) {
             int sign = (value >= 0) ? 1 : -1;
             Exponent = 0;
@@ -202,7 +207,13 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         // compute the average values for the group
         double avgPercentIdentity = sumPercentIdentity / pairCount;
         double avgPercentMatch = sumPercentMatch / pairCount;
-        PValue avgEvalue = new PValue(Math.pow(10, sumEvalue / pairCount));
+        PValue avgEvalue;
+	if (sumEvalue == 0) {
+	    avgEvalue = new PValue();
+	}
+	else {
+	    avgEvalue = new PValue(Math.pow(10, sumEvalue / pairCount));
+	}
         String msaResult = getMSAResult(orthologName);
 
         // update ortholog groups
@@ -257,7 +268,9 @@ public class UpdateOrthologGroupPlugin implements Plugin {
 
             sumPercentIdentity += 100.0 * identityCount / totalMatchLength;
             sumPercentMatch += 100.0 * nonOverlapLength / seqLength;
-            sumEvalue += pvalueExp + Math.log10(pvalueMant);
+	    if (pvalueMant != 0) {
+		sumEvalue += pvalueExp + Math.log10(pvalueMant);
+	    }
 
             count++;
         }
