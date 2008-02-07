@@ -82,7 +82,9 @@ public class GenerateBioLayoutPlugin implements Plugin {
             SequenceId = sequenceId;
             SourceId = sourceId.replaceAll("\\s+", " ").trim().intern();
             TaxonId = taxonId;
-            Description = description.replaceAll("\\s+", " ").trim().intern();
+            Description = description;
+            if (Description != null)
+                Description = Description.replaceAll("\\s+", " ").trim().intern();
         }
     }
 

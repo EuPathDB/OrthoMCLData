@@ -106,8 +106,7 @@ public class FixMsaData {
                 + " FROM dots.ExternalAaSequence eas, apidb.OrthomclTaxon ot, "
                 + "      apidb.OrthologGroupAaSequence ogs "
                 + " WHERE eas.aa_sequence_id = ogs.aa_sequence_id "
-                + "   AND eas.taxon_id = ot.taxon_id "
-                + "  AND ot.is_species = 1");
+                + "   AND eas.taxon_id = ot.taxon_id");
         Map<String, String> sequences = new HashMap<String, String>();
         while (rs.next()) {
             String sequenceId = rs.getString("aa_sequence_id");
