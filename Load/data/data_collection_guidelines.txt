@@ -1,0 +1,8 @@
+Data collection guideline:
+* prokaryotes (Bacteria, Archaea): from GenBank (since the genomes are usually small, and the annotations are relatively accurate, and stable)
+* Eukaryotes: 
+    * some of them should be collected from the original databases (or sequence center). (The annotations are updated frequently, and some of them are not completely sequenced)
+    * Individual databases may provide urls to each gene
+    * Ensembl: most of the higher Eukaryotes, eg. mammals
+* The data source should be consistent with the previous versions of OrthoMCL, unless suggested otherwise
+* Check the GOLD list for the data sources of each genome
