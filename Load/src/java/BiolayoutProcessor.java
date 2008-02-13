@@ -234,10 +234,9 @@ public class BiolayoutProcessor {
             String nodeName = taxon.Abbreviation + sequenceId;
 
             writer.print("nodeArray.push(new node('" + nodeName + "','");
-            writer.print(sequence.SourceId + "',\"");
-            writer.print((sequence.Description != null ? sequence.Description
-                    : sequence.SourceId)
-                    + "\",'");
+            writer.print(sequence.SourceId + "','");
+            writer.print((sequence.Description != null ? 
+                    sequence.Description : sequence.SourceId) + "','");
             writer.print(taxon.Name + "',['");
 
             // output all sequences in the same taxon

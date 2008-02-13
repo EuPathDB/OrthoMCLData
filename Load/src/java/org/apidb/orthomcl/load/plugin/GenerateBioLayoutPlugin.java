@@ -83,8 +83,10 @@ public class GenerateBioLayoutPlugin implements Plugin {
             SourceId = sourceId.replaceAll("\\s+", " ").trim().intern();
             TaxonId = taxonId;
             Description = description;
-            if (Description != null)
+            if (Description != null) {
                 Description = Description.replaceAll("\\s+", " ").trim().intern();
+                Description = Description.replace('\'', '"');
+            }
         }
     }
 
