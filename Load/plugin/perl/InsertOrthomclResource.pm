@@ -98,7 +98,9 @@ sub run {
     while(<FILE>) {
 	chomp;
 	my $resource = $self->parseResourceLine($_);
-	$resource->submit();
+	if ($resource) {
+	    $resource->submit();
+	}
     }
 
     return "Done adding resources.";
@@ -107,7 +109,7 @@ sub run {
 sub parseResourceLine {
     my ($self, $line) = @_;
     
-    my $resource = GUS::Model::ApiDB::OrthomclResource->new();
+    my $resource;
     my @resData = split('\t',$line);
     
     my $dbh = $self->getQueryHandle();
@@ -117,8 +119,8 @@ sub parseResourceLine {
     
     my $stmt = $dbh->prepare($sql);
     
-    if (scalar @resData == 13) {
-	if (length($resData[1]) == 3) {
+    if (scalar @resData == 13 && length($resData[1]) == 3) {
+	    $resource = GUS::Model::ApiDB::OrthomclResource->new();
 	    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
 	    $resource->setOrthomclTaxonId($taxonId);
 	    $resource->setResourceName($resData[6]);
@@ -127,10 +129,6 @@ sub parseResourceLine {
 	    $resource->setStrain($resData[5]);
 	    $resource->setDescription($resData[3]);
 	    $resource->setLinkoutUrl($resData[12]);
-	}
-    }
-    else {
-	$self->userError("invalid line in resource file: '$line'");
     }
     
     return $resource;
