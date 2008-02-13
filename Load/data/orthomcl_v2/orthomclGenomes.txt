@@ -1,166 +1,92 @@
-DOMAIN	ABREVATION	SPECIES	GROUPS	BRC purpose	STRAIN	DATA SOURCE	VERSION (if there is)	URL	PROCESSING	NCBI Tax ID	ANNOTATION PRESENT IN FASTA?	1
-BACTERIA (30=16+14 NEW)												2
-	aae	Aquifex aeolicus	Aquifex		VF5	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Aquifex_aeolicus/	GenBank	224324	annotation	3
-	tma	Thermotoga maritima	Thermotoga		MSB8	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Thermotoga_maritima/	GenBank	243274	annotation	4
-	det	Dehalococcoides ethenogenes	Green nonsulfur bacteria		195	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Dehalococcoides_ethenogenes_195/	GenBank	243164	annotation	5
-	dra	Deinococcus radiodurans	Deinococci		R1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Deinococcus_radiodurans/	GenBank	243230	annotation	6
-	tpa	Treponema pallidum	Spirochetes		subsp. pallidum str. Nichols	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Treponema_pallidum/	GenBank	243276	annotation	7
-	cte	Chlorobium tepidum	Green sulfur bacteria		TLS	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlorobium_tepidum_TLS/	GenBank	194439	annotation	8
-	rba	Rhodopirellula baltica	Planctomyces/Pirella	the marine planctomycete Pirellula sp. strain 1	SH_1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Pirellula_sp/	GenBank	243090	annotation	9
-	cpn	Chlamydophila pneumoniae	Chlamydia		CWL029	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlamydophila_pneumoniae_CWL029/	GenBank	115713	annotation	10
-	syn	Synechococcus sp.	Cyanobacteria		WH8102	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Synechococcus_sp_WH8102/	GenBank	84588	annotation	11
-	mtu	Mycobacterium tuberculosis	Actinobacteria	BioHealthBase	H37Rv	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Mycobacterium_tuberculosis_H37Rv/	GenBank	83332	annotation	12
-	ban	Bacillus anthracis Ames	"Gram-positive, Firmicutes"	Pathema	Ames	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Bacillus_anthracis_Ames/	GenBank	261594	annotation	13
-	wsu	Wolinella succinogenes	epsilon-proteobacteria	pathogenic Campylobacter jejuni subsp. jejuni	DSM 1740	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Wolinella_succinogenes/	GenBank	273121	annotation	14
-	gsu	Geobacter sulfurreducens	delta-proteobacteria		PCA	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Geobacter_sulfurreducens/	GenBank	243231	annotation	15
-	atu	Agrobacterium tumefaciens	alpha-proteobacteria		C58 Uwash	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Agrobacterium_tumefaciens_C58_UWash/	GenBank	176299	annotation	16
-	rso	Ralstonia solanacearum	beta-proteobacteria		GMI1000	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Ralstonia_solanacearum/	GenBank	267608	annotation	17
-	eco	Escherichia coli	gamma-proteobacteria		K12	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Escherichia_coli_K12/	GenBank	316407	annotation	18
-NEW(BioHealthBase)	ftu	Francisella tularensis	gamma-proteobacteria	BioHealthBase	subsp. tularensis SCHU S4 (first published such species genome in Nature Genetics)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Francisella_tularensis_tularensis/	GenBank	177416	annotation	19
-NEW(ERIC)	ype	Yersinia pestis	gamma-proteobacteria	ERIC	CO-92 (first published in Nature in 2001)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Yersinia_pestis_CO92/	GenBank	214092	annotation	20
-NEW(ERIC)	sfl	Shigella flexneri	gamma-proteobacteria	ERIC	2a str. 301 (first published in NAR 2002)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Shigella_flexneri_2a/	GenBank	198214	annotation	21
-NEW(ERIC)	sty	Salmonella typhi / Salmonella enterica	gamma-proteobacteria	ERIC	sv Typhi CT18 (2001 Nature)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Salmonella_typhi/	GenBank	220341	annotation	22
-NEW(NMPDR)	sau	Staphylococcus aureus	"Gram-positive, Firmicutes"	NMPDR	subsp. Aureus Mu50	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Staphylococcus_aureus_Mu50/	GenBank	158878	annotation	23
-NEW(NMPDR)	vch	Vibrio cholerae	gamma-proteobacteria	NMPDR	" N16961, Biotype ElTor (2000 Nature)"	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Vibrio_cholerae/	GenBank	243277	annotation	24
-NEW(NMPDR)	lmo	Listeria monocytogenes	"Gram-positive, Firmicutes"	NMPDR	EGD-e (first published in Science 2001)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Listeria_monocytogenes/	GenBank	169963	annotation	25
-NEW(NMPDR)	cje	Campylobacter jejuni	epsilon-proteobacteria	NMPDR	subsp. jejuni NCTC 11168 (first published in Nature 2000)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Campylobacter_jejuni/	GenBank	192222	annotation	26
-NEW(NMPDR)	spn	Streptococcus pneumoniae	"Gram-positive, Firmicutes"	NMPDR	"TIGR4 (second published Streptococcus, but published in Science 2001)"	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Streptococcus_pneumoniae_TIGR4/	GenBank	170187	annotation	27
-NEW(Pathesma)	cpe	Clostridium perfringens	"Gram-positive, Firmicutes"	Pathema	13 (first published cpe genome)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Clostridium_perfringens/	GenBank	195102	annotation	28
-NEW(Pathesma)	bur	Burkholderia mallei	beta-proteobacteria	Pathema	ATCC23344 (first published)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Burkholderia_mallei_ATCC_23344/	GenBank	243160	annotation	29
-NEW(Patric)	rty	Rickettsia typhi	alpha-proteobacteria	Patric	Wilmington (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Rickettsia_typhi_wilmington/	GenBank	257363	annotation	30
-NEW(Patric)	bsu	Brucella suis/Brucella melitensis bv suis	alpha-proteobacteria	Patric	1330 (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Brucella_suis_1330/	GenBank	204722	annotation	31
-NEW(Patric)	cbu	Coxiella burnetii	gamma-proteobacteria	Patric	RSA 493 (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Coxiella_burnetii/	GenBank	227377	annotation	32
-ARCHAEA (4)												33			
-	hal	Halobacterium sp. 	Euryarchaeota		NRC-1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Halobacterium_sp/	GenBank	64091	annotation	34			
-	mja	Methanococcus jannaschii	Euryarchaeota		DSSM 2661	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Methanococcus_jannaschii/	GenBank	243232	annotation	35			
-	sso	Sulfolobus solfataricus	Crenarchaeota		P2	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Sulfolobus_solfataricus/	GenBank	273057	annotation	36			
-	neq	Nanoarchaeum equitans	Nanoarchaeota		Kin4-M	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans/	GenBank	228908	annotation	37			
-EUKARYA (53=35+18 NEW)												38			
-NEW(BioHealthBase)	gla	Giardia lamblia / Giardia intestinalis	PROTOZOA-diplomonadida	MBL		GiardiaDB		http://gmod.mbl.edu/perl/site/giardia?page=download_tool&file=orfs_aa&type=orfs&noheader=T	MBL	184922		39			
-	ehi	Entamoeba histolytica	PROTOZOA-ENTAMOEBIDAE intestinal parasite and the causative agent of amoebiasis	Pathema		TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/e_histolytica/annotation_dbs/EHA1.pep	TIGR1	294381	annotation	40	no change		
-	ddi	Dictyostelium discoideum	"PROTOZOA-MYCETOZOA social amoebae, slime mold"			dictyBase		http://www.dictybase.org/db/cgi-bin/dictyBase/download/download.pl?area=blast_databases&ID=dicty_primary_protein.gz&confirm=Y	Dicty_Broad	352472	"gene name, but no annotation; using dictymart to download geneid-product mapping file; however, the dictymart gave different description for the same gene. So gave up, just use the current gene name in the FASTA"	41			
-	pfa	Plasmodium falciparum	PROTOZOA-APICOMPLEXA	ApiDB	3D7	PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pfalciparum/PfalciparumAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	36329	annotation	42			
-	pyo	Plasmodium yoelii	PROTOZOA-APICOMPLEXA	ApiDB	17XNL	PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pyoelii/PyoeliiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	352914	annotation	43			
-NEW	pvi	Plasmodium vivax	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pvivax/PvivaxAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	126793	annotation	44			
-	pkn	Plasmodium knowlesi	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB		/files/cbil/data/cbil/orthoMCL/manualDelivery/Pknowlesi.fasta	Pknowlesi	5851	annotation	45			
-NEW	pbe	Plasmodium berghei	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pberghei/PbergheiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	5821	annotation	46			
-NEW	pch	Plasmodium chabaudi	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pchabaudi/PchabaudiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	5825	annotation	47			
-	cpa	Cryptosporidium parvum	PROTOZOA-APICOMPLEXA	ApiDB	Iowa (Type2)	CryptoDB	3.4	http://www.cryptodb.org/common/downloads/release-3.4/Cparvum/CparvumAnnotatedProtein.fsa.zip	ApiDB	5807	annotation	48			
-	cho	Cryptosporidium hominis	PROTOZOA-APICOMPLEXA	ApiDB	TU502 (Type 1)	CryptoDB	3.4	http://www.cryptodb.org/common/downloads/release-3.4/Chominis/ChominisAnnotatedProtein.fsa.zip	ApiDB	237895	annotation	49			
-	tgo	Toxoplasma gondii	PROTOZOA-APICOMPLEXA	ApiDB		ToxoDB	4.1	http://www.plasmodb.org/download/release-5.2/Tgondii/TgondiiAnnotatedProteins_toxoDb-4.1.fasta	ApiDB	5811	annotation	50			
-	the	Theileria parva	PROTOZOA-APICOMPLEXA			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_parva/annotation_dbs/TPA1.pep	TIGR2_Sanger	5875	annotation	51	id is not tpa!!!		
-NEW	tan	Theileria annulata	PROTOZOA-APICOMPLEXA		Ankara clone C9	SANGER		ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep	TIGR2_Sanger	5874		52			
-NEW	tth	Tetrahymena thermophila	"PROTOZOA, ALVEOLATA, ciliophora"			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_thermophila/annotation_dbs/TTA1.pep	TIGR2_Sanger	5911	annotation	53			
-NEW	tcr	Trypanosoma cruzi	PROTOZOA-EUGLENOZOA		CL Brener TC3	TIGR		ftp://ftp.tigr.org/private/euk/t_cruzi_q98122/annotation_dbs/TCA1.pep	TIGR2_Sanger	5693	annotation	54	http://www.genedb.org/genedb/Search?organism=tcruzi&name=Tc00.1047053503417.30&isid=true	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tca1&orf=6853.t00021	
-NEW	tbr	Trypanosoma brucei	PROTOZOA-EUGLENOZOA		TREU927/4 GUTat10.1	TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_brucei/annotation_dbs/TBA1.pep	TIGR1	5691	annotation	55	http://www.genedb.org/genedb/Search?organism=tryp&name=Tb927.1.120&isid=true	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tba1&orf=338.t00013	
-NEW	lma	Leishmania major	PROTOZOA-EUGLENOZOA		Friedlin	SANGER		ftp://ftp.sanger.ac.uk/pub/databases/L.major_sequences/DATASETS/LmjFwholegenome_20060901_V5.2.pep	TIGR2_Sanger	5664	annotation	56	http://www.genedb.org/genedb/Search?organism=leish&name=LmjF06.0710&isid=true		
-	ecu	Encephalitozoon cuniculi	FUNGI	genbank		GenBank		ftp://ftp.ncbi.nih.gov/genomes/Fungi/Encephalitozoon_cuniculi/	GenBank	6035	annotation	57			
-	sce	Saccharomyces cerevisiae	"FUNGI, budding yeast"		S288C	SGD		ftp://genome-ftp.stanford.edu/yeast/data_download/sequence/genomic_sequence/orf_protein/orf_trans_all.fasta.gz	SGD	4932	annotation	58			
-	spo	Schizosaccharomyces pombe	"FUNGI, fission yeast"			SANGER		ftp://ftp.sanger.ac.uk/pub/yeast/pombe/Protein_data/pompep	TIGR2_Sanger	4896	annotation	59			
-	cne	Cryptococcus neoformans	"FUNGI, basidiomycetous yeast"			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/c_neoformans/annotation_dbs/CNA1.pep	TIGR2_Sanger	5207	annotation	60			
-NEW	pha	Phanerochaete chrysosporium	"FUNGI, BASIDIOMYCOTA"		RP-78	JGI		ftp://ftp.jgi-psf.org/pub/JGI_data/Phanerochaete_chrysosporium/v2.0/BestModels2.1.prot.gz	JGI	5306		61	id is not pch		
-	ago	Ashbya gossypii	"FUNGI, ASCOMYCOTA, filamentous fungus"	integr8		AGD	2.1	ftp://ftp.ebi.ac.uk/pub/databases/integr8/uniprot/proteomes/982.A_gossypii.dat.gz	Integr8Uniprot	33169	syntenic homolog	62			
-	ncr	Neurospora crassa	"FUNGI, filamentous fungus"		OR74A	WI	release 7	http://www.broad.mit.edu/annotation/genome/neurospora/assets/neurospora_crassa_7_proteins.fasta.gz	Dicty_Broad	5141	most hypothetical and predicted protein	63			
-	yli	Yarrowia lipolytica	"FUNGI, ASCOMYCOTA"		CLIB99	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Yali-GL2r2.aa	Genolevures	4952	highly/weekly similar to	64			
-	kla	Kluyveromyces lactis	"FUNGI, ASCOMYCOTA"		CLIB210	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Klla-GL2r2.aa	Genolevures	28985	highly/weekly similar to	65			
-	dha	Debaryomyces hansenii	"FUNGI, ASCOMYCOTA"		CBS767	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Deha-GL2r2.aa	Genolevures	4959	highly/weekly similar to	66			
-	cgl	Candida glabrate	"FUNGI, ASCOMYCOTA"		CBS138	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Cagl-GL2r2.aa	Genolevures	5478	highly/weekly similar to	67			
-NEW	aor	Aspergillus oryzae	"FUNGI, ASCOMYCOTA"		RIB40	JAPAN		ftp://ftp.bio.nite.go.jp/pub/ao/	TIGR1	5062	annotation	68		http://www.bio.nite.go.jp/dogan/ProteinInformation?ORF_ID=AO090005000129	
-NEW	afu	Aspergillus fumigatus	"FUNGI, ASCOMYCOTA"		Af293	SANGER		ftp://ftp.sanger.ac.uk/pub/pathogens/A_fumigatus/A_fumigatus.GeneDB.pep	TIGR2_Sanger	5085		69			
-NEW	gth	Guillardia theta	"PLANTS, PROTOZOA-CRYPTOPHYTA"			JGI		http://img.jgi.doe.gov/cgi-bin/pub/main.cgi?downloadTaxonFaaFile=1&taxon_oid=638269501	TIGR1	55529		70			
-NEW	cre	Chlamydomonas reinhardtii	"PLANTS, CHLOROPHYTA, green algae"			JGI	3	ftp://ftp.jgi-psf.org/pub/JGI_data/Chlamy/v3.1/Chlre3_1.GeneCatalogProteins.6JUL06.fasta.gz	JGI	3055	annotation	71			
-NEW	ota	Ostreococcus tauri	"PLANTS, CHLOROPHYTA"			"Laboratoire Arago, France"	2006-12-11	https://bioinformatics.psb.ugent.be/gdb/ostreococcus/ostreo_pep_061206.tfa.gz	TIGR1	70448		72			
-	cme	Cyanidioschyzon merolae	"PLANTS, red algae PROTOZOA-RHODOPHYTA  "		10D	UTOKYO		http://merolae.biol.s.u-tokyo.ac.jp/download/cds.fasta	Genolevures	45157	annotation	73			
-	tps	Thalassiosira pseudonana	"PLANTS, diatom PROTOZOA-STRAMENOPILES "			JGI	1	ftp://ftp.jgi-psf.org/pub/JGI_data/Diatom/thaps1/thaps1Prots.fasta.gz	NoAnnotation	35128	no annotation	74			
-	ath	Arabidopsis thaliana	PLANTS			TIGR		ftp://ftp.tigr.org/pub/data/a_thaliana/ath1/SEQUENCES/ATH1.pep.gz	TIGR1	3702	annotation	75			
-	osa	Oryza sativa	"PLANTS, rice"		ssp. Indica or ssp. Japonica	TIGR	4	ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_5.0/all.chrs/all.pep	TIGR_Rice	4530	annotation	76	"http://www.tigr.org/tdb/e2k1/osa1/data_download.shtml gave result of 12 chromosomes, but contain 20000 less proteins than OSA1.pep, why???"	mito/chloroplast	 japonica or indica?
-	cel	Caenorhabditis elegans	NEMATODES			Wormbase	42	/files/cbil/data/cbil/orthoMCL/manualDelivery/c_elegans_peptide.fasta	Wormbase	6239	"no annotation, get annotation or family info from ensmart"	77			
-	cbr	Caenorhabditis briggsae	NEMATODES			Wormbase	"brigpep2, assembly: cb25.agp8"	/files/cbil/data/cbil/orthoMCL/manualDelivery/c_briggsae_peptide.fasta	Wormbase	6238	no annotation	78			
-NEW (TDR)	bma	Brugia malayi	NEMATODES			TIGR		ftp://ftp.tigr.org/private/euk/b_malayi_fh574/annotation_dbs/BMA1.pep	TIGR1	6279		79			
-	dme	Drosophila melanogaster	"ARTHROPODA, fruit fly"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/drosophila_melanogaster_42_43/data/pub/pep/	EnsMart	7227	"no annotation, get annotation or family info from ensmart"	80			
-	aga	Anopheles gambiae	"ARTHROPODA, mosquito"	VectorBase	PEST	ensembl	42	ftp://ftp.ensembl.org/pub/release-42/anopheles_gambiae_42_3e/data/pub/pep/	EnsMart	7165	"no annotation, get annotation or family info from ensmart"	81			
-NEW(TDR)	sma	Schistosoma mansoni	PLATYHELMINTHES			sanger	4	ftp://ftp.sanger.ac.uk/pub/pathogens/Schistosoma/mansoni/genome/gene_predictions/GeneDB_Smansoni_Proteins.v4.0.gz	TIGR2_Sanger	6183		82			
-NEW(VectorBase)	aed	Aedes aegypti	"ARTHOPODA, mosquito"	VectorBase		ensembl	42	ftp://ftp.ensembl.org/pub/release-42/aedes_aegypti_42_1a/data/fasta/pep/Aedes_aegypti.AaegL1.42.pep.all.fa.gz	EnsMart	7159		83			
-NEW	ame	Apis mellifera 	"ARTHROPODA, honey bee"			GenBank		ftp://ftp.ncbi.nih.gov/genomes/Apis_mellifera/protein/protein.fa.gz	GenBank	7460		84			
-	cin	Ciona intestinalis	"FISH, sea squirt"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/ciona_intestinalis_42_2d/data/pub/pep/	EnsMart	7719	"no annotation, get annotation or family info from ensmart"	85			
-	fru	Takifugu rubripes	"FISH, fugu"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/takifugu_rubripes_42_4d/data/pub/pep/	EnsMart	31033	"no annotation, get annotation or family info from ensmart"	86	id is not tru		
-	tni	Tetraodon nigroviridis	"FISH, teleost fish "			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/tetraodon_nigroviridis_42_1h/data/pub/pep/	EnsMart	99883	"no annotation, get annotation or family info from ensmart"	87			
-	dre	Danio rerio	"FISH, zebrafish"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/danio_rerio_42_6c/data/pub/pep/	EnsMart	7955	"no annotation, get annotation or family info from ensmart"	88			
-	gga	Gallus gallus	"BIRDS, chicken"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/gallus_gallus_42_2/data/pub/pep/	EnsMart	9031	"no annotation, get annotation or family info from ensmart"	89			
-	mmu	Mus musculus	"MAMMALS, mouse"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/mus_musculus_42_36c/data/pub/pep/	EnsMart	10090	"no annotation, get annotation or family info from ensmart"	90			
-	rno	Rattus norvegicus	"MAMMALS, Brown Norway Rat"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/rattus_norvegicus_42_34l/data/pub/pep/	EnsMart	10116	"no annotation, get annotation or family info from ensmart"	91			
-	has	Homo sapiens	"PRIMATES, human"			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/homo_sapiens_42_36d/data/pub/pep/	EnsMart	9606	"no annotation, get annotation or family info from ensmart"	92			
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
-															
+DOMAIN	ABREVATION	SPECIES	GROUPS	BRC purpose	STRAIN	DATA SOURCE	VERSION (if there is)	URL	PROCESSING	NCBI Tax ID	ANNOTATION PRESENT IN FASTA?	Linkout url
+BACTERIA (30=16+14 NEW)												
+	aae	Aquifex aeolicus	Aquifex		VF5	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Aquifex_aeolicus/	GenBank	224324	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	tma	Thermotoga maritima	Thermotoga		MSB8	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Thermotoga_maritima/	GenBank	243274	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	det	Dehalococcoides ethenogenes	Green nonsulfur bacteria		195	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Dehalococcoides_ethenogenes_195/	GenBank	243164	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	dra	Deinococcus radiodurans	Deinococci		R1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Deinococcus_radiodurans/	GenBank	243230	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	tpa	Treponema pallidum	Spirochetes		subsp. pallidum str. Nichols	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Treponema_pallidum/	GenBank	243276	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	cte	Chlorobium tepidum	Green sulfur bacteria		TLS	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlorobium_tepidum_TLS/	GenBank	194439	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	rba	Rhodopirellula baltica	Planctomyces/Pirella	the marine planctomycete Pirellula sp. strain 1	SH_1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Pirellula_sp/	GenBank	243090	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	cpn	Chlamydophila pneumoniae	Chlamydia		CWL029	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Chlamydophila_pneumoniae_CWL029/	GenBank	115713	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	syn	Synechococcus sp.	Cyanobacteria		WH8102	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Synechococcus_sp_WH8102/	GenBank	84588	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	mtu	Mycobacterium tuberculosis	Actinobacteria	BioHealthBase	H37Rv	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Mycobacterium_tuberculosis_H37Rv/	GenBank	83332	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	ban	Bacillus anthracis Ames	Gram-positive, Firmicutes	Pathema	Ames	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Bacillus_anthracis_Ames/	GenBank	261594	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	wsu	Wolinella succinogenes	epsilon-proteobacteria	pathogenic Campylobacter jejuni subsp. jejuni	DSM 1740	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Wolinella_succinogenes/	GenBank	273121	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	gsu	Geobacter sulfurreducens	delta-proteobacteria		PCA	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Geobacter_sulfurreducens/	GenBank	243231	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	atu	Agrobacterium tumefaciens	alpha-proteobacteria		C58 Uwash	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Agrobacterium_tumefaciens_C58_UWash/	GenBank	176299	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	rso	Ralstonia solanacearum	beta-proteobacteria		GMI1000	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Ralstonia_solanacearum/	GenBank	267608	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	eco	Escherichia coli	gamma-proteobacteria		K12	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Escherichia_coli_K12/	GenBank	316407	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(BioHealthBase)	ftu	Francisella tularensis	gamma-proteobacteria	BioHealthBase	subsp. tularensis SCHU S4 (first published such species genome in Nature Genetics)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Francisella_tularensis_tularensis/	GenBank	177416	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(ERIC)	ype	Yersinia pestis	gamma-proteobacteria	ERIC	CO-92 (first published in Nature in 2001)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Yersinia_pestis_CO92/	GenBank	214092	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(ERIC)	sfl	Shigella flexneri	gamma-proteobacteria	ERIC	2a str. 301 (first published in NAR 2002)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Shigella_flexneri_2a/	GenBank	198214	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(ERIC)	sty	Salmonella typhi / Salmonella enterica	gamma-proteobacteria	ERIC	sv Typhi CT18 (2001 Nature)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Salmonella_typhi/	GenBank	220341	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(NMPDR)	sau	Staphylococcus aureus	Gram-positive, Firmicutes	NMPDR	subsp. Aureus Mu50	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Staphylococcus_aureus_Mu50/	GenBank	158878	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(NMPDR)	vch	Vibrio cholerae	gamma-proteobacteria	NMPDR	 N16961, Biotype ElTor (2000 Nature)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Vibrio_cholerae/	GenBank	243277	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(NMPDR)	lmo	Listeria monocytogenes	Gram-positive, Firmicutes	NMPDR	EGD-e (first published in Science 2001)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Listeria_monocytogenes/	GenBank	169963	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(NMPDR)	cje	Campylobacter jejuni	epsilon-proteobacteria	NMPDR	subsp. jejuni NCTC 11168 (first published in Nature 2000)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Campylobacter_jejuni/	GenBank	192222	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(NMPDR)	spn	Streptococcus pneumoniae	Gram-positive, Firmicutes	NMPDR	TIGR4 (second published Streptococcus, but published in Science 2001)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Streptococcus_pneumoniae_TIGR4/	GenBank	170187	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(Pathesma)	cpe	Clostridium perfringens	Gram-positive, Firmicutes	Pathema	13 (first published cpe genome)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Clostridium_perfringens/	GenBank	195102	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(Pathesma)	bur	Burkholderia mallei	beta-proteobacteria	Pathema	ATCC23344 (first published)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Burkholderia_mallei_ATCC_23344/	GenBank	243160	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(Patric)	rty	Rickettsia typhi	alpha-proteobacteria	Patric	Wilmington (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Rickettsia_typhi_wilmington/	GenBank	257363	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(Patric)	bsu	Brucella suis/Brucella melitensis bv suis	alpha-proteobacteria	Patric	1330 (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Brucella_suis_1330/	GenBank	204722	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+NEW(Patric)	cbu	Coxiella burnetii	gamma-proteobacteria	Patric	RSA 493 (PATRIC REFERENCE GENOME)	GenBank		ftp://ftp.ncbi.nlm.nih.gov/genomes/Bacteria/Coxiella_burnetii/	GenBank	227377	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+ARCHAEA (4)												
+	hal	Halobacterium sp. 	Euryarchaeota		NRC-1	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Halobacterium_sp/	GenBank	64091	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	mja	Methanococcus jannaschii	Euryarchaeota		DSSM 2661	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Methanococcus_jannaschii/	GenBank	243232	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	sso	Sulfolobus solfataricus	Crenarchaeota		P2	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Sulfolobus_solfataricus/	GenBank	273057	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	neq	Nanoarchaeum equitans	Nanoarchaeota		Kin4-M	GenBank		ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Nanoarchaeum_equitans/	GenBank	228908	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+EUKARYA (53=35+18 NEW)												
+NEW(BioHealthBase)	gla	Giardia lamblia / Giardia intestinalis	PROTOZOA-diplomonadida	MBL		GiardiaDB		http://gmod.mbl.edu/perl/site/giardia?page=download_tool&file=orfs_aa&type=orfs&noheader=T	MBL	184922		
+	ehi	Entamoeba histolytica	PROTOZOA-ENTAMOEBIDAE intestinal parasite and the causative agent of amoebiasis	Pathema		TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/e_histolytica/annotation_dbs/EHA1.pep	TIGR1	294381	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=eha1&orf=
+	ddi	Dictyostelium discoideum	PROTOZOA-MYCETOZOA social amoebae, slime mold			dictyBase		http://www.dictybase.org/db/cgi-bin/dictyBase/download/download.pl?area=blast_databases&ID=dicty_primary_protein.gz&confirm=Y	Dicty_Broad	352472	gene name, but no annotation; using dictymart to download geneid-product mapping file; however, the dictymart gave different description for the same gene. So gave up, just use the current gene name in the FASTA	http://dictybase.org/db/cgi-bin/gene_page.pl?dictybaseid=
+	pfa	Plasmodium falciparum	PROTOZOA-APICOMPLEXA	ApiDB	3D7	PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pfalciparum/PfalciparumAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	36329	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+	pyo	Plasmodium yoelii	PROTOZOA-APICOMPLEXA	ApiDB	17XNL	PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pyoelii/PyoeliiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	352914	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+NEW	pvi	Plasmodium vivax	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pvivax/PvivaxAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	126793	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+	pkn	Plasmodium knowlesi	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB		/files/cbil/data/cbil/orthoMCL/manualDelivery/Pknowlesi.fasta	Pknowlesi	5851	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+NEW	pbe	Plasmodium berghei	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pberghei/PbergheiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	5821	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+NEW	pch	Plasmodium chabaudi	PROTOZOA-APICOMPLEXA	ApiDB		PlasmoDB	5.2	http://www.plasmodb.org/download/release-5.2/Pchabaudi/PchabaudiAnnotatedProteins_plasmoDB-5.2.fasta	ApiDB	5825	annotation	http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=PlasmoDB&primary_key=
+	cpa	Cryptosporidium parvum	PROTOZOA-APICOMPLEXA	ApiDB	Iowa (Type2)	CryptoDB	3.4	http://www.cryptodb.org/common/downloads/release-3.4/Cparvum/CparvumAnnotatedProtein.fsa.zip	ApiDB	5807	annotation	http://cryptodb.org/cryptodb/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=CryptoDB&primary_key=
+	cho	Cryptosporidium hominis	PROTOZOA-APICOMPLEXA	ApiDB	TU502 (Type 1)	CryptoDB	3.4	http://www.cryptodb.org/common/downloads/release-3.4/Chominis/ChominisAnnotatedProtein.fsa.zip	ApiDB	237895	annotation	http://cryptodb.org/cryptodb/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=CryptoDB&primary_key=
+	tgo	Toxoplasma gondii	PROTOZOA-APICOMPLEXA	ApiDB		ToxoDB	4.1	http://www.plasmodb.org/download/release-5.2/Tgondii/TgondiiAnnotatedProteins_toxoDb-4.1.fasta	ApiDB	5811	annotation	http://toxodb.org/toxo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&project_id=ToxoDB&primary_key=
+	the	Theileria parva	PROTOZOA-APICOMPLEXA			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_parva/annotation_dbs/TPA1.pep	TIGR2_Sanger	5875	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tpa1&orf=
+NEW	tan	Theileria annulata	PROTOZOA-APICOMPLEXA		Ankara clone C9	SANGER		ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep	TIGR2_Sanger	5874		
+NEW	tth	Tetrahymena thermophila	PROTOZOA, ALVEOLATA, ciliophora			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_thermophila/annotation_dbs/TTA1.pep	TIGR2_Sanger	5911	annotation	
+NEW	tcr	Trypanosoma cruzi	PROTOZOA-EUGLENOZOA		CL Brener TC3	TIGR		ftp://ftp.tigr.org/private/euk/t_cruzi_q98122/annotation_dbs/TCA1.pep	TIGR2_Sanger	5693	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tca1&orf=
+NEW	tbr	Trypanosoma brucei	PROTOZOA-EUGLENOZOA		TREU927/4 GUTat10.1	TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_brucei/annotation_dbs/TBA1.pep	TIGR1	5691	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tba1&orf=
+NEW	lma	Leishmania major	PROTOZOA-EUGLENOZOA		Friedlin	SANGER		ftp://ftp.sanger.ac.uk/pub/databases/L.major_sequences/DATASETS/LmjFwholegenome_20060901_V5.2.pep	TIGR2_Sanger	5664	annotation	
+	ecu	Encephalitozoon cuniculi	FUNGI	genbank		GenBank		ftp://ftp.ncbi.nih.gov/genomes/Fungi/Encephalitozoon_cuniculi/	GenBank	6035	annotation	http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	sce	Saccharomyces cerevisiae	FUNGI, budding yeast		S288C	SGD		ftp://genome-ftp.stanford.edu/yeast/data_download/sequence/genomic_sequence/orf_protein/orf_trans_all.fasta.gz	SGD	4932	annotation	http://db.yeastgenome.org/cgi-bin/locus.pl?locus=
+	spo	Schizosaccharomyces pombe	FUNGI, fission yeast			SANGER		ftp://ftp.sanger.ac.uk/pub/yeast/pombe/Protein_data/pompep	TIGR2_Sanger	4896	annotation	http://www.genedb.org/genedb/Search?organism=pombe&name=
+	cne	Cryptococcus neoformans	FUNGI, basidiomycetous yeast			TIGR		ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/c_neoformans/annotation_dbs/CNA1.pep	TIGR2_Sanger	5207	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=cna1&orf=
+NEW	pha	Phanerochaete chrysosporium	FUNGI, BASIDIOMYCOTA		RP-78	JGI		ftp://ftp.jgi-psf.org/pub/JGI_data/Phanerochaete_chrysosporium/v2.0/BestModels2.1.prot.gz	JGI	5306		http://genome.jgi-psf.org/cgi-bin/dispGeneModel?db=Phchr1&id=
+	ago	Ashbya gossypii	FUNGI, ASCOMYCOTA, filamentous fungus	integr8		AGD	2.1	ftp://ftp.ebi.ac.uk/pub/databases/integr8/uniprot/proteomes/982.A_gossypii.dat.gz	Integr8Uniprot	33169	syntenic homolog	http://agd.unibas.ch/Ashbya_gossypii/geneview?gene=
+	ncr	Neurospora crassa	FUNGI, filamentous fungus		OR74A	WI	release 7	http://www.broad.mit.edu/annotation/genome/neurospora/assets/neurospora_crassa_7_proteins.fasta.gz	Dicty_Broad	5141	most hypothetical and predicted protein	http://www.broad.mit.edu/cgi-bin/annotation/fungi/neurospora_crassa_3/findfeatures.cgi?FEATURETYPES=ANNOTATED_GENE&page=showfeatures&Search=Submit&GENELOCUS=
+	yli	Yarrowia lipolytica	FUNGI, ASCOMYCOTA		CLIB99	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Yali-GL2r2.aa	Genolevures	4952	highly/weekly similar to	http://cbi.labri.u-bordeaux.fr/Genolevures/elt/YALI/
+	kla	Kluyveromyces lactis	FUNGI, ASCOMYCOTA		CLIB210	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Klla-GL2r2.aa	Genolevures	28985	highly/weekly similar to	http://cbi.labri.u-bordeaux.fr/Genolevures/elt/KLLA/
+	dha	Debaryomyces hansenii	FUNGI, ASCOMYCOTA		CBS767	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Deha-GL2r2.aa	Genolevures	4959	highly/weekly similar to	http://cbi.labri.u-bordeaux.fr/Genolevures/elt/DEHA/
+	cgl	Candida glabrate	FUNGI, ASCOMYCOTA		CBS138	Genolevures	2	http://cbi.labri.u-bordeaux.fr/Genolevures/raw/seq/annotation/Release2/Cagl-GL2r2.aa	Genolevures	5478	highly/weekly similar to	http://cbi.labri.u-bordeaux.fr/Genolevures/elt/CAGL/
+NEW	aor	Aspergillus oryzae	FUNGI, ASCOMYCOTA		RIB40	JAPAN		ftp://ftp.bio.nite.go.jp/pub/ao/	TIGR1	5062	annotation	
+NEW	afu	Aspergillus fumigatus	FUNGI, ASCOMYCOTA		Af293	SANGER		ftp://ftp.sanger.ac.uk/pub/pathogens/A_fumigatus/A_fumigatus.GeneDB.pep	TIGR2_Sanger	5085		http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=afu1&orf=
+NEW	gth	Guillardia theta	PLANTS, PROTOZOA-CRYPTOPHYTA			JGI		http://img.jgi.doe.gov/cgi-bin/pub/main.cgi?downloadTaxonFaaFile=1&taxon_oid=638269501	TIGR1	55529		
+NEW	cre	Chlamydomonas reinhardtii	PLANTS, CHLOROPHYTA, green algae			JGI	3	ftp://ftp.jgi-psf.org/pub/JGI_data/Chlamy/v3.1/Chlre3_1.GeneCatalogProteins.6JUL06.fasta.gz	JGI	3055	annotation	http://genome.jgi-psf.org/cgi-bin/dispGeneModel?db=Chlre3&id=
+NEW	ota	Ostreococcus tauri	PLANTS, CHLOROPHYTA			Laboratoire Arago, France	2006-12-11	https://bioinformatics.psb.ugent.be/gdb/ostreococcus/ostreo_pep_061206.tfa.gz	TIGR1	70448		
+	cme	Cyanidioschyzon merolae	PLANTS, red algae PROTOZOA-RHODOPHYTA  		10D	UTOKYO		http://merolae.biol.s.u-tokyo.ac.jp/download/cds.fasta	Genolevures	45157	annotation	http://merolae.biol.s.u-tokyo.ac.jp/db/cds_view.cgi?locus=
+	tps	Thalassiosira pseudonana	PLANTS, diatom PROTOZOA-STRAMENOPILES 			JGI	1	ftp://ftp.jgi-psf.org/pub/JGI_data/Diatom/thaps1/thaps1Prots.fasta.gz	NoAnnotation	35128	no annotation	http://genome.jgi-psf.org/cgi-bin/dispGeneModel?db=thaps1&tid=
+	ath	Arabidopsis thaliana	PLANTS			TIGR		ftp://ftp.tigr.org/pub/data/a_thaliana/ath1/SEQUENCES/ATH1.pep.gz	TIGR1	3702	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=ath1&orf=
+	osa	Oryza sativa	PLANTS, rice		ssp. Indica or ssp. Japonica	TIGR	4	ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_5.0/all.chrs/all.pep	TIGR_Rice	4530	annotation	http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=osa1r5&orf=
+	cel	Caenorhabditis elegans	NEMATODES			Wormbase	42	/files/cbil/data/cbil/orthoMCL/manualDelivery/c_elegans_peptide.fasta	Wormbase	6239	no annotation, get annotation or family info from ensmart	http://www.wormbase.org/db/gene/gene?class=Gene;name=
+	cbr	Caenorhabditis briggsae	NEMATODES			Wormbase	brigpep2, assembly: cb25.agp8	/files/cbil/data/cbil/orthoMCL/manualDelivery/c_briggsae_peptide.fasta	Wormbase	6238	no annotation	http://www.wormbase.org/db/gene/gene?class=Gene;name=
+NEW (TDR)	bma	Brugia malayi	NEMATODES			TIGR		ftp://ftp.tigr.org/private/euk/b_malayi_fh574/annotation_dbs/BMA1.pep	TIGR1	6279		http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=bma1&orf=
+	dme	Drosophila melanogaster	ARTHROPODA, fruit fly			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/drosophila_melanogaster_42_43/data/pub/pep/	EnsMart	7227	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Drosophila_melanogaster/protview?peptide=
+	aga	Anopheles gambiae	ARTHROPODA, mosquito	VectorBase	PEST	ensembl	42	ftp://ftp.ensembl.org/pub/release-42/anopheles_gambiae_42_3e/data/pub/pep/	EnsMart	7165	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Anopheles_gambiae/protview?peptide=
+NEW(TDR)	sma	Schistosoma mansoni	PLATYHELMINTHES			sanger	4	ftp://ftp.sanger.ac.uk/pub/pathogens/Schistosoma/mansoni/genome/gene_predictions/GeneDB_Smansoni_Proteins.v4.0.gz	TIGR2_Sanger	6183		
+NEW(VectorBase)	aed	Aedes aegypti	ARTHOPODA, mosquito	VectorBase		ensembl	42	ftp://ftp.ensembl.org/pub/release-42/aedes_aegypti_42_1a/data/fasta/pep/Aedes_aegypti.AaegL1.42.pep.all.fa.gz	EnsMart	7159		http://dec2006.archive.ensembl.org/Aedes_aegypti/protview?peptide=
+NEW	ame	Apis mellifera 	ARTHROPODA, honey bee			GenBank		ftp://ftp.ncbi.nih.gov/genomes/Apis_mellifera/protein/protein.fa.gz	GenBank	7460		http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein&val=
+	cin	Ciona intestinalis	FISH, sea squirt			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/ciona_intestinalis_42_2d/data/pub/pep/	EnsMart	7719	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Ciona_intestinalis/protview?peptide=
+	fru	Takifugu rubripes	FISH, fugu			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/takifugu_rubripes_42_4d/data/pub/pep/	EnsMart	31033	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Takifugu_rubripes/protview?peptide=
+	tni	Tetraodon nigroviridis	FISH, teleost fish 			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/tetraodon_nigroviridis_42_1h/data/pub/pep/	EnsMart	99883	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Tetraodon_nigroviridis/protview?peptide=
+	dre	Danio rerio	FISH, zebrafish			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/danio_rerio_42_6c/data/pub/pep/	EnsMart	7955	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Danio_rerio/protview?peptide=
+	gga	Gallus gallus	BIRDS, chicken			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/gallus_gallus_42_2/data/pub/pep/	EnsMart	9031	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Gallus_gallus/protview?peptide=
+	mmu	Mus musculus	MAMMALS, mouse			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/mus_musculus_42_36c/data/pub/pep/	EnsMart	10090	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Mus_musculus/protview?peptide=
+	rno	Rattus norvegicus	MAMMALS, Brown Norway Rat			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/rattus_norvegicus_42_34l/data/pub/pep/	EnsMart	10116	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Rattus_norvegicus/protview?peptide=
+	has	Homo sapiens	PRIMATES, human			ensembl	42	ftp://ftp.ensembl.org/pub/release-42/homo_sapiens_42_36d/data/pub/pep/	EnsMart	9606	no annotation, get annotation or family info from ensmart	http://dec2006.archive.ensembl.org/Homo_sapiens/protview?peptide=
