@@ -119,7 +119,7 @@ sub parseResourceLine {
     
     my $stmt = $dbh->prepare($sql);
     
-    if (scalar @resData == 13 && length($resData[1]) == 3) {
+    if (scalar @resData >= 12 && length($resData[1]) == 3) {
 	    $resource = GUS::Model::ApiDB::OrthomclResource->new();
 	    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
 	    $resource->setOrthomclTaxonId($taxonId);
@@ -128,7 +128,9 @@ sub parseResourceLine {
 	    $resource->setResourceVersion($resData[7]);
 	    $resource->setStrain($resData[5]);
 	    $resource->setDescription($resData[3]);
-	    $resource->setLinkoutUrl($resData[12]);
+	    if (scalar @resData > 12) {
+		$resource->setLinkoutUrl($resData[12]);
+	    }
     }
     
     return $resource;
