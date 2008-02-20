@@ -164,6 +164,7 @@ sub run {
 	push(@lines, @data[1]); 
 	$self->undefPointerCache();  
     }
+
     # submit the last group (unless no groups were read)
     if ($cur_group) {
 	my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
