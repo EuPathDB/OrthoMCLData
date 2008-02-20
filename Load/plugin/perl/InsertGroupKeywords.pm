@@ -125,7 +125,7 @@ sub new {
 
 sub run {
     my ($self) = @_;
-
+    
     # read sequence descriptions from db per group
     my $dbh = $self->getQueryHandle();
     my $sql = "SELECT ogs.ortholog_group_id, eas.description
@@ -136,11 +136,12 @@ sub run {
     my $stmt = $dbh->prepare($sql);
     
     $stmt->execute();
-
+    
     my $cur_group;
     my @lines;
-
+    
     while (my @data = $stmt->fetchrow_array()) {
+	# if a new group is coming up, submit data for $cur_group
 	if ($cur_group && $cur_group ne $data[0]) {
 	    my %keywords = %{FunKeyword(\@lines)};
 	    foreach my $k (keys %keywords) {
@@ -152,16 +153,28 @@ sub run {
 		
 		$keyword->submit();
 	    }
-
+	    
 	    @lines = ();
 	}
+	# initialize/update $cur_group
 	if (!$cur_group || $cur_group ne $data[0]) {
 	    $cur_group = $data[0];
 	}
+	# fall through and perform GC
 	push(@lines, @data[1]); 
 	$self->undefPointerCache();  
     }
-
+    # submit the last group (unless no groups were read)
+    if ($cur_group) {
+	my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
+	
+	$keyword->setOrthologGroupId($cur_group);
+	$keyword->setKeyword($k);
+	$keyword->setFrequency($keywords{$k});
+	
+	$keyword->submit();
+    }
+    
     return "Done adding group keywords.";
 }
 
