@@ -95,7 +95,7 @@ WHERE og.ortholog_group_id = ogs.ortholog_group_id
   AND og.ortholog_group_id = ?";
     my $query_sequences_by_group = $dbh->prepare($sql_sequences_by_group);
 
-    $query_group_ids->execute();
+    $query_groups->execute();
 
     while (my @data = $query_groups->fetchrow_array()) {
 	print OUTFILE "$data[0]: ";
