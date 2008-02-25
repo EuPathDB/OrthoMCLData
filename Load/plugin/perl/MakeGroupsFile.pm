@@ -104,7 +104,7 @@ WHERE og.ortholog_group_id = ogs.ortholog_group_id
 	while (my @seqdata = $query_sequences_by_group->fetchrow_array()) {
 	    push(@groupseqs, $data[0]);
 	}
-	print OUTFILE "join($groupseqs, ' ')\n";
+	print OUTFILE "join(@groupseqs, ' ')\n";
     }
     
 }
