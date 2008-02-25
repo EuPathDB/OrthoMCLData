@@ -1,8 +1,5 @@
 package org.apidb.orthomcl.load.plugin;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-
-import oracle.sql.CLOB;
 
 /**
  * 
@@ -33,10 +28,10 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         double Mantissa;
         int Exponent;
 
-	PValue() {
-	    Exponent = 0;
-	    Mantissa = 0;
-	}
+        PValue() {
+            Exponent = 0;
+            Mantissa = 0;
+        }
 
         PValue(double value) {
             int sign = (value >= 0) ? 1 : -1;
@@ -58,7 +53,6 @@ public class UpdateOrthologGroupPlugin implements Plugin {
     private static final Logger logger = Logger.getLogger(UpdateOrthologGroupPlugin.class);
 
     private Connection connection;
-    private File msaDir;
     private String sequenceTable;
 
     /*
@@ -82,8 +76,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
                     + " apidb.OrthologGroup "
                     + " SET avg_percent_match = ?, avg_percent_identity = ?,"
                     + " avg_evalue_mant = ?, avg_evalue_exp = ?, "
-                    + " avg_connectivity = ?, number_of_match_pairs = ?, "
-                    + " multiple_sequence_alignment = ? "
+                    + " avg_connectivity = ?, number_of_match_pairs = ? "
                     + " WHERE ortholog_group_id = ?");
             PreparedStatement psUpdateSequence = connection.prepareStatement("UPDATE"
                     + " apidb.OrthologGroupAaSequence SET connectivity = ?"
@@ -139,26 +132,20 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      */
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
-        if (args.length != 5) {
+        if (args.length != 4) {
             throw new OrthoMCLException("The args should be: <sequence_table> "
-                    + "<msa_result_dir> <connection_string> <login> <password>");
+                    + " <connection_string> <login> <password>");
         }
         sequenceTable = args[0];
-        String msaDirName = args[1];
-        String connectionString = args[2];
-        String login = args[3];
-        String password = args[4];
+        String connectionString = args[1];
+        String login = args[2];
+        String password = args[3];
 
         try {
             DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
             connection = DriverManager.getConnection(connectionString, login,
                     password);
-            msaDir = new File(msaDirName);
-            if (!msaDir.exists() || !msaDir.isDirectory())
-                throw new FileNotFoundException(msaDirName);
         } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (FileNotFoundException ex) {
             throw new OrthoMCLException(ex);
         }
     }
@@ -208,14 +195,11 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         double avgPercentIdentity = sumPercentIdentity / pairCount;
         double avgPercentMatch = sumPercentMatch / pairCount;
         PValue avgEvalue;
-	if (sumEvalue == 0) {
-	    avgEvalue = new PValue();
-	}
-	else {
-	    avgEvalue = new PValue(Math.pow(10, sumEvalue / pairCount));
-	}
-        String msaResult = getMSAResult(orthologName);
-
+        if (sumEvalue == 0) {
+            avgEvalue = new PValue();
+        } else {
+            avgEvalue = new PValue(Math.pow(10, sumEvalue / pairCount));
+        }
         // update ortholog groups
         psUpdateGroup.setDouble(1, avgPercentMatch);
         psUpdateGroup.setDouble(2, avgPercentIdentity);
@@ -223,25 +207,8 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         psUpdateGroup.setDouble(4, avgEvalue.Exponent);
         psUpdateGroup.setDouble(5, avgConnectivity);
         psUpdateGroup.setInt(6, pairCount);
-
-        CLOB clob = CLOB.createTemporary(connection, false,
-                CLOB.DURATION_SESSION);
-        clob.setString(1, msaResult);
-        psUpdateGroup.setClob(7, clob);
-
-        psUpdateGroup.setInt(8, orthologGroupId);
+        psUpdateGroup.setInt(7, orthologGroupId);
         psUpdateGroup.execute();
-    }
-
-    private String getMSAResult(String orthologName) throws IOException {
-        File msaFile = new File(msaDir, orthologName + ".msa");
-        if (!msaFile.exists() || !msaFile.isFile()) return null;
-
-        int length = (int) msaFile.length();
-        FileReader reader = new FileReader(msaFile);
-        char[] buffer = new char[length];
-        reader.read(buffer);
-        return new String(buffer);
     }
 
     private double[] getPairInfo(int sequenceId1, int sequenceId2,
@@ -268,9 +235,9 @@ public class UpdateOrthologGroupPlugin implements Plugin {
 
             sumPercentIdentity += 100.0 * identityCount / totalMatchLength;
             sumPercentMatch += 100.0 * nonOverlapLength / seqLength;
-	    if (pvalueMant != 0) {
-		sumEvalue += pvalueExp + Math.log10(pvalueMant);
-	    }
+            if (pvalueMant != 0) {
+                sumEvalue += pvalueExp + Math.log10(pvalueMant);
+            }
 
             count++;
         }
@@ -285,8 +252,8 @@ public class UpdateOrthologGroupPlugin implements Plugin {
 
     private Map<Integer, Integer> getSequenceLength() throws SQLException {
         Statement stSequence = connection.createStatement();
-        ResultSet rsSequence = stSequence.executeQuery("SELECT aa_sequence_id, length FROM "
-                + sequenceTable);
+        ResultSet rsSequence = stSequence.executeQuery("SELECT aa_sequence_id, "
+                + " length FROM " + sequenceTable);
         Map<Integer, Integer> lengthMap = new HashMap<Integer, Integer>();
         while (rsSequence.next()) {
             int sequenceId = rsSequence.getInt("aa_sequence_id");

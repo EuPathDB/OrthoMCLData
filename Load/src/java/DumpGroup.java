@@ -44,7 +44,7 @@ public class DumpGroup {
 
         Class.forName("oracle.jdbc.driver.OracleDriver");
         Connection connection = DriverManager.getConnection(
-                "jdbc:oracle:oci:@orthomcl", "jerric", "bdomsalp");
+                "<jdbc_connection_string>", "<login>", "<password>");
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT og.name, eas.source_id, "
                 + "      ot.three_letter_abbrev "
