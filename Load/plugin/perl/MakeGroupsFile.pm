@@ -102,11 +102,12 @@ WHERE og.ortholog_group_id = ogs.ortholog_group_id
 	my @groupseqs;
 	$query_sequences_by_group->execute($data[1]);
 	while (my @seqdata = $query_sequences_by_group->fetchrow_array()) {
-	    push(@groupseqs, $data[0]);
+	    push(@groupseqs, $seqdata[0]);
 	}
-	print OUTFILE "join(@groupseqs, ' ')\n";
+	print OUTFILE "@groupseqs\n";
     }
     
+    close OUTFILE;
 }
 
 sub undoTables {
