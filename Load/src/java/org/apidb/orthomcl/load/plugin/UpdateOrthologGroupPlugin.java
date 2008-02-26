@@ -29,7 +29,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         int Exponent;
 
         PValue() {
-            Exponent = 0;
+            Exponent = 1;
             Mantissa = 0;
         }
 
