@@ -172,6 +172,15 @@ public class UpdateSimilarityPlugin implements Plugin {
                     }
                 }
             }
+            if (segments != null && segments.size() > 1)
+                if (update(queryId, subjectId, segments, psUpdate)) {
+                    updateCount++;
+                    if (updateCount % 1000 == 0) {
+                        psUpdate.executeBatch();
+                        logger.info(updateCount + " pairs updated.");
+                    }
+                }
+
             // commit remaining updates
             if (updateCount % 1000 != 0) psUpdate.executeBatch();
             psUpdate.close();
