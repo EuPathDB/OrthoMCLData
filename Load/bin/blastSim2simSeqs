@@ -11,7 +11,7 @@
 
 # the fields in the Sum line are:
 #subject_Identifier:score:pvalue:minSubjectStart:maxSubjectEnd:minQueryStart:maxQueryEnd:numberOfMatches:totalMatchLength:numberIdentical:numberPositive:isReversed:readingFrame:+3fields related to percent match
-
+use strict;
 
 my $query_id;
 my $query_taxon;
@@ -20,7 +20,7 @@ while (<>) {
   # if new query
   if (/^\>(\d+)\-(\d+)/) {
     $query_id = $1;
-    $taxon_id = $2;
+    $query_taxon = $2;
   }
 
   elsif (/Sum: (.*)/) {
@@ -29,9 +29,10 @@ while (<>) {
     my ($subject_id, $subject_taxon) = split(/\-/,$fields[0]);
     $fields[2] = '1' . $fields[2] if ($fields[2] =~ /^e/);
     my ($evalue_mant, $evalue_exp) = split(/e\-/, $fields[2]);
+    ($evalue_mant, $evalue_exp) = (0,0) if $fields[2] eq '0.';
     my ($totalMatchLength, $numberIdentical) = ($fields[8], $fields[9]);
-    my $percentIdent = int($numberIdentical / $totalMatchLength * 100);
-    my $percentMatch = $fields[15];
+    my $percentIdent = int($numberIdentical / $totalMatchLength * 100 + .5);
+    my $percentMatch = int($fields[15] +.5);
     print "$query_id, $subject_id, $query_taxon, $subject_taxon, $evalue_mant, $evalue_exp, $percentIdent, $percentMatch\n";
   }
 }
