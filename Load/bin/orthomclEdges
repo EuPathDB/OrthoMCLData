@@ -1,0 +1,191 @@
+#!/usr/bin/perl
+
+use strict;
+use DBI;
+
+=pod
+SimilarSequences
+| InterTaxonMatch
+| | BestQueryTaxonScore
+| | | BestInterTaxonScore
+| | | | BetterHit
+| | | | | InParalog
+| | | | | | InParalog2way--------|
+| | | BestHit                    |
+| | | | Ortholog                 |
+| | | | | Ortholog2way           |
+| | | | | | CoOrthologCandidate -|
+| | | | | | | CoOrtholog
+=cut
+
+my $configFile = $ARGV[0];
+my $only = $ARGV[1];
+
+&usage() unless $configFile;
+
+my $config = parseConfigFile($configFile);
+
+commonTempTables();
+
+inparalogs() unless $only eq '-orthologs';
+
+orthlogs() unless $only eq '-inparalogs';
+
+normalizeInparalogs() unless $only eq '-orthologs';
+
+coorthlogs() unless $only;
+
+############################################################################
+
+sub commonTempTables {
+  print STDERR "
+Constructing common temp tables:
+  - update SimilarSequences evalue_exp, setting 0 values to the minimum evalue_exp-1
+  - create InterTaxonMatch
+  - create BestQueryTaxonScore
+";
+  validateInputTables();
+  updateMinimumEvalueExponent();
+  interTaxonMatch();
+  bestQueryTaxon();
+}
+
+sub inparalogs {
+  print STDERR "
+Constructing InParalog tables:
+  - create BestInterTaxonScore
+  - create BetterHit
+  - create InParalog
+";
+  bestInterTaxonScore();
+  betterHit();
+  inParalog();
+}
+
+sub orthologs {
+  print STDERR "
+Constructing Ortholog tables:
+  - create BestHit
+  - create Ortholog 
+  - update Ortholog, setting normalized_score
+";
+  bestHit();
+  ortholog();
+  normalizeOrthologs();
+}
+
+sub normalizeInparalogs {
+}
+
+sub coorthologs {
+  print STDERR "
+Constructing CoOrtholog tables:
+  - create InParalog2way
+  - create Ortholog2way
+  - create CoOrthologCandidate
+  - create CoOrtholog
+  - update CoOrtholog, setting normalized_score
+";
+  inParalog2way();
+  ortholog2way();
+  coorthologCandidate();
+  coortholog();
+  normalizeCoorthologs();
+}
+
+sub validateInputTables() {
+
+}
+
+sub updateMinimumEvalueExponent {
+}
+
+sub interTaxonMatch {
+}
+
+sub bestQueryTaxon {
+}
+
+sub  bestInterTaxonScore{
+}
+
+sub  betterHit{
+}
+
+sub  inParalog{
+}
+
+sub bestHit {
+}
+
+sub ortholog {
+}
+
+sub normalizeOrthologs {
+}
+
+sub normalizeInparalogs {
+}
+
+sub  inParalog2way {
+}
+
+sub  ortholog2way {
+}
+
+sub  coorthologCandidate {
+}
+
+sub  coortholog {
+}
+
+sub  normalizeCoorthologs {
+}
+
+
+sub usage {
+  print "
+Find edges for OrthoMCL.
+
+usage: orthomclEdges config_file [-orthologsOnly | -inparalogsOnly]
+
+where:
+  config_file : see below
+  orthologsOnly : only output is Orthologs table
+  inparalogsOnly : only output is InParalogs table
+
+Database Input:
+  - SimilarSequences table containing all-v-all BLAST hits
+  - InParalog, Ortholog, CoOrtholog tables - created but empty
+
+Database Output:
+  - Populated InParalog, Ortholog and CoOrtholog tables
+
+File Output:
+  - matrix file as expected by MCL.
+
+Sample Config File:
+dbVender=oracle  (or mysql)
+SimilarSequencesTable=apidb.SimilarSequences
+OrthologsTable=apidb.Orthologs
+InParalogsTable=apidb.InParalogs
+CoOrthologsTable=apidb.CoOrthologs
+login=my_db_login
+password=my_db_password
+";
+  exit(1);
+}
+
+sub parseConfigFile {
+  my ($configFile) = @_;
+
+  open(F, $configFile) || die "Can't open config file '$configFile'\n";
+
+  my $config;
+  while(<F>) {
+    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
+    $config->{$1} = $2;
+  }
+  return $config;
+}
+
