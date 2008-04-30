@@ -2,6 +2,7 @@
 
 use strict;
 use DBI;
+use DBD::Oracle;
 
 =pod
 SimilarSequences
@@ -9,13 +10,13 @@ SimilarSequences
 | | BestQueryTaxonScore
 | | | BestInterTaxonScore
 | | | | BetterHit
-| | | | | InParalog
+| | | | | InParalog ***
 | | | | | | InParalog2way--------|
 | | | BestHit                    |
-| | | | Ortholog                 |
+| | | | Ortholog ***             |
 | | | | | Ortholog2way           |
 | | | | | | CoOrthologCandidate -|
-| | | | | | | CoOrtholog
+| | | | | | | CoOrtholog ***
 =cut
 
 my $configFile = $ARGV[0];
@@ -24,38 +25,55 @@ my $only = $ARGV[1];
 &usage() unless $configFile;
 
 my $config = parseConfigFile($configFile);
+my $sst = $config->{similarSequencesTable};
+
+my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
+		       $config->{dbPassword}) or die DBI::errstr;
 
 commonTempTables();
 
-inparalogs() unless $only eq '-orthologs';
+inparalogs() unless $only eq '-orthologsOnly';
 
-orthlogs() unless $only eq '-inparalogs';
+orthlogs() unless $only eq '-inparalogsOnly';
 
-normalizeInparalogs() unless $only eq '-orthologs';
+normalizeInparalogs() unless $only eq '-orthologsOnly';
 
 coorthlogs() unless $only;
 
 ############################################################################
 
+sub parseConfigFile {
+  my ($configFile) = @_;
+
+  open(F, $configFile) || die "Can't open config file '$configFile'\n";
+
+  my $config;
+  while(<F>) {
+    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
+    $config->{$1} = $2;
+  }
+  return $config;
+}
+
 sub commonTempTables {
   print STDERR "
 Constructing common temp tables:
   - update SimilarSequences evalue_exp, setting 0 values to the minimum evalue_exp-1
-  - create InterTaxonMatch
+  - create InterTaxonMatch (view)
   - create BestQueryTaxonScore
 ";
   validateInputTables();
   updateMinimumEvalueExponent();
   interTaxonMatch();
-  bestQueryTaxon();
+  bestQueryTaxonScore();
 }
 
 sub inparalogs {
   print STDERR "
 Constructing InParalog tables:
-  - create BestInterTaxonScore
-  - create BetterHit
-  - create InParalog
+  - create BestInterTaxonScore temp table
+  - create BetterHit temp table
+  - populate InParalog
 ";
   bestInterTaxonScore();
   betterHit();
@@ -65,8 +83,8 @@ Constructing InParalog tables:
 sub orthologs {
   print STDERR "
 Constructing Ortholog tables:
-  - create BestHit
-  - create Ortholog 
+  - create BestHit temp table
+  - populate Ortholog table
   - update Ortholog, setting normalized_score
 ";
   bestHit();
@@ -75,15 +93,54 @@ Constructing Ortholog tables:
 }
 
 sub normalizeInparalogs {
+  my $inParalogTable = $config->{inParalogTable};
+  my $orthologTable = $config->{orthologTable};
+
+  my $sql = "
+update $inParalogTable i
+set normalized_score = (
+ select i.unnormalized_score / t.average
+ from    (
+     select decode(haveOrthologsAvg.average, null,
+                   allInparalogsAvg.average,
+                   haveOrthologsAvg.average) average,
+             allInparalogsAvg.taxon_id
+     from
+       (
+         select avg(i2.unnormalized_score) average, i2.taxon_id
+         from $inParalogTable i2
+         group by i2.taxon_id
+       ) allInparalogsAvg,
+       (
+         select avg(i2.unnormalized_score) average, i2.taxon_id
+         from $inParalogTable i2
+         where (i2.sequence_id_a in
+                 (select sequence_id_a from $orthologTable
+                  union
+                  select sequence_id_b from $orthologTable
+               )
+            or (i2.sequence_id_b in 
+                 (select sequence_id_a from $orthologTable
+                  union 
+                  select sequence_id_b from $orthologTable)
+               )
+         group by i2.taxon_id
+       ) haveOrthologsAvg
+     where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
+   ) t
+ where i.taxon_id = t.taxon_id
+)
+";
+  runSql($sql, "update InParalogs, setting normalized_score");
 }
 
 sub coorthologs {
   print STDERR "
 Constructing CoOrtholog tables:
-  - create InParalog2way
-  - create Ortholog2way
-  - create CoOrthologCandidate
-  - create CoOrtholog
+  - create InParalog2way temp table
+  - create Ortholog2way temp table
+  - create CoOrthologCandidate temp table
+  - populate CoOrtholog
   - update CoOrtholog, setting normalized_score
 ";
   inParalog2way();
@@ -93,55 +150,260 @@ Constructing CoOrtholog tables:
   normalizeCoorthologs();
 }
 
-sub validateInputTables() {
+sub validateInputTables {
 
 }
 
 sub updateMinimumEvalueExponent {
+  my $sql = "
+update $sst
+set evalue_exp = (
+  select min(evalue_exp)-1
+  from $sst
+  where evalue_mant != 0
+)
+where evalue_exp = 0
+";
+  runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value");
 }
 
 sub interTaxonMatch {
+  my $sql = "
+create view InterTaxonMatch as
+select ss.query_id, ss.subject_id, ss.subject_taxon,
+       ss.evalue_mant, ss.evalue_exp
+from $sst ss
+where ss.subject_taxon != ss.query_taxon
+";
+  runSql($sql, "creating view InterTaxonMatch");
 }
 
-sub bestQueryTaxon {
+sub bestQueryTaxonScore {
+  my $sql = "
+create table BestQueryTaxonScore as
+select im.query_id, im.subject_taxon, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
+from IntertaxonMatch im,
+     (select query_id, subject_taxon, min(evalue_exp) as evalue_exp
+      from IntertaxonMatch
+      group by query_id, subject_taxon) low_exp
+where im.query_id = low_exp.query_id
+  and im.subject_taxon = low_exp.subject_taxon
+  and im.evalue_exp = low_exp.evalue_exp
+group by im.query_id, im.subject_taxon, low_exp.evalue_exp
+";
+
+  runSql($sql, "create BestQueryTaxonScore");
+  $sql = "
+create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon, evalue_exp, evalue_mant)
+";
+
+  runSql($sql, "create qtscore_ix index on BestQueryTaxonScore");
 }
 
 sub  bestInterTaxonScore{
+  my $sql = "
+create table BestIntertaxonScore as
+select im.query_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
+from BestQueryTaxonScore im,
+     (select query_id, min(evalue_exp) as evalue_exp
+      from BestQueryTaxonScore
+      group by query_id) low_exp
+where im.query_id = low_exp.query_id
+  and im.evalue_exp = low_exp.evalue_exp
+group by im.query_id, low_exp.evalue_exp
+";
+  runSql($sql, "");
 }
 
 sub  betterHit{
+  my $sql = "
+create table BetterHit as
+select s.query_id, s.subject_id,
+       s.query_taxon_id as taxon_id,
+       s.evalue_exp, s.evalue_mant
+from $sst s, BestIntertaxonScore bis
+where s.query_id != s.subject_id
+  and s.query_taxon = s.subject_taxon
+  and s.query_id = bis.query_id
+  and (s.evalue_mant < 0.001
+       or s.evalue_exp < bis.evalue_exp
+       or (s.evalue_exp = bis.evalue_exp and s.evalue_mant <= bis.evalue_mant))
+-- . . . or Similarity for a protein with no BestIntertaxonScore
+--       (i.e. an intrataxon match for a protein with no intertaxon
+--        match in the database)
+union
+select s.query_id, s.subject_id, s.evalue_exp, s.evalue_mant
+from $sst s
+where s.query_taxon = s.subject_taxon
+  and s.query_id in (select query_id from $sst
+                     minus select query_id from BestIntertaxonScore)
+";
+  runSql($sql, "create BetterHit table");
 }
 
 sub  inParalog{
+  my $sql = "
+insert into InParalog
+select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
+       bh1.taxon_id
+       case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
+         when bh1.evalue_mant < 0.01 or bh2.evalue_mant < 0.01
+           then (bh1.evalue_exp + bh2.evalue_exp) / -2
+         else  -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
+           (log(10, bh1.evalue_mant * bh2.evalue_mant)
+            + bh1.evalue_exp + bh2.evalue_exp) / -2
+       end as unnormalized_score,
+       cast(null as number) as normalized_score
+from BetterHit bh1, BetterHit bh2
+where bh1.query_id < bh1.subject_id
+  and bh1.query_id = bh2.subject_id
+  and bh1.subject_id = bh2.query_id;
+";
+  runSql($sql, "populate InParalog");
 }
 
 sub bestHit {
+  my $sql = "
+create table BestHit as
+select s.query_id, s.subject_id,
+       s.query_taxon_id, s.subject_taxon_id,
+       s.evalue_exp, s.evalue_mant
+from $sst s, BestQueryTaxonScore cutoff
+where s.query_id = cutoff.query_id
+  and s.subject_taxon = cutoff.subject_taxon
+  and s.query_taxon != s.subject_taxon
+  and (s.evalue_mant < 0.01
+       or s.evalue_exp = cutoff.evalue_exp
+          and s.evalue_mant = cutoff.evalue_mant)
+";
+  runSql($sql, "create BestHit");
 }
 
 sub ortholog {
+  my $orthologTable = $config->{orthologTable};
+
+  my $sql = "
+insert into $orthologTable
+select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
+       bh1.query_taxon_id, bh1.subject_taxon_id,
+       case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
+         when bh1.evalue_mant < 0.01 or bh2.evalue_mant < 0.01
+           then (bh1.evalue_exp + bh2.evalue_exp) / -2
+         else  -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
+           (log(10, bh1.evalue_mant * bh2.evalue_mant)
+            + bh1.evalue_exp + bh2.evalue_exp) / -2
+       end as unnormalized_score,
+       cast(null as number) as normalized_score
+from BestHit bh1, BestHit bh2
+where bh1.query_id < bh1.subject_id
+  and bh1.query_id = bh2.subject_id
+  and bh1.subject_id = bh2.query_id
+";
+  runSql($sql, "populate Ortholog");
 }
 
 sub normalizeOrthologs {
+  my $sql = "
+";
+  runSql($sql, "");
 }
 
-sub normalizeInparalogs {
-}
 
 sub  inParalog2way {
+  my $inParalogTable = $config->{inParalogTable};
+
+  my $sql = "
+create table inparalog2way as
+select sequence_id_a, sequence_id_b from $inParalogTable
+union
+select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
+";
+  runSql($sql, "create inParalog2way");
 }
 
 sub  ortholog2way {
+  my $orthologTable = $config->{orthologTable};
+
+  my $sql = "
+create table ortholog2way as
+-- symmetric closure of Ortholog
+select sequence_id_a, sequence_id_b from $orthologTable
+union
+select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $orthologTable
+";
+  runSql($sql, "create ortholog2way");
+
+  $sql = "
+create index in2a_ix on inparalog2way(sequence_id_a, sequence_id_b)
+";
+  runSql($sql, "index in2a_ix");
+
+  $sql = "
+create index in2b_ix on inparalog2way(sequence_id_b, sequence_id_a)
+";
+  runSql($sql, "index in2b_ix");
 }
 
 sub  coorthologCandidate {
+  my $sql = "
+create table CoorthologCandidate as
+select distinct
+       least(sequence_id_a, sequence_id_b) as sequence_id_a,
+       greatest(sequence_id_a, sequence_id_b) as sequence_id_b
+from (-- twp-way union, part 1: inparalog-ortholog-inparalog
+      select ip1.sequence_id_a, ip2.sequence_id_b
+      from inparalog2way ip1, ortholog2way o, inparalog2way ip2
+      where ip1.sequence_id_b = o.sequence_id_a
+        and o.sequence_id_b = ip2.sequence_id_a
+   union -- part 2: ortholog-inparalog
+      select ip.sequence_id_a, o.sequence_id_b
+      from inparalog2way ip, ortholog2way o
+      where ip.sequence_id_b = o.sequence_id_a)
+";
+  runSql($sql, "create CoOrthologCandidate");
 }
 
 sub  coortholog {
+  my $orthologTable = $config->{orthologTable};
+  my $coOrthologTable = $config->{coOrthologTable};
+
+  my $sql = "
+create table $coOrthologTable as
+select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
+       candidate.sequence_id_a, candidate.sequence_id_b,
+       case  -- in case of 0 evalue, use rigged exponent
+         when ab.evalue_mant < 0.00001 or ba.evalue_mant < 0.00001
+           then (ab.evalue_exp + ba.evalue_exp) / -2
+         else -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
+           (log(10, ab.evalue_mant * ba.evalue_mant)
+            + ab.evalue_exp + ba.evalue_exp) / -2
+       end as score
+from $sst ab, $sst ba,
+     (select sequence_id_a, sequence_id_b from CoorthologCandidate
+      minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
+where ab.query_id = candidate.sequence_id_a
+  and ab.subject_id = candidate.sequence_id_b
+  and ba.query_id = candidate.sequence_id_b
+  and ba.subject_id = candidate.sequence_id_a
+";
+  runSql($sql, "populate CoOrtholog");
 }
 
 sub  normalizeCoorthologs {
+  my $sql = "
+";
+
+  runSql($sql, "");
 }
 
+sub runSql {
+  my ($sql, $msg) = @_;
+
+  print STDERR "  $msg\n\n";
+
+  my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+  $stmt->execute() or die DBI::errstr;
+}
 
 sub usage {
   print "
@@ -164,28 +426,18 @@ Database Output:
 File Output:
   - matrix file as expected by MCL.
 
+
 Sample Config File:
+
 dbVender=oracle  (or mysql)
-SimilarSequencesTable=apidb.SimilarSequences
-OrthologsTable=apidb.Orthologs
-InParalogsTable=apidb.InParalogs
-CoOrthologsTable=apidb.CoOrthologs
-login=my_db_login
-password=my_db_password
+dbConnectString=dbi:Oracle:orthomcl
+dbLogin=my_db_login
+dbPassword=my_db_password
+similarSequencesTable=apidb.SimilarSequences
+orthologTable=apidb.Ortholog
+inParalogTable=apidb.InParalog
+coOrthologTable=apidb.CoOrtholog
 ";
   exit(1);
-}
-
-sub parseConfigFile {
-  my ($configFile) = @_;
-
-  open(F, $configFile) || die "Can't open config file '$configFile'\n";
-
-  my $config;
-  while(<F>) {
-    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
-    $config->{$1} = $2;
-  }
-  return $config;
 }
 
