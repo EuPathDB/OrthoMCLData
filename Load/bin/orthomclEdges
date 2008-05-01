@@ -3,6 +3,7 @@
 use strict;
 use DBI;
 use DBD::Oracle;
+use DBD::mysql;
 
 =pod
 SimilarSequences
@@ -303,9 +304,19 @@ where bh1.query_id < bh1.subject_id
 }
 
 sub normalizeOrthologs {
+  my $orthologTable = $config->{orthologTable};
+
   my $sql = "
+update $orthologTable o
+set normalized_score = (
+  select o.unnormalized_score / t.average
+  from (
+    select avg(o2.unnormalized_score) average
+    from $orthologTable o2
+  ) t
+)
 ";
-  runSql($sql, "");
+  runSql($sql, "updating Orthologs, setting normalized_score");
 }
 
 
@@ -389,20 +400,38 @@ where ab.query_id = candidate.sequence_id_a
   runSql($sql, "populate CoOrtholog");
 }
 
-sub  normalizeCoorthologs {
-  my $sql = "
-";
+sub normalizeCoOrthologs {
+  my $coOrthologTable = $config->{coOrthologTable};
 
-  runSql($sql, "");
+  my $sql = "
+update $coOrthologTable c
+set normalized_score = (
+  select c.unnormalized_score / t.average
+  from (
+    select avg(c2.unnormalized_score) average
+    from $coOrthologTable c2
+  ) t
+)
+";
+  runSql($sql, "updating CoOrthologs, setting normalized_score");
 }
 
 sub runSql {
-  my ($sql, $msg) = @_;
+  my ($sql, $msg, $sampleTime) = @_;
 
-  print STDERR "  $msg\n\n";
+  my $t = time();
+
+  print STDERR localtime() . "  $msg\n  (OrthoMCL V2 took $sampleTime for this step)\n";
 
   my $stmt = $dbh->prepare($sql) or die DBI::errstr;
   $stmt->execute() or die DBI::errstr;
+
+  my $tt = time() - $t;
+  my $hours = int($tt / 3600);
+  my $mins = int($tt / 60) % 60;
+  if ($hours == 0 && $mins == 0) {$mins = 1};
+  print STDERR "  done ($hours hours and $mins mins)\n\n";
+
 }
 
 sub usage {
