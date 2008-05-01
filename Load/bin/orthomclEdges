@@ -21,9 +21,39 @@ SimilarSequences
 =cut
 
 my $configFile = $ARGV[0];
-my $only = $ARGV[1];
+my $restart = $ARGV[1];
+
+my $stepCount = 1;
+my @steps = ('updateMinimumEvalueExponent',
+	     'bestQueryTaxonScore',
+	     'qtscore_ix',
+	     'bestInterTaxonScore',
+	     'betterHit',
+	     'inParalog',
+	     'bestHit',
+	     'ortholog',
+	     'normalizeOrthologs',
+	     'normalizeInparalogs',
+	     'inParalog2way',
+	     'ortholog2way',
+	     'in2a_ix',
+	     'in2b_ix',
+	     'coorthologCandidate',
+	     'coortholog',
+	     'normalizeCoOrthologs',
+	    );
+
+my $stepsHash;
+for (my $i=0; $i<scalar(@steps); $i++) {$stepsHash->{$steps[$i]} = $i+1}
 
 &usage() unless $configFile;
+
+my $skipPast;
+if ($restart) {
+  usage() unless $restart =~ /startAfter=(.*)/;
+  $skipPast = $stepsHash->{$1};
+  die "invalid restart arg $restart" unless $skipPast;
+}
 
 my $config = parseConfigFile($configFile);
 my $sst = $config->{similarSequencesTable};
@@ -33,13 +63,13 @@ my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
 
 commonTempTables();
 
-inparalogs() unless $only eq '-orthologsOnly';
+inparalogs();
 
-orthologs() unless $only eq '-inparalogsOnly';
+orthologs();
 
-normalizeInparalogs() unless $only eq '-orthologsOnly';
+normalizeInparalogs();
 
-coorthologs() unless $only;
+coorthologs();
 
 ############################################################################
 
@@ -61,19 +91,21 @@ sub commonTempTables {
 Constructing common temp tables:
   - update SimilarSequences evalue_exp, setting 0 values to the minimum evalue_exp-1
   - create BestQueryTaxonScore
+
 ";
   validateInputTables();
   updateMinimumEvalueExponent();
-  #interTaxonMatch();
   bestQueryTaxonScore();
 }
 
 sub inparalogs {
   print STDERR "
+
 Constructing InParalog tables:
   - create BestInterTaxonScore temp table
   - create BetterHit temp table
   - populate InParalog
+
 ";
   bestInterTaxonScore();
   betterHit();
@@ -82,10 +114,12 @@ Constructing InParalog tables:
 
 sub orthologs {
   print STDERR "
+
 Constructing Ortholog tables:
   - create BestHit temp table
   - populate Ortholog table
   - update Ortholog, setting normalized_score
+
 ";
   bestHit();
   ortholog();
@@ -108,22 +142,22 @@ set normalized_score = (
      from
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from apidb.InParalog i2
+         from $inParalogTable i2
          group by i2.taxon_id
        ) allInparalogsAvg,
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from apidb.InParalog i2
+         from $inParalogTable i2
          where (i2.sequence_id_a in
-                 (select sequence_id_a from apidb.Ortholog
+                 (select sequence_id_a from $orthologTable
                   union
-                  select sequence_id_b from apidb.Ortholog
-                  )
-            or i2.sequence_id_b in 
-                 (select sequence_id_a from apidb.Ortholog
+                  select sequence_id_b from $orthologTable
+               )
+            or (i2.sequence_id_b in 
+                 (select sequence_id_a from $orthologTable
                   union 
-                  select sequence_id_b from apidb.Ortholog)
-              ) 
+                  select sequence_id_b from $orthologTable)
+               )
          group by i2.taxon_id
        ) haveOrthologsAvg
      where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
@@ -131,17 +165,19 @@ set normalized_score = (
  where i.taxon_id = t.taxon_id
 )
 ";
-  runSql($sql, "update InParalogs, setting normalized_score");
+  runSql($sql, "update InParalogs, setting normalized_score", 'normalizeInparalogs');
 }
 
 sub coorthologs {
   print STDERR "
+
 Constructing CoOrtholog tables:
   - create InParalog2way temp table
   - create Ortholog2way temp table
   - create CoOrthologCandidate temp table
   - populate CoOrtholog
   - update CoOrtholog, setting normalized_score
+
 ";
   inParalog2way();
   ortholog2way();
@@ -164,22 +200,12 @@ set evalue_exp = (
 )
 where evalue_exp = 0
 ";
-  runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value");
+  runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value",
+	 'updateMinimumEvalueExponent');
 }
 
-#sub interTaxonMatch {
-#  my $sql = "
-#create view InterTaxonMatch as
-#select ss.query_id, ss.subject_id, ss.subject_taxon_id,
-#       ss.evalue_mant, ss.evalue_exp
-#from $sst ss
-#where ss.subject_taxon_id != ss.query_taxon_id
-#";
-#  runSql($sql, "creating view InterTaxonMatch");
-#}
-
 sub bestQueryTaxonScore {
-  my $interTaxonMatch = $config->{interTaxonMatch};
+  my $interTaxonMatch = $config->{interTaxonMatchView};
 
   my $sql = "
 create table BestQueryTaxonScore as
@@ -194,12 +220,12 @@ where im.query_id = low_exp.query_id
 group by im.query_id, im.subject_taxon_id, low_exp.evalue_exp
 ";
 
-  runSql($sql, "create BestQueryTaxonScore");
+  runSql($sql, "create BestQueryTaxonScore", 'bestQueryTaxonScore');
+
   $sql = "
 create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon_id, evalue_exp, evalue_mant)
 ";
-
-  runSql($sql, "create qtscore_ix index on BestQueryTaxonScore");
+  runSql($sql, "create qtscore_ix index on BestQueryTaxonScore", 'qtscore_ix');
 }
 
 sub  bestInterTaxonScore{
@@ -214,7 +240,7 @@ where im.query_id = low_exp.query_id
   and im.evalue_exp = low_exp.evalue_exp
 group by im.query_id, low_exp.evalue_exp
 ";
-  runSql($sql, "");
+  runSql($sql, "create BestInterTaxonScore", 'bestInterTaxonScore');
 }
 
 sub  betterHit{
@@ -234,13 +260,13 @@ where s.query_id != s.subject_id
 --       (i.e. an intrataxon match for a protein with no intertaxon
 --        match in the database)
 union
-select s.query_id, s.subject_id, s.query_taxon_id as taxon_id, s.evalue_exp, s.evalue_mant
+select s.query_id, s.subject_id, s.evalue_exp, s.query_taxon_id as taxon_id, s.evalue_mant
 from $sst s
 where s.query_taxon_id = s.subject_taxon_id
   and s.query_id in (select query_id from $sst
                      minus select query_id from BestIntertaxonScore)
 ";
-  runSql($sql, "create BetterHit table");
+  runSql($sql, "create BetterHit table", 'betterHit');
 }
 
 sub  inParalog{
@@ -261,7 +287,7 @@ where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate InParalog");
+  runSql($sql, "populate InParalog", 'inParalog');
 }
 
 sub bestHit {
@@ -278,7 +304,7 @@ where s.query_id = cutoff.query_id
        or s.evalue_exp = cutoff.evalue_exp
           and s.evalue_mant = cutoff.evalue_mant)
 ";
-  runSql($sql, "create BestHit");
+  runSql($sql, "create BestHit", 'bestHit');
 }
 
 sub ortholog {
@@ -301,7 +327,7 @@ where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate Ortholog");
+  runSql($sql, "populate Ortholog", 'ortholog');
 }
 
 sub normalizeOrthologs {
@@ -317,7 +343,7 @@ set normalized_score = (
   ) t
 )
 ";
-  runSql($sql, "updating Orthologs, setting normalized_score");
+  runSql($sql, "updating Orthologs, setting normalized_score", 'normalizeOrthologs');
 }
 
 
@@ -330,7 +356,7 @@ select sequence_id_a, sequence_id_b from $inParalogTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
 ";
-  runSql($sql, "create inParalog2way");
+  runSql($sql, "create inParalog2way", 'inParalog2way');
 }
 
 sub  ortholog2way {
@@ -343,17 +369,17 @@ select sequence_id_a, sequence_id_b from $orthologTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $orthologTable
 ";
-  runSql($sql, "create ortholog2way");
+  runSql($sql, "create ortholog2way", 'ortholog2way');
 
   $sql = "
 create index in2a_ix on inparalog2way(sequence_id_a, sequence_id_b)
 ";
-  runSql($sql, "index in2a_ix");
+  runSql($sql, "index in2a_ix", 'in2a_ix');
 
   $sql = "
 create index in2b_ix on inparalog2way(sequence_id_b, sequence_id_a)
 ";
-  runSql($sql, "index in2b_ix");
+  runSql($sql, "index in2b_ix", 'in2b_ix');
 }
 
 sub  coorthologCandidate {
@@ -372,7 +398,7 @@ from (-- twp-way union, part 1: inparalog-ortholog-inparalog
       from inparalog2way ip, ortholog2way o
       where ip.sequence_id_b = o.sequence_id_a)
 ";
-  runSql($sql, "create CoOrthologCandidate");
+  runSql($sql, "create CoOrthologCandidate", 'coorthologCandidate');
 }
 
 sub  coortholog {
@@ -382,7 +408,7 @@ sub  coortholog {
   my $sql = "
 insert into $coOrthologTable (sequence_id_a, sequence_id_b, unnormalized_score)
 select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
-       candidate.sequence_id_a as sequence_id_a, candidate.sequence_id_b as sequence_id_b,
+       candidate.sequence_id_a, candidate.sequence_id_b,
        case  -- in case of 0 evalue, use rigged exponent
          when ab.evalue_mant < 0.00001 or ba.evalue_mant < 0.00001
            then (ab.evalue_exp + ba.evalue_exp) / -2
@@ -398,7 +424,7 @@ where ab.query_id = candidate.sequence_id_a
   and ba.query_id = candidate.sequence_id_b
   and ba.subject_id = candidate.sequence_id_a
 ";
-  runSql($sql, "populate CoOrtholog");
+  runSql($sql, "populate CoOrtholog", 'coortholog');
 }
 
 sub normalizeCoOrthologs {
@@ -414,37 +440,47 @@ set normalized_score = (
   ) t
 )
 ";
-  runSql($sql, "updating CoOrthologs, setting normalized_score");
+  runSql($sql, "updating CoOrthologs, setting normalized_score", 'normalizeCoOrthologs');
 }
 
 sub runSql {
-  my ($sql, $msg, $sampleTime) = @_;
+  my ($sql, $msg, $tag, $sampleTime) = @_;
+
+  my $stepNumber = $stepsHash->{$tag};
+  die "invalid tag '$tag'" unless $stepNumber;
+
+  if ($skipPast >= $stepNumber) {
+    print STDERR "... skipping '$tag'...\n\n";
+    return;
+  }
 
   my $t = time();
 
-  print STDERR localtime() . "  $msg\n  (OrthoMCL V2 took $sampleTime for this step)\n";
+  print STDERR localtime() . "  $msg  (OrthoMCL V2 took $sampleTime for this step)\n";
 
   my $stmt = $dbh->prepare($sql) or die DBI::errstr;
-  $stmt->execute() or die DBI::errstr;
+#  $stmt->execute() or die DBI::errstr;
 
   my $tt = time() - $t;
   my $hours = int($tt / 3600);
   my $mins = int($tt / 60) % 60;
   if ($hours == 0 && $mins == 0) {$mins = 1};
-  print STDERR "  done ($hours hours and $mins mins)\n\n";
+  print STDERR localtime() . "  step '$tag' done ($hours hours and $mins mins)\n\n";
 
 }
 
 sub usage {
+  my $stepsString;
+  map { $stepsString .= "  $_\n" } @steps;
+
   print "
 Find edges for OrthoMCL.
 
-usage: orthomclEdges config_file [-orthologsOnly | -inparalogsOnly]
+usage: orthomclEdges config_file <startAfter=TAG>
 
 where:
   config_file : see below
-  orthologsOnly : only output is Orthologs table
-  inparalogsOnly : only output is InParalogs table
+  startAfter : optionally start after a previously completed step. see below for TAGs
 
 Database Input:
   - SimilarSequences table containing all-v-all BLAST hits
@@ -453,8 +489,11 @@ Database Input:
 Database Output:
   - Populated InParalog, Ortholog and CoOrtholog tables
 
-File Output:
+Standard Output:
   - matrix file as expected by MCL.
+
+Standard Error:
+  - logging info
 
 
 Sample Config File:
@@ -467,7 +506,10 @@ similarSequencesTable=apidb.SimilarSequences
 orthologTable=apidb.Ortholog
 inParalogTable=apidb.InParalog
 coOrthologTable=apidb.CoOrtholog
-interTaxonMatchTable=apidb.InterTaxonMatch
+interTaxonMatchView=apidb.InterTaxonMatch
+
+Names of TAGs to use in startAfter (look in log file to see last one run)
+$stepsString
 ";
   exit(1);
 }
