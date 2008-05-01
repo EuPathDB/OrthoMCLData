@@ -31,13 +31,13 @@ my $sst = $config->{similarSequencesTable};
 my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
 		       $config->{dbPassword}) or die DBI::errstr;
 
-#commonTempTables();
+commonTempTables();
 
-#inparalogs() unless $only eq '-orthologsOnly';
+inparalogs() unless $only eq '-orthologsOnly';
 
-#orthologs() unless $only eq '-inparalogsOnly';
+orthologs() unless $only eq '-inparalogsOnly';
 
-#normalizeInparalogs() unless $only eq '-orthologsOnly';
+normalizeInparalogs() unless $only eq '-orthologsOnly';
 
 coorthologs() unless $only;
 
@@ -60,12 +60,11 @@ sub commonTempTables {
   print STDERR "
 Constructing common temp tables:
   - update SimilarSequences evalue_exp, setting 0 values to the minimum evalue_exp-1
-  - create InterTaxonMatch (view)
   - create BestQueryTaxonScore
 ";
   validateInputTables();
   updateMinimumEvalueExponent();
-  interTaxonMatch();
+  #interTaxonMatch();
   bestQueryTaxonScore();
 }
 
@@ -148,7 +147,7 @@ Constructing CoOrtholog tables:
   ortholog2way();
   coorthologCandidate();
   coortholog();
-  normalizeCoorthologs();
+  normalizeCoOrthologs();
 }
 
 sub validateInputTables {
@@ -168,24 +167,26 @@ where evalue_exp = 0
   runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value");
 }
 
-sub interTaxonMatch {
-  my $sql = "
-create view InterTaxonMatch as
-select ss.query_id, ss.subject_id, ss.subject_taxon_id,
-       ss.evalue_mant, ss.evalue_exp
-from $sst ss
-where ss.subject_taxon_id != ss.query_taxon_id
-";
-  runSql($sql, "creating view InterTaxonMatch");
-}
+#sub interTaxonMatch {
+#  my $sql = "
+#create view InterTaxonMatch as
+#select ss.query_id, ss.subject_id, ss.subject_taxon_id,
+#       ss.evalue_mant, ss.evalue_exp
+#from $sst ss
+#where ss.subject_taxon_id != ss.query_taxon_id
+#";
+#  runSql($sql, "creating view InterTaxonMatch");
+#}
 
 sub bestQueryTaxonScore {
+  my $interTaxonMatch = $config->{interTaxonMatch};
+
   my $sql = "
 create table BestQueryTaxonScore as
 select im.query_id, im.subject_taxon_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
-from IntertaxonMatch im,
+from $interTaxonMatch im,
      (select query_id, subject_taxon_id, min(evalue_exp) as evalue_exp
-      from IntertaxonMatch
+      from $interTaxonMatch
       group by query_id, subject_taxon_id) low_exp
 where im.query_id = low_exp.query_id
   and im.subject_taxon_id = low_exp.subject_taxon_id
@@ -379,16 +380,16 @@ sub  coortholog {
   my $coOrthologTable = $config->{coOrthologTable};
 
   my $sql = "
-create table $coOrthologTable as
+insert into $coOrthologTable (sequence_id_a, sequence_id_b, unnormalized_score)
 select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
-       candidate.sequence_id_a, candidate.sequence_id_b,
+       candidate.sequence_id_a as sequence_id_a, candidate.sequence_id_b as sequence_id_b,
        case  -- in case of 0 evalue, use rigged exponent
          when ab.evalue_mant < 0.00001 or ba.evalue_mant < 0.00001
            then (ab.evalue_exp + ba.evalue_exp) / -2
          else -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
            (log(10, ab.evalue_mant * ba.evalue_mant)
             + ab.evalue_exp + ba.evalue_exp) / -2
-       end as score
+       end as unnormalized_score
 from $sst ab, $sst ba,
      (select sequence_id_a, sequence_id_b from CoorthologCandidate
       minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
@@ -466,6 +467,7 @@ similarSequencesTable=apidb.SimilarSequences
 orthologTable=apidb.Ortholog
 inParalogTable=apidb.InParalog
 coOrthologTable=apidb.CoOrtholog
+interTaxonMatchTable=apidb.InterTaxonMatch
 ";
   exit(1);
 }
