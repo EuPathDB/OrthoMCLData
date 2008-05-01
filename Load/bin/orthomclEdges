@@ -31,15 +31,15 @@ my $sst = $config->{similarSequencesTable};
 my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
 		       $config->{dbPassword}) or die DBI::errstr;
 
-commonTempTables();
+#commonTempTables();
 
-inparalogs() unless $only eq '-orthologsOnly';
+#inparalogs() unless $only eq '-orthologsOnly';
 
-orthlogs() unless $only eq '-inparalogsOnly';
+#orthologs() unless $only eq '-inparalogsOnly';
 
-normalizeInparalogs() unless $only eq '-orthologsOnly';
+#normalizeInparalogs() unless $only eq '-orthologsOnly';
 
-coorthlogs() unless $only;
+coorthologs() unless $only;
 
 ############################################################################
 
@@ -109,22 +109,22 @@ set normalized_score = (
      from
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
+         from apidb.InParalog i2
          group by i2.taxon_id
        ) allInparalogsAvg,
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
+         from apidb.InParalog i2
          where (i2.sequence_id_a in
-                 (select sequence_id_a from $orthologTable
+                 (select sequence_id_a from apidb.Ortholog
                   union
-                  select sequence_id_b from $orthologTable
-               )
-            or (i2.sequence_id_b in 
-                 (select sequence_id_a from $orthologTable
+                  select sequence_id_b from apidb.Ortholog
+                  )
+            or i2.sequence_id_b in 
+                 (select sequence_id_a from apidb.Ortholog
                   union 
-                  select sequence_id_b from $orthologTable)
-               )
+                  select sequence_id_b from apidb.Ortholog)
+              ) 
          group by i2.taxon_id
        ) haveOrthologsAvg
      where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
@@ -171,10 +171,10 @@ where evalue_exp = 0
 sub interTaxonMatch {
   my $sql = "
 create view InterTaxonMatch as
-select ss.query_id, ss.subject_id, ss.subject_taxon,
+select ss.query_id, ss.subject_id, ss.subject_taxon_id,
        ss.evalue_mant, ss.evalue_exp
 from $sst ss
-where ss.subject_taxon != ss.query_taxon
+where ss.subject_taxon_id != ss.query_taxon_id
 ";
   runSql($sql, "creating view InterTaxonMatch");
 }
@@ -182,20 +182,20 @@ where ss.subject_taxon != ss.query_taxon
 sub bestQueryTaxonScore {
   my $sql = "
 create table BestQueryTaxonScore as
-select im.query_id, im.subject_taxon, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
+select im.query_id, im.subject_taxon_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
 from IntertaxonMatch im,
-     (select query_id, subject_taxon, min(evalue_exp) as evalue_exp
+     (select query_id, subject_taxon_id, min(evalue_exp) as evalue_exp
       from IntertaxonMatch
-      group by query_id, subject_taxon) low_exp
+      group by query_id, subject_taxon_id) low_exp
 where im.query_id = low_exp.query_id
-  and im.subject_taxon = low_exp.subject_taxon
+  and im.subject_taxon_id = low_exp.subject_taxon_id
   and im.evalue_exp = low_exp.evalue_exp
-group by im.query_id, im.subject_taxon, low_exp.evalue_exp
+group by im.query_id, im.subject_taxon_id, low_exp.evalue_exp
 ";
 
   runSql($sql, "create BestQueryTaxonScore");
   $sql = "
-create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon, evalue_exp, evalue_mant)
+create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon_id, evalue_exp, evalue_mant)
 ";
 
   runSql($sql, "create qtscore_ix index on BestQueryTaxonScore");
@@ -224,7 +224,7 @@ select s.query_id, s.subject_id,
        s.evalue_exp, s.evalue_mant
 from $sst s, BestIntertaxonScore bis
 where s.query_id != s.subject_id
-  and s.query_taxon = s.subject_taxon
+  and s.query_taxon_id = s.subject_taxon_id
   and s.query_id = bis.query_id
   and (s.evalue_mant < 0.001
        or s.evalue_exp < bis.evalue_exp
@@ -233,9 +233,9 @@ where s.query_id != s.subject_id
 --       (i.e. an intrataxon match for a protein with no intertaxon
 --        match in the database)
 union
-select s.query_id, s.subject_id, s.evalue_exp, s.evalue_mant
+select s.query_id, s.subject_id, s.query_taxon_id as taxon_id, s.evalue_exp, s.evalue_mant
 from $sst s
-where s.query_taxon = s.subject_taxon
+where s.query_taxon_id = s.subject_taxon_id
   and s.query_id in (select query_id from $sst
                      minus select query_id from BestIntertaxonScore)
 ";
@@ -246,7 +246,7 @@ sub  inParalog{
   my $sql = "
 insert into InParalog
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
-       bh1.taxon_id
+       bh1.taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
          when bh1.evalue_mant < 0.01 or bh2.evalue_mant < 0.01
            then (bh1.evalue_exp + bh2.evalue_exp) / -2
@@ -258,7 +258,7 @@ select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
 from BetterHit bh1, BetterHit bh2
 where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
-  and bh1.subject_id = bh2.query_id;
+  and bh1.subject_id = bh2.query_id
 ";
   runSql($sql, "populate InParalog");
 }
@@ -271,8 +271,8 @@ select s.query_id, s.subject_id,
        s.evalue_exp, s.evalue_mant
 from $sst s, BestQueryTaxonScore cutoff
 where s.query_id = cutoff.query_id
-  and s.subject_taxon = cutoff.subject_taxon
-  and s.query_taxon != s.subject_taxon
+  and s.subject_taxon_id = cutoff.subject_taxon_id
+  and s.query_taxon_id != s.subject_taxon_id
   and (s.evalue_mant < 0.01
        or s.evalue_exp = cutoff.evalue_exp
           and s.evalue_mant = cutoff.evalue_mant)
