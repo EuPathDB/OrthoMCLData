@@ -34,8 +34,8 @@ my @steps = ('updateMinimumEvalueExponent',
 	     'ortholog',
 	     'normalizeOrthologs',
 	     'normalizeInparalogs',
-	     'inParalog2way',
 	     'ortholog2way',
+	     'inParalog2way',
 	     'in2a_ix',
 	     'in2b_ix',
 	     'coorthologCandidate',
@@ -201,7 +201,7 @@ set evalue_exp = (
 where evalue_exp = 0
 ";
   runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value",
-	 'updateMinimumEvalueExponent');
+	 'updateMinimumEvalueExponent', '23 min');
 }
 
 sub bestQueryTaxonScore {
@@ -220,12 +220,12 @@ where im.query_id = low_exp.query_id
 group by im.query_id, im.subject_taxon_id, low_exp.evalue_exp
 ";
 
-  runSql($sql, "create BestQueryTaxonScore", 'bestQueryTaxonScore');
+  runSql($sql, "create BestQueryTaxonScore", 'bestQueryTaxonScore', '1.5 hours');
 
   $sql = "
 create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon_id, evalue_exp, evalue_mant)
 ";
-  runSql($sql, "create qtscore_ix index on BestQueryTaxonScore", 'qtscore_ix');
+  runSql($sql, "create qtscore_ix index on BestQueryTaxonScore", 'qtscore_ix', '3 min');
 }
 
 sub  bestInterTaxonScore{
@@ -240,7 +240,7 @@ where im.query_id = low_exp.query_id
   and im.evalue_exp = low_exp.evalue_exp
 group by im.query_id, low_exp.evalue_exp
 ";
-  runSql($sql, "create BestInterTaxonScore", 'bestInterTaxonScore');
+  runSql($sql, "create BestInterTaxonScore", 'bestInterTaxonScore', '30 min');
 }
 
 sub  betterHit{
@@ -266,7 +266,7 @@ where s.query_taxon_id = s.subject_taxon_id
   and s.query_id in (select query_id from $sst
                      minus select query_id from BestIntertaxonScore)
 ";
-  runSql($sql, "create BetterHit table", 'betterHit');
+  runSql($sql, "create BetterHit table", 'betterHit', '30 min');
 }
 
 sub  inParalog{
@@ -287,7 +287,7 @@ where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate InParalog", 'inParalog');
+  runSql($sql, "populate InParalog", 'inParalog', '5 min');
 }
 
 sub bestHit {
@@ -304,7 +304,7 @@ where s.query_id = cutoff.query_id
        or s.evalue_exp = cutoff.evalue_exp
           and s.evalue_mant = cutoff.evalue_mant)
 ";
-  runSql($sql, "create BestHit", 'bestHit');
+  runSql($sql, "create BestHit", 'bestHit', '45 min');
 }
 
 sub ortholog {
@@ -327,7 +327,7 @@ where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate Ortholog", 'ortholog');
+  runSql($sql, "populate Ortholog", 'ortholog', '10 min');
 }
 
 sub normalizeOrthologs {
@@ -347,18 +347,6 @@ set normalized_score = (
 }
 
 
-sub  inParalog2way {
-  my $inParalogTable = $config->{inParalogTable};
-
-  my $sql = "
-create table inparalog2way as
-select sequence_id_a, sequence_id_b from $inParalogTable
-union
-select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
-";
-  runSql($sql, "create inParalog2way", 'inParalog2way');
-}
-
 sub  ortholog2way {
   my $orthologTable = $config->{orthologTable};
 
@@ -369,17 +357,29 @@ select sequence_id_a, sequence_id_b from $orthologTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $orthologTable
 ";
-  runSql($sql, "create ortholog2way", 'ortholog2way');
+  runSql($sql, "create ortholog2way", 'ortholog2way', '1.5 hours');
+}
+
+sub  inParalog2way {
+  my $inParalogTable = $config->{inParalogTable};
+
+  my $sql = "
+create table inparalog2way as
+select sequence_id_a, sequence_id_b from $inParalogTable
+union
+select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
+";
+  runSql($sql, "create inParalog2way", 'inParalog2way', '1.5 hours');
 
   $sql = "
 create index in2a_ix on inparalog2way(sequence_id_a, sequence_id_b)
 ";
-  runSql($sql, "index in2a_ix", 'in2a_ix');
+  runSql($sql, "index in2a_ix", 'in2a_ix', '1.5 hours');
 
   $sql = "
 create index in2b_ix on inparalog2way(sequence_id_b, sequence_id_a)
 ";
-  runSql($sql, "index in2b_ix", 'in2b_ix');
+  runSql($sql, "index in2b_ix", 'in2b_ix', '1.5 hours');
 }
 
 sub  coorthologCandidate {
@@ -398,7 +398,7 @@ from (-- twp-way union, part 1: inparalog-ortholog-inparalog
       from inparalog2way ip, ortholog2way o
       where ip.sequence_id_b = o.sequence_id_a)
 ";
-  runSql($sql, "create CoOrthologCandidate", 'coorthologCandidate');
+  runSql($sql, "create CoOrthologCandidate", 'coorthologCandidate', '10 min');
 }
 
 sub  coortholog {
@@ -424,7 +424,7 @@ where ab.query_id = candidate.sequence_id_a
   and ba.query_id = candidate.sequence_id_b
   and ba.subject_id = candidate.sequence_id_a
 ";
-  runSql($sql, "populate CoOrtholog", 'coortholog');
+  runSql($sql, "populate CoOrtholog", 'coortholog', '30 min');
 }
 
 sub normalizeCoOrthologs {
@@ -456,10 +456,10 @@ sub runSql {
 
   my $t = time();
 
-  print STDERR localtime() . "  $msg  (OrthoMCL V2 took $sampleTime for this step)\n";
+  print STDERR localtime() . "  $msg  (OrthoMCL-DB V2 took $sampleTime for this step)\n";
 
   my $stmt = $dbh->prepare($sql) or die DBI::errstr;
-#  $stmt->execute() or die DBI::errstr;
+  $stmt->execute() or die DBI::errstr;
 
   my $tt = time() - $t;
   my $hours = int($tt / 3600);
