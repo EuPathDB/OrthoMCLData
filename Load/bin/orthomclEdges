@@ -240,7 +240,7 @@ where im.query_id = low_exp.query_id
   and im.evalue_exp = low_exp.evalue_exp
 group by im.query_id, low_exp.evalue_exp
 ";
-  runSql($sql, "create BestInterTaxonScore", 'bestInterTaxonScore', '30 min');
+  runSql($sql, "create BestInterTaxonScore", 'bestInterTaxonScore', '2 min');
 }
 
 sub  betterHit{
