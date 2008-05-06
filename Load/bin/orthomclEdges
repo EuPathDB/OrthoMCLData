@@ -97,18 +97,21 @@ sub parseConfigFile {
 }
 
 sub commonTempTables {
+  print STDERR localtime() . "Constructing common temp tables\n";
   validateInputTables();
   updateMinimumEvalueExponent();
   bestQueryTaxonScore();
 }
 
 sub inparalogs {
+  print STDERR localtime() . "Constructing inparalog tables\n";
   bestInterTaxonScore();
   betterHit();
   inParalog();
 }
 
 sub orthologs {
+  print STDERR localtime() . "Constructing ortholog tables\n";
   bestHit();
   ortholog();
   normalizeOrthologs();
@@ -157,6 +160,7 @@ set normalized_score = (
 }
 
 sub coorthologs {
+  print STDERR localtime() . "Constructing coortholog tables\n";
   inParalog2way();
   ortholog2way();
   coorthologCandidate();
@@ -475,7 +479,9 @@ sub clean {
 }
 
 sub cleanall {
-    
+    foreach my $tag (keys (%$cleanHash)) {
+	clean($tag);   
+    }
 }
 
 sub usage {
