@@ -48,15 +48,16 @@ my $stepsHash;
 my $cleanHash;
 for (my $i=0; $i<scalar(@steps); $i++) {
     $stepsHash->{$steps[$i]->[0]} = $i+1;
-    $cleanHash->{$steps[$i]->[0]} $steps[$i]->[1] if $steps[$i]->[1];
+    $cleanHash->{$steps[$i]->[0]} = $steps[$i]->[1] if $steps[$i]->[1];
 }
 
 &usage() unless $configFile;
+usage() unless $clean =~ /clean=(yes|no|only|all)/;
+$clean = $1;
 
 my $skipPast;
 if ($restart) {
   usage() unless $restart =~ /startAfter=(.*)/;
-  usage() unless grep {/^$clean$/} ('yes', 'no', 'only', 'all');
   $skipPast = $stepsHash->{$1};
   die "invalid restart arg $restart" unless $skipPast;
 }
@@ -86,6 +87,7 @@ sub parseConfigFile {
 
   open(F, $configFile) || die "Can't open config file '$configFile'\n";
 
+  next if /^#/;
   my $config;
   while(<F>) {
     /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
@@ -95,40 +97,18 @@ sub parseConfigFile {
 }
 
 sub commonTempTables {
-  print STDERR "
-Constructing common temp tables:
-  - update SimilarSequences evalue_exp, setting 0 values to the minimum evalue_exp-1
-  - create BestQueryTaxonScore
-
-";
   validateInputTables();
   updateMinimumEvalueExponent();
   bestQueryTaxonScore();
 }
 
 sub inparalogs {
-  print STDERR "
-
-Constructing InParalog tables:
-  - create BestInterTaxonScore temp table
-  - create BetterHit temp table
-  - populate InParalog
-
-";
   bestInterTaxonScore();
   betterHit();
   inParalog();
 }
 
 sub orthologs {
-  print STDERR "
-
-Constructing Ortholog tables:
-  - create BestHit temp table
-  - populate Ortholog table
-  - update Ortholog, setting normalized_score
-
-";
   bestHit();
   ortholog();
   normalizeOrthologs();
@@ -177,16 +157,6 @@ set normalized_score = (
 }
 
 sub coorthologs {
-  print STDERR "
-
-Constructing CoOrtholog tables:
-  - create InParalog2way temp table
-  - create Ortholog2way temp table
-  - create CoOrthologCandidate temp table
-  - populate CoOrtholog
-  - update CoOrtholog, setting normalized_score
-
-";
   inParalog2way();
   ortholog2way();
   coorthologCandidate();
@@ -353,7 +323,7 @@ set normalized_score = (
   ) t
 )
 ";
-  runSql($sql, "updating Orthologs, setting normalized_score");
+  runSql($sql, "updating Orthologs, setting normalized_score", 'normalizeOrthologs', '0');
 }
 
 
@@ -450,7 +420,7 @@ set normalized_score = (
   ) t
 )
 ";
-  runSql($sql, "updating CoOrthologs, setting normalized_score", 'normalizeCoOrthologs');
+  runSql($sql, "updating CoOrthologs, setting normalized_score", 'normalizeCoOrthologs', '0');
 }
 
 sub runSql {
@@ -479,26 +449,29 @@ sub runSql {
       print STDERR localtime() . "  step '$tag' done ($hours hours and $mins mins)\n\n";
   }
 
-  clean($tag) unless ($clean eq 'no') {
+  clean($tag) unless ($clean eq 'no');
 }
 
 sub clean {
-    my ($tag) = @_;
+  my ($tag) = @_;
 
-    my $cleanSql = $cleanHash->{$tag};
+  my $cleanSqls = $cleanHash->{$tag};
+  foreach my $cleanSql (@$cleanSqls) {
     if ($cleanSql) {
-	$cleanSql =~ /(\w+) table (\w+)/i || die "invalid clean sql '$cleanSql'";
-	my $action = $1;
-	my $table = uc($2);
-	if ($action eq 'drop') {
-	    my $stmt = $dbh->prepare('select * from all_tables where table_name = $table;' ) or die DBI::errstr;
-	    $stmt->execute() or die DBI::errstr;
-	    return unless $stmt->fetchrow();
-	}
-	my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+      $cleanSql =~ /(\w+) table (\w+)/i || die "invalid clean sql '$cleanSql'";
+      my $action = $1;
+      my $table = uc($2);
+      if ($action eq 'drop') {
+	my $stmt = $dbh->prepare("select * from all_tables where table_name = '$table'" ) or die DBI::errstr;
 	$stmt->execute() or die DBI::errstr;
-	print STDERR "... cleaning: $sql\n";
+	return unless $stmt->fetchrow();
+      }
+      my $stmt = $dbh->prepare($cleanSql) or die DBI::errstr;
+      print STDERR localtime() . "  cleaning: $cleanSql\n";
+      #	$stmt->execute() or die DBI::errstr;
+      print STDERR localtime() . "  done\n";
     }
+  }
 }
 
 sub cleanall {
