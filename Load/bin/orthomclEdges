@@ -21,36 +21,42 @@ SimilarSequences
 =cut
 
 my $configFile = $ARGV[0];
-my $restart = $ARGV[1];
+my $clean = $ARGV[1];
+my $restart = $ARGV[2];
 
 my $stepCount = 1;
-my @steps = ('updateMinimumEvalueExponent',
-	     'bestQueryTaxonScore',
-	     'qtscore_ix',
-	     'bestInterTaxonScore',
-	     'betterHit',
-	     'inParalog',
-	     'bestHit',
-	     'ortholog',
-	     'normalizeOrthologs',
-	     'normalizeInparalogs',
-	     'ortholog2way',
-	     'inParalog2way',
-	     'in2a_ix',
-	     'in2b_ix',
-	     'coorthologCandidate',
-	     'coortholog',
-	     'normalizeCoOrthologs',
+my @steps = (['updateMinimumEvalueExponent'], 
+	     ['bestQueryTaxonScore'],
+	     ['qtscore_ix'],
+	     ['bestInterTaxonScore'],
+	     ['betterHit', ['drop table BestInterTaxonScore']],
+	     ['inParalog', ['drop table BetterHit']],
+	     ['bestHit', ['drop table BestQueryTaxonScore']],
+	     ['ortholog', ['drop table BestHit']],
+	     ['normalizeOrthologs'],
+	     ['normalizeInparalogs'],
+	     ['ortholog2way'],
+	     ['inParalog2way'],
+	     ['in2a_ix'],
+	     ['in2b_ix'],
+	     ['coorthologCandidate', ['drop table ortholog2way', 'drop table inparalog2way']],
+	     ['coortholog', ['drop table CoOrthologCandidate']],
+	     ['normalizeCoOrthologs'],
 	    );
 
 my $stepsHash;
-for (my $i=0; $i<scalar(@steps); $i++) {$stepsHash->{$steps[$i]} = $i+1}
+my $cleanHash;
+for (my $i=0; $i<scalar(@steps); $i++) {
+    $stepsHash->{$steps[$i]->[0]} = $i+1;
+    $cleanHash->{$steps[$i]->[0]} $steps[$i]->[1] if $steps[$i]->[1];
+}
 
 &usage() unless $configFile;
 
 my $skipPast;
 if ($restart) {
   usage() unless $restart =~ /startAfter=(.*)/;
+  usage() unless grep {/^$clean$/} ('yes', 'no', 'only', 'all');
   $skipPast = $stepsHash->{$1};
   die "invalid restart arg $restart" unless $skipPast;
 }
@@ -70,6 +76,8 @@ orthologs();
 normalizeInparalogs();
 
 coorthologs();
+
+cleanall() if $clean eq 'all';
 
 ############################################################################
 
@@ -230,7 +238,7 @@ create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon_id, evalu
 
 sub  bestInterTaxonScore{
   my $sql = "
-create table BestIntertaxonScore as
+create table BestInterTaxonScore as
 select im.query_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
 from BestQueryTaxonScore im,
      (select query_id, min(evalue_exp) as evalue_exp
@@ -270,8 +278,10 @@ where s.query_taxon_id = s.subject_taxon_id
 }
 
 sub  inParalog{
+  my $inParalogTable = $config->{inParalogTable};
+
   my $sql = "
-insert into InParalog
+insert into $inParalogTable
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -343,7 +353,7 @@ set normalized_score = (
   ) t
 )
 ";
-  runSql($sql, "updating Orthologs, setting normalized_score", 'normalizeOrthologs');
+  runSql($sql, "updating Orthologs, setting normalized_score");
 }
 
 
@@ -454,19 +464,45 @@ sub runSql {
     return;
   }
 
-  my $t = time();
+  if ($clean ne 'only') {
+      my $t = time();
 
-  print STDERR localtime() . "  $msg  (OrthoMCL-DB V2 took $sampleTime for this step)\n";
+      print STDERR localtime() . "  $msg  (OrthoMCL-DB V2 took $sampleTime for this step)\n";
 
-  my $stmt = $dbh->prepare($sql) or die DBI::errstr;
-  $stmt->execute() or die DBI::errstr;
+      my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+      $stmt->execute() or die DBI::errstr;
 
-  my $tt = time() - $t;
-  my $hours = int($tt / 3600);
-  my $mins = int($tt / 60) % 60;
-  if ($hours == 0 && $mins == 0) {$mins = 1};
-  print STDERR localtime() . "  step '$tag' done ($hours hours and $mins mins)\n\n";
+      my $tt = time() - $t;
+      my $hours = int($tt / 3600);
+      my $mins = int($tt / 60) % 60;
+      if ($hours == 0 && $mins == 0) {$mins = 1};
+      print STDERR localtime() . "  step '$tag' done ($hours hours and $mins mins)\n\n";
+  }
 
+  clean($tag) unless ($clean eq 'no') {
+}
+
+sub clean {
+    my ($tag) = @_;
+
+    my $cleanSql = $cleanHash->{$tag};
+    if ($cleanSql) {
+	$cleanSql =~ /(\w+) table (\w+)/i || die "invalid clean sql '$cleanSql'";
+	my $action = $1;
+	my $table = uc($2);
+	if ($action eq 'drop') {
+	    my $stmt = $dbh->prepare('select * from all_tables where table_name = $table;' ) or die DBI::errstr;
+	    $stmt->execute() or die DBI::errstr;
+	    return unless $stmt->fetchrow();
+	}
+	my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+	$stmt->execute() or die DBI::errstr;
+	print STDERR "... cleaning: $sql\n";
+    }
+}
+
+sub cleanall {
+    
 }
 
 sub usage {
@@ -476,11 +512,16 @@ sub usage {
   print "
 Find edges for OrthoMCL.
 
-usage: orthomclEdges config_file <startAfter=TAG>
+usage: orthomclEdges config_file cleanup=[yes|no|only|all] <startAfter=TAG>
 
 where:
   config_file : see below
-  startAfter : optionally start after a previously completed step. see below for TAGs
+  cleanup     : clean up temp tables? 
+                   yes=clean as we go; 
+                   no=don't clean as we go; 
+                   only=just clean, do nothing else; 
+                   all=just clean, InParalog, Ortholog and CoOrtholog.
+  startAfter  : optionally start after a previously completed step. see below for TAGs
 
 Database Input:
   - SimilarSequences table containing all-v-all BLAST hits
