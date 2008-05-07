@@ -25,7 +25,7 @@ my $clean = $ARGV[1];
 my $restart = $ARGV[2];
 
 my $stepCount = 1;
-my @steps = (['updateMinimumEvalueExponent'], 
+my @steps = (['updateMinimumEvalueExponent'],
 	     ['bestQueryTaxonScore'],
 	     ['qtscore_ix'],
 	     ['bestInterTaxonScore'],
@@ -42,6 +42,7 @@ my @steps = (['updateMinimumEvalueExponent'],
 	     ['coorthologCandidate', ['drop table ortholog2way', 'drop table inparalog2way']],
 	     ['coortholog', ['drop table CoOrthologCandidate']],
 	     ['normalizeCoOrthologs'],
+	     ['cleanall', ['truncate table inparalog', 'truncate table ortholog', 'truncate table coortholog']],
 	    );
 
 my $stepsHash;
@@ -97,70 +98,32 @@ sub parseConfigFile {
 }
 
 sub commonTempTables {
-  print STDERR localtime() . "Constructing common temp tables\n";
+  print STDERR localtime() . " Constructing common temp tables\n"
+    unless $clean eq 'only' || $clean eq 'all';
   validateInputTables();
   updateMinimumEvalueExponent();
   bestQueryTaxonScore();
 }
 
 sub inparalogs {
-  print STDERR localtime() . "Constructing inparalog tables\n";
+  print STDERR localtime() . " Constructing inparalog tables\n"
+    unless $clean eq 'only' || $clean eq 'all';
   bestInterTaxonScore();
   betterHit();
   inParalog();
 }
 
 sub orthologs {
-  print STDERR localtime() . "Constructing ortholog tables\n";
+  print STDERR localtime() . " Constructing ortholog tables\n"
+    unless $clean eq 'only' || $clean eq 'all';
   bestHit();
   ortholog();
   normalizeOrthologs();
 }
 
-sub normalizeInparalogs {
-  my $inParalogTable = $config->{inParalogTable};
-  my $orthologTable = $config->{orthologTable};
-
-  my $sql = "
-update $inParalogTable i
-set normalized_score = (
- select i.unnormalized_score / t.average
- from    (
-     select decode(haveOrthologsAvg.average, null,
-                   allInparalogsAvg.average,
-                   haveOrthologsAvg.average) average,
-             allInparalogsAvg.taxon_id
-     from
-       (
-         select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
-         group by i2.taxon_id
-       ) allInparalogsAvg,
-       (
-         select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
-         where (i2.sequence_id_a in
-                 (select sequence_id_a from $orthologTable
-                  union
-                  select sequence_id_b from $orthologTable
-               )
-            or (i2.sequence_id_b in 
-                 (select sequence_id_a from $orthologTable
-                  union 
-                  select sequence_id_b from $orthologTable)
-               )
-         group by i2.taxon_id
-       ) haveOrthologsAvg
-     where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
-   ) t
- where i.taxon_id = t.taxon_id
-)
-";
-  runSql($sql, "update InParalogs, setting normalized_score", 'normalizeInparalogs');
-}
-
 sub coorthologs {
-  print STDERR localtime() . "Constructing coortholog tables\n";
+  print STDERR localtime() . " Constructing coortholog tables\n"
+    unless $clean eq 'only' || $clean eq 'all';
   inParalog2way();
   ortholog2way();
   coorthologCandidate();
@@ -226,6 +189,9 @@ group by im.query_id, low_exp.evalue_exp
 }
 
 sub  betterHit{
+  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
+  my $percentMatchThreshold = $config->{percentMatchThreshold};
+
   my $sql = "
 create table BetterHit as
 select s.query_id, s.subject_id,
@@ -235,6 +201,8 @@ from $sst s, BestIntertaxonScore bis
 where s.query_id != s.subject_id
   and s.query_taxon_id = s.subject_taxon_id
   and s.query_id = bis.query_id
+  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.percent_match >= $percentMatchThreshold
   and (s.evalue_mant < 0.001
        or s.evalue_exp < bis.evalue_exp
        or (s.evalue_exp = bis.evalue_exp and s.evalue_mant <= bis.evalue_mant))
@@ -245,6 +213,8 @@ union
 select s.query_id, s.subject_id, s.evalue_exp, s.query_taxon_id as taxon_id, s.evalue_mant
 from $sst s
 where s.query_taxon_id = s.subject_taxon_id
+  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.percent_match >= $percentMatchThreshold
   and s.query_id in (select query_id from $sst
                      minus select query_id from BestIntertaxonScore)
 ";
@@ -255,7 +225,7 @@ sub  inParalog{
   my $inParalogTable = $config->{inParalogTable};
 
   my $sql = "
-insert into $inParalogTable
+insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -275,6 +245,9 @@ where bh1.query_id < bh1.subject_id
 }
 
 sub bestHit {
+  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
+  my $percentMatchThreshold = $config->{percentMatchThreshold};
+
   my $sql = "
 create table BestHit as
 select s.query_id, s.subject_id,
@@ -284,6 +257,8 @@ from $sst s, BestQueryTaxonScore cutoff
 where s.query_id = cutoff.query_id
   and s.subject_taxon_id = cutoff.subject_taxon_id
   and s.query_taxon_id != s.subject_taxon_id
+  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.percent_match >= $percentMatchThreshold
   and (s.evalue_mant < 0.01
        or s.evalue_exp = cutoff.evalue_exp
           and s.evalue_mant = cutoff.evalue_mant)
@@ -295,7 +270,7 @@ sub ortholog {
   my $orthologTable = $config->{orthologTable};
 
   my $sql = "
-insert into $orthologTable
+insert into $orthologTable (sequence_id_a, sequence_id_b, query_taxon_id, subject_taxon_id, unnormalized_score, normalized_score)
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.query_taxon_id, bh1.subject_taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -330,6 +305,48 @@ set normalized_score = (
   runSql($sql, "updating Orthologs, setting normalized_score", 'normalizeOrthologs', '0');
 }
 
+sub normalizeInparalogs {
+  my $inParalogTable = $config->{inParalogTable};
+  my $orthologTable = $config->{orthologTable};
+
+  my $sql = "
+update $inParalogTable i
+set normalized_score = (
+ select i.unnormalized_score / t.average
+ from
+   (
+     select decode(haveOrthologsAvg.average, null,
+                   allInparalogsAvg.average,
+                   haveOrthologsAvg.average) average,
+             allInparalogsAvg.taxon_id
+     from
+       (
+         select avg(i2.unnormalized_score) average, i2.taxon_id
+         from $inParalogTable i2
+         group by i2.taxon_id
+       ) allInparalogsAvg,
+       (
+         select avg(i2.unnormalized_score) average, i2.taxon_id
+         from $inParalogTable i2
+         where (i2.sequence_id_a in
+                 (select sequence_id_a from $orthologTable
+                  union
+                  select sequence_id_b from $orthologTable)
+               )
+            or (i2.sequence_id_b in 
+                 (select sequence_id_a from $orthologTable
+                  union 
+                  select sequence_id_b from $orthologTable)
+               )
+         group by i2.taxon_id
+       ) haveOrthologsAvg
+       where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
+   ) t
+ where i.taxon_id = t.taxon_id
+)
+";
+  runSql($sql, "update InParalogs, setting normalized_score", 'normalizeInparalogs');
+}
 
 sub  ortholog2way {
   my $orthologTable = $config->{orthologTable};
@@ -388,6 +405,8 @@ from (-- twp-way union, part 1: inparalog-ortholog-inparalog
 sub  coortholog {
   my $orthologTable = $config->{orthologTable};
   my $coOrthologTable = $config->{coOrthologTable};
+  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
+  my $percentMatchThreshold = $config->{percentMatchThreshold};
 
   my $sql = "
 insert into $coOrthologTable (sequence_id_a, sequence_id_b, unnormalized_score)
@@ -405,8 +424,12 @@ from $sst ab, $sst ba,
       minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
 where ab.query_id = candidate.sequence_id_a
   and ab.subject_id = candidate.sequence_id_b
+  and ab.pvalue_exp <= $pvalueExpThreshold
+  and ab.percent_match >= $percentMatchThreshold
   and ba.query_id = candidate.sequence_id_b
   and ba.subject_id = candidate.sequence_id_a
+  and ba.pvalue_exp <= $pvalueExpThreshold
+  and ba.percent_match >= $percentMatchThreshold
 ";
   runSql($sql, "populate CoOrtholog", 'coortholog', '30 min');
 }
@@ -438,10 +461,10 @@ sub runSql {
     return;
   }
 
-  if ($clean ne 'only') {
+  if ($clean ne 'only' && $clean ne 'all') {
       my $t = time();
 
-      print STDERR localtime() . "  $msg  (OrthoMCL-DB V2 took $sampleTime for this step)\n";
+      print STDERR localtime() . "   $msg  (OrthoMCL-DB V2 took $sampleTime for this step)\n";
 
       my $stmt = $dbh->prepare($sql) or die DBI::errstr;
       $stmt->execute() or die DBI::errstr;
@@ -450,7 +473,8 @@ sub runSql {
       my $hours = int($tt / 3600);
       my $mins = int($tt / 60) % 60;
       if ($hours == 0 && $mins == 0) {$mins = 1};
-      print STDERR localtime() . "  step '$tag' done ($hours hours and $mins mins)\n\n";
+      my $hoursStr = $hours? "$hours hours and " : "";
+      print STDERR localtime() . "   step '$tag' done ($hoursStr$mins mins)\n\n";
   }
 
   clean($tag) unless ($clean eq 'no');
@@ -471,9 +495,9 @@ sub clean {
 	return unless $stmt->fetchrow();
       }
       my $stmt = $dbh->prepare($cleanSql) or die DBI::errstr;
-      print STDERR localtime() . "  cleaning: $cleanSql\n";
-      #	$stmt->execute() or die DBI::errstr;
-      print STDERR localtime() . "  done\n";
+      print STDERR localtime() . "   cleaning: $cleanSql\n";
+      $stmt->execute() or die DBI::errstr;
+      print STDERR localtime() . "   done\n";
     }
   }
 }
@@ -486,7 +510,7 @@ sub cleanall {
 
 sub usage {
   my $stepsString;
-  map { $stepsString .= "  $_\n" } @steps;
+  map { $stepsString .= "  $_->[0]\n" } @steps;
 
   print "
 Find edges for OrthoMCL.
@@ -527,6 +551,8 @@ orthologTable=apidb.Ortholog
 inParalogTable=apidb.InParalog
 coOrthologTable=apidb.CoOrtholog
 interTaxonMatchView=apidb.InterTaxonMatch
+percentMatchCutoff=50
+evalueExponentCutoff=-5
 
 Names of TAGs to use in startAfter (look in log file to see last one run)
 $stepsString
