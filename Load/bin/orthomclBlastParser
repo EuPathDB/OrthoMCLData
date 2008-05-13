@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+
+use strict;
+use Bio::Tools::BPLite;
+
+my $blastFile = $ARGV[0];
+
+usage() unless $blastFile;
+
+open(F,$blastFile) || die "can't open BLAST file '$blastFile'\n";
+
+my $report = new Bio::Tools::BPlite(-fh=>\*F);
+
+{
+  $report->query =~ /(\d+)\-(\d+)/ || die "query id '$report->query' must be in query_id-taxon_id format\n";
+  my $query_id = $1;
+  my $query_taxon = $2;
+
+  while (my $sbjct = $report->nextSbjct) {
+    $sbjct->name =~ /(\d+)\-(\d+)/ || die "subject id '$sbjct->name' must be in subject_id-taxon_id format\n";
+    my $subject_id = $1;
+    my $subject_taxon = $2;
+    ;
+    while (my $hsp = $sbjct->nextHSP) {
+      $hsp->EXP;
+      $hsp->match;
+      $hsp->positive;
+      $hsp->length;
+      $hsp->querySeq;
+      $hsp->sbjctSeq;
+      $hsp->homologySeq;
+      $hsp->query->start;
+      $hsp->query->end;
+      $hsp->hit->start;
+      $hsp->hit->end;
+      $hsp->hit->seq_id;
+      $hsp->hit->overlaps($exon);
+    }
+    my $evalue = $hsp->EXP;
+    $evalue = '1' . $evalue if ($evalue =~ /^e/);
+    my ($evalue_mant, $evalue_exp) = split(/e\-/, $evalue);
+    ($evalue_mant, $evalue_exp) = (0,0) if $evalue eq '0.';
+    my $percentMatch = ;
+    print "$query_id, $subject_id, $query_taxon, $subject_taxon, $evalue_mant, $evalue_exp, $percentIdent, $percentMatch\n";
+
+  }
+
+
+  # the following line takes you to the next report in the stream/file
+  # it will return 0 if that report is empty,
+  # but that is valid for an empty blast report.
+  # Returns -1 for EOF.
+
+  last if ($report->_parseHeader == -1);
+  redo;
+}
+
+
+  usage {
+
+    print "
+
+orthomclBlastParser blast_file
+
+where:
+  blast_file:  standard blast file output.  BUT, the sequence id must have a taxon id suffix in the form 'seq_id-taxon_id'
+
+output is a tab file, with one row per subject. these are the columns:
+
+query_id subject_id query_taxon subject_taxon evalue_mant evalue_exp percentIdent percentMatch
+
+";
+    exit(1);
+
+  }
