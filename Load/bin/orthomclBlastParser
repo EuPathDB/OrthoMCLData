@@ -20,31 +20,33 @@ my $report = new Bio::Tools::BPlite(-fh=>\*F);
     $sbjct->name =~ /(\d+)\-(\d+)/ || die "subject id '$sbjct->name' must be in subject_id-taxon_id format\n";
     my $subject_id = $1;
     my $subject_taxon = $2;
-    ;
+    my $first = 1;
+    my $start;
+    my $end;
+    my $nonOverlapMatchLen; 
+    my $queryBigger = $report->qlength > $sbjct->{'LENGTH'};
     while (my $hsp = $sbjct->nextHSP) {
-      $hsp->EXP;
-      $hsp->match;
-      $hsp->positive;
-      $hsp->length;
-      $hsp->querySeq;
-      $hsp->sbjctSeq;
-      $hsp->homologySeq;
-      $hsp->query->start;
-      $hsp->query->end;
-      $hsp->hit->start;
-      $hsp->hit->end;
-      $hsp->hit->seq_id;
-      $hsp->hit->overlaps($exon);
+	if ($first) {
+	    $evalue = $hsp->EXP;
+	    $start = $queryBigger? $hsp->query->start : $hsp->hit->start;
+	    $end = $queryBigger? $hsp->query->end : $hsp->hit->end;
+	}
+	$newStart = $queryBigger? $hsp->query->start : $hsp->hit->start;
+	$newEnd = $queryBigger? $hsp->query->end : $hsp->hit->end;
+	$nonOverlapMatchLen = 
+	    computeNonOverlappingMatchLength($newStart, $newEnd,
+					     $start, $end, $first, $noml);
+
+      $first = 0;
     }
-    my $evalue = $hsp->EXP;
     $evalue = '1' . $evalue if ($evalue =~ /^e/);
     my ($evalue_mant, $evalue_exp) = split(/e\-/, $evalue);
     ($evalue_mant, $evalue_exp) = (0,0) if $evalue eq '0.';
-    my $percentMatch = ;
+    my $percentMatch = 
+	int($nonOverlapMatchLen / ($queryBigger? = $sbjct->{'LENGTH'} : $report->qlength) * 100 + .5);
     print "$query_id, $subject_id, $query_taxon, $subject_taxon, $evalue_mant, $evalue_exp, $percentIdent, $percentMatch\n";
 
   }
-
 
   # the following line takes you to the next report in the stream/file
   # it will return 0 if that report is empty,
@@ -55,9 +57,22 @@ my $report = new Bio::Tools::BPlite(-fh=>\*F);
   redo;
 }
 
+sub computeNonOverlappingMatchLength {
+    my($newStart, $newEnd, $start, $end, $first, $noml) = @_;
+    if ($newEnd > $end) { # extends
+	if($newStart <= $end){  ##overlaps
+	    $end = $newEnd;  #extend end ... already dealt with if new end is less
+	} else{  ##there is a gap in between ..
+	    $noml += $end - $start + 1;
+	    $end = $newEnd;
+	    $start = $newStart;
+	}
+    }
+    $noml += $end - $start + 1; # deal with the last one 
+    return $noml;
+}
 
-  usage {
-
+sub usage {
     print "
 
 orthomclBlastParser blast_file
@@ -71,5 +86,4 @@ query_id subject_id query_taxon subject_taxon evalue_mant evalue_exp percentIden
 
 ";
     exit(1);
-
-  }
+}
