@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 
 use strict;
-use Bio::Tools::BPLite;
+use Bio::Tools::BPlite;
+use Data::Dumper;
 
 my $blastFile = $ARGV[0];
 
@@ -12,38 +13,55 @@ open(F,$blastFile) || die "can't open BLAST file '$blastFile'\n";
 my $report = new Bio::Tools::BPlite(-fh=>\*F);
 
 {
-  $report->query =~ /(\d+)\-(\d+)/ || die "query id '$report->query' must be in query_id-taxon_id format\n";
+  $report->query =~ /(\S+)\---(\S+)/ || die "query id '".$report->query."' must be in query_id-taxon_id format\n";
   my $query_id = $1;
   my $query_taxon = $2;
 
   while (my $sbjct = $report->nextSbjct) {
-    $sbjct->name =~ /(\d+)\-(\d+)/ || die "subject id '$sbjct->name' must be in subject_id-taxon_id format\n";
+    $sbjct->name =~ /(\S+)\---(\S+)/ || die "subject id '$sbjct->name' must be in subject_id-taxon_id format\n";
     my $subject_id = $1;
     my $subject_taxon = $2;
     my $first = 1;
     my $start;
     my $end;
-    my $nonOverlapMatchLen; 
-    my $queryBigger = $report->qlength > $sbjct->{'LENGTH'};
+    $report->query =~ /\((\d+) letters/ || die "can't extract query seq length";
+    my $queryLength = $1;
+    my $queryBigger = $queryLength > $sbjct->{'LENGTH'};
+    my $evalue;
+    my $totalIdentities;
+    my $totalMatchLen;
+    my $nonOverlapMatchLen;
     while (my $hsp = $sbjct->nextHSP) {
-	if ($first) {
-	    $evalue = $hsp->EXP;
-	    $start = $queryBigger? $hsp->query->start : $hsp->hit->start;
-	    $end = $queryBigger? $hsp->query->end : $hsp->hit->end;
-	}
-	$newStart = $queryBigger? $hsp->query->start : $hsp->hit->start;
-	$newEnd = $queryBigger? $hsp->query->end : $hsp->hit->end;
-	$nonOverlapMatchLen = 
-	    computeNonOverlappingMatchLength($newStart, $newEnd,
-					     $start, $end, $first, $noml);
-
+=pod
+      print Dumper($report);
+      print "\n\n**************************************\n\n";
+      print Dumper($sbjct);
+      print "\n\n**************************************\n\n";
+      print Dumper($hsp);
+      exit;
+=cut
+      if ($first) {
+	$evalue = $hsp->EXP;
+	$start = $queryBigger? $hsp->query->start : $hsp->hit->start;
+	$end = $queryBigger? $hsp->query->end : $hsp->hit->end;
+      }
       $first = 0;
+      my $newStart = $queryBigger? $hsp->query->start : $hsp->hit->start;
+      my $newEnd = $queryBigger? $hsp->query->end : $hsp->hit->end;
+      $nonOverlapMatchLen =
+	computeNonOverlappingMatchLength($newStart, $newEnd,
+					 $start, $end, $first,
+					 $nonOverlapMatchLen);
+      $totalIdentities += $hsp->match;
+      $totalMatchLen += $hsp->length;
     }
     $evalue = '1' . $evalue if ($evalue =~ /^e/);
     my ($evalue_mant, $evalue_exp) = split(/e\-/, $evalue);
     ($evalue_mant, $evalue_exp) = (0,0) if $evalue eq '0.';
-    my $percentMatch = 
-	int($nonOverlapMatchLen / ($queryBigger? = $sbjct->{'LENGTH'} : $report->qlength) * 100 + .5);
+    $evalue_exp = 0 unless $evalue_exp;
+    my $percentIdent = int($totalIdentities / $totalMatchLen * 1000 + .5) / 10;
+    my $percentMatch =
+      int($nonOverlapMatchLen / ($queryBigger? $sbjct->{'LENGTH'} : $queryLength) * 1000 + .5) / 10;
     print "$query_id, $subject_id, $query_taxon, $subject_taxon, $evalue_mant, $evalue_exp, $percentIdent, $percentMatch\n";
 
   }
@@ -58,22 +76,22 @@ my $report = new Bio::Tools::BPlite(-fh=>\*F);
 }
 
 sub computeNonOverlappingMatchLength {
-    my($newStart, $newEnd, $start, $end, $first, $noml) = @_;
-    if ($newEnd > $end) { # extends
-	if($newStart <= $end){  ##overlaps
-	    $end = $newEnd;  #extend end ... already dealt with if new end is less
-	} else{  ##there is a gap in between ..
-	    $noml += $end - $start + 1;
-	    $end = $newEnd;
-	    $start = $newStart;
-	}
+  my($newStart, $newEnd, $start, $end, $first, $noml) = @_;
+  if ($newEnd > $end) {		# extends
+    if ($newStart <= $end) {	##overlaps
+      $end = $newEnd; #extend end ... already dealt with if new end is less
+    } else {			##there is a gap in between ..
+      $noml += $end - $start + 1;
+      $end = $newEnd;
+      $start = $newStart;
     }
-    $noml += $end - $start + 1; # deal with the last one 
-    return $noml;
+  }
+  $noml += $end - $start + 1;	# deal with the last one 
+  return $noml;
 }
 
 sub usage {
-    print "
+  print "
 
 orthomclBlastParser blast_file
 
@@ -85,5 +103,5 @@ output is a tab file, with one row per subject. these are the columns:
 query_id subject_id query_taxon subject_taxon evalue_mant evalue_exp percentIdent percentMatch
 
 ";
-    exit(1);
+  exit(1);
 }
