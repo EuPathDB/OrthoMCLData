@@ -2,8 +2,6 @@
 
 use strict;
 use DBI;
-use DBD::Oracle;
-use DBD::mysql;
 
 =pod
 SimilarSequences
@@ -66,8 +64,15 @@ if ($restart) {
 my $config = parseConfigFile($configFile);
 my $sst = $config->{similarSequencesTable};
 
+if ($config->{dbVendor} = 'oracle') {
+  require DBD::Oracle;
+} else {
+  require DBD::mysql;
+}
+
 my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
 		       $config->{dbPassword}) or die DBI::errstr;
+
 
 commonTempTables();
 
