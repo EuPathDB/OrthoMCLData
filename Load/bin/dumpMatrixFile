@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+
+use strict;
+use DBI;
+
+my $vendor = $ARGV[0];
+
+usage() unless $configFile;
+
+if ($config->{dbVendor} = 'oracle') {
+  require DBD::Oracle;
+} else {
+  require DBD::mysql;
+}
+
+my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
+		       $config->{dbPassword}) or die DBI::errstr;
+
+my $config = parseConfigFile($configFile);
+
+if ($config->{dbVendor} = 'oracle') {
+  require DBD::Oracle;
+} else {
+  require DBD::mysql;
+}
+
+my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
+		       $config->{dbPassword}) or die DBI::errstr;
+
+my $inParalogTable = $config->{inParalogTable};
+my $orthologTable = $config->{orthologTable};
+my $coOrthologTable = $config->{coOrthologTable};
+
+my $sql = "
+select sum(c) from (
+  select count(*) c from $orthologTable
+  union
+  select count(*) c from $inParalogTable
+  union
+  select count(*) c from $coOrthologTable
+)
+";
+
+my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+$stmt->execute() or die DBI::errstr;
+
+my ($dimension) = $stmt->fetchrow_array();
+
+my $header "(mclheader
+mcltype matrix
+dimensions ${dimension}x${dimension}
+)
+
+(mclmatrix
+begin
+
+";
+
+print $header;
+
+$sql = "
+select query_id, subject_id, score from (
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $inParalogTable
+  union
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $orthologTable
+  union
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $coOrthologTable
+  union
+  select sequence_id_b, sequence_id_a, normalized_score
+  from $inParalogTable
+  union
+  select sequence_id_b, sequence_id_a, normalized_score
+  from $orthologTable
+  union
+  select sequence_id_b, sequence_id_a, normalized_score
+  from $coOrthologTable
+) order by query_id, subject_id
+";
+
+$stmt = $dbh->prepare($sql) or die DBI::errstr;
+$stmt->execute() or die DBI::errstr;
+
+my $prevQueryId = -1;
+my @row;
+while (my ($queryId, $subjectId, $score) = $stmt->fetchrow_array()) {
+  if ($queryId ne $prevQueryId) {
+    print "$prevQueryId\t" . join(" ", @row) . " \$" unless $prevQueryId == -1;
+    @row = ();
+    $prevQueryId = $queryId;
+  }
+  push(@row, "$subjectID:$score");
+}
+print "$prevQueryId\t" . join(" ", @row) . " \$" unless $prevQueryId == -1;
