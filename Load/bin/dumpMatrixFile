@@ -3,9 +3,11 @@
 use strict;
 use DBI;
 
-my $vendor = $ARGV[0];
+my $configFile = $ARGV[0];
 
 usage() unless $configFile;
+
+my $config = parseConfigFile($configFile);
 
 if ($config->{dbVendor} = 'oracle') {
   require DBD::Oracle;
@@ -15,8 +17,6 @@ if ($config->{dbVendor} = 'oracle') {
 
 my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
 		       $config->{dbPassword}) or die DBI::errstr;
-
-my $config = parseConfigFile($configFile);
 
 if ($config->{dbVendor} = 'oracle') {
   require DBD::Oracle;
@@ -46,7 +46,7 @@ $stmt->execute() or die DBI::errstr;
 
 my ($dimension) = $stmt->fetchrow_array();
 
-my $header "(mclheader
+my $header = "(mclheader
 mcltype matrix
 dimensions ${dimension}x${dimension}
 )
@@ -87,10 +87,26 @@ my $prevQueryId = -1;
 my @row;
 while (my ($queryId, $subjectId, $score) = $stmt->fetchrow_array()) {
   if ($queryId ne $prevQueryId) {
-    print "$prevQueryId\t" . join(" ", @row) . " \$" unless $prevQueryId == -1;
+    print "$prevQueryId\t" . join(" ", @row) . " \n\$" unless $prevQueryId == -1;
     @row = ();
     $prevQueryId = $queryId;
   }
-  push(@row, "$subjectID:$score");
+  push(@row, "$subjectId:$score");
 }
-print "$prevQueryId\t" . join(" ", @row) . " \$" unless $prevQueryId == -1;
+print "$prevQueryId\t" . join(" ", @row) . " \n\$" unless $prevQueryId == -1;
+print ")\n";
+
+sub parseConfigFile {
+  my ($configFile) = @_;
+
+  open(F, $configFile) || die "Can't open config file '$configFile'\n";
+
+  next if /^#/;
+  my $config;
+  while(<F>) {
+    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
+    $config->{$1} = $2;
+  }
+  return $config;
+}
+
