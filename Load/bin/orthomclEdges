@@ -141,13 +141,18 @@ sub validateInputTables {
 }
 
 sub updateMinimumEvalueExponent {
-  my $sql = "
-update $sst
-set evalue_exp = (
-  select min(evalue_exp)-1
+    my $sql = "select min(evalue_exp)
   from $sst
   where evalue_mant != 0
-)
+";
+
+    my $stmt = $dbh->prepare("$sql") or die DBI::errstr;
+    $stmt->execute() or die DBI::errstr;
+    my ($minEvalueExp) = $stmt->fetchrow_array();
+
+  $sql = "
+update $sst
+set evalue_exp = ${minEvalueExp}-1
 where evalue_exp = 0
 ";
   runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value",
@@ -320,10 +325,12 @@ set normalized_score = (
  select i.unnormalized_score / t.average
  from
    (
-     select decode(haveOrthologsAvg.average, null,
-                   allInparalogsAvg.average,
-                   haveOrthologsAvg.average) average,
-             allInparalogsAvg.taxon_id
+     select case
+            when haveOrthologsAvg.average is NULL
+              then allInparalogsAvg.average
+              else haveOrthologsAvg.average
+            end as average,
+            allInparalogsAvg.taxon_id
      from
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
