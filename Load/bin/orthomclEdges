@@ -237,7 +237,7 @@ where s.query_id != s.subject_id
 --       (i.e. an intrataxon match for a protein with no intertaxon
 --        match in the database)
 union
-select s.query_id, s.subject_id, s.evalue_exp, s.query_taxon_id as taxon_id, s.evalue_mant
+select s.query_id, s.subject_id, s.query_taxon_id as taxon_id, s.evalue_exp, s.evalue_mant
 from $sst s
 where s.query_taxon_id = s.subject_taxon_id
   and s.evalue_exp <= $evalueExpThreshold
@@ -400,10 +400,9 @@ create table inparalogAvgScore as
 
   $sql = "
   insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
-  select it.sequence_id_a, it.sequence_id_b, it.taxon_id_a, it.taxon_id_b, it.unnormalized_score, it.unnormalized_score/a.avg_score
+  select it.sequence_id_a, it.sequence_id_b, it.taxon_id, it.unnormalized_score, it.unnormalized_score/a.avg_score
   from inParalogTemp it, inParalogAvgScore a
   where it.taxon_id = a.taxon_id
-)
 ";
 
   runSql($sql, "populate InParalogs, including normalized_score", 'inparalogsNormalization', '0');
