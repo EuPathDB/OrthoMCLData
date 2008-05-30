@@ -31,15 +31,21 @@ my @steps = (['updateMinimumEvalueExponent'],
 	     ['inParalog', ['drop table BetterHit']],
 	     ['bestHit', ['drop table BestQueryTaxonScore']],
 	     ['ortholog', ['drop table BestHit']],
-	     ['normalizeOrthologs'],
-	     ['normalizeInparalogs'],
+	     ['orthologAvg'],
+	     ['orthologAvgIndex'],
+	     ['orthologsNormalization', ['drop table OrthologAvgScore', 'drop table OrthologTemp']],
+	     ['inparalogAvg'],
+	     ['inparalogAvgIndex'],
+	     ['inparalogsNormalization', ['drop table InparalogAvgScore', 'drop table InparalogTemp']],
 	     ['ortholog2way'],
 	     ['inParalog2way'],
 	     ['in2a_ix'],
 	     ['in2b_ix'],
 	     ['coorthologCandidate', ['drop table ortholog2way', 'drop table inparalog2way']],
 	     ['coortholog', ['drop table CoOrthologCandidate']],
-	     ['normalizeCoOrthologs'],
+	     ['coorthologAvg'],
+	     ['coorthologAvgIndex'],
+	     ['coorthologsNormalization', ['drop table CoOrthologAvgScore', 'drop table CoOrthologTemp']],
 	     ['cleanall', ['truncate table inparalog', 'truncate table ortholog', 'truncate table coortholog']],
 	    );
 
@@ -49,6 +55,10 @@ for (my $i=0; $i<scalar(@steps); $i++) {
     $stepsHash->{$steps[$i]->[0]} = $i+1;
     $cleanHash->{$steps[$i]->[0]} = $steps[$i]->[1] if $steps[$i]->[1];
 }
+
+print STDERR "\n\n============================================================================================\n";
+print STDERR localtime(). " orthomclEdges " . join(' ', @ARGV) . "\n";
+print STDERR "=============================================================================================\n\n";
 
 &usage() unless $configFile;
 usage() unless $clean =~ /cleanup=(yes|no|only|all)/;
@@ -62,16 +72,16 @@ if ($restart) {
 }
 
 my $config = parseConfigFile($configFile);
-my $sst = $config->{similarSequencesTable};
+my $sst = getConfig("similarSequencesTable");
 
-if ($config->{dbVendor} = 'oracle') {
+if (getConfig("dbVendor") == 'oracle') {
   require DBD::Oracle;
 } else {
   require DBD::mysql;
 }
 
-my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
-		       $config->{dbPassword}) or die DBI::errstr;
+my $dbh = DBI->connect(getConfig("dbConnectString"), getConfig("dbLogin"),
+		       getConfig("dbPassword")) or die DBI::errstr;
 
 
 commonTempTables();
@@ -93,10 +103,10 @@ sub parseConfigFile {
 
   open(F, $configFile) || die "Can't open config file '$configFile'\n";
 
-  next if /^#/;
+  next if /^\#/;
   my $config;
   while(<F>) {
-    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
+    /^(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
     $config->{$1} = $2;
   }
   return $config;
@@ -146,21 +156,28 @@ sub updateMinimumEvalueExponent {
   where evalue_mant != 0
 ";
 
-    my $stmt = $dbh->prepare("$sql") or die DBI::errstr;
-    $stmt->execute() or die DBI::errstr;
-    my ($minEvalueExp) = $stmt->fetchrow_array();
+    # a little bit of a hack here.  mysql can't tolerate finding the
+    # minEvalueExp in the sql that updates the table
+    # so, we do it as a preprocess.
+    # must explicitly avoid the preprocess if just cleaning or if skipping
+    my $minEvalueExp;
+    if ($clean ne 'only' && $clean ne 'all' && !$skipPast) {
+      my $stmt = $dbh->prepare("$sql") or die DBI::errstr;
+      $stmt->execute() or die DBI::errstr;
+      ($minEvalueExp) = $stmt->fetchrow_array();
+    }
 
   $sql = "
 update $sst
 set evalue_exp = ${minEvalueExp}-1
 where evalue_exp = 0
 ";
-  runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value",
+  runSql($sql, "updating $sst, setting 0 evalue_exp to underflow value ${minEvalueExp}-1",
 	 'updateMinimumEvalueExponent', '23 min');
 }
 
 sub bestQueryTaxonScore {
-  my $interTaxonMatch = $config->{interTaxonMatchView};
+  my $interTaxonMatch = getConfig("interTaxonMatchView");
 
   my $sql = "
 create table BestQueryTaxonScore as
@@ -199,8 +216,8 @@ group by im.query_id, low_exp.evalue_exp
 }
 
 sub  betterHit{
-  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
-  my $percentMatchThreshold = $config->{percentMatchThreshold};
+  my $evalueExpThreshold = getConfig("evalueExponentCutoff");
+  my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
 create table BetterHit as
@@ -211,7 +228,7 @@ from $sst s, BestIntertaxonScore bis
 where s.query_id != s.subject_id
   and s.query_taxon_id = s.subject_taxon_id
   and s.query_id = bis.query_id
-  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.evalue_exp <= $evalueExpThreshold
   and s.percent_match >= $percentMatchThreshold
   and (s.evalue_mant < 0.001
        or s.evalue_exp < bis.evalue_exp
@@ -223,7 +240,7 @@ union
 select s.query_id, s.subject_id, s.evalue_exp, s.query_taxon_id as taxon_id, s.evalue_mant
 from $sst s
 where s.query_taxon_id = s.subject_taxon_id
-  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.evalue_exp <= $evalueExpThreshold
   and s.percent_match >= $percentMatchThreshold
   and s.query_id in (select query_id from $sst
                      minus select query_id from BestIntertaxonScore)
@@ -232,10 +249,8 @@ where s.query_taxon_id = s.subject_taxon_id
 }
 
 sub  inParalog{
-  my $inParalogTable = $config->{inParalogTable};
-
   my $sql = "
-insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
+create table InParalogTemp as
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -244,19 +259,18 @@ select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
          else  -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
            (log(10, bh1.evalue_mant * bh2.evalue_mant)
             + bh1.evalue_exp + bh2.evalue_exp) / -2
-       end as unnormalized_score,
-       cast(null as number) as normalized_score
+       end as unnormalized_score
 from BetterHit bh1, BetterHit bh2
 where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate InParalog", 'inParalog', '5 min');
+  runSql($sql, "create InParalogTemp table", 'inParalog', '5 min');
 }
 
 sub bestHit {
-  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
-  my $percentMatchThreshold = $config->{percentMatchThreshold};
+  my $evalueExpThreshold = getConfig("evalueExponentCutoff");
+  my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
 create table BestHit as
@@ -267,7 +281,7 @@ from $sst s, BestQueryTaxonScore cutoff
 where s.query_id = cutoff.query_id
   and s.subject_taxon_id = cutoff.subject_taxon_id
   and s.query_taxon_id != s.subject_taxon_id
-  and s.pvalue_exp <= $pvalueExpThreshold
+  and s.evalue_exp <= $evalueExpThreshold
   and s.percent_match >= $percentMatchThreshold
   and (s.evalue_mant < 0.01
        or s.evalue_exp = cutoff.evalue_exp
@@ -277,10 +291,8 @@ where s.query_id = cutoff.query_id
 }
 
 sub ortholog {
-  my $orthologTable = $config->{orthologTable};
-
   my $sql = "
-insert into $orthologTable (sequence_id_a, sequence_id_b, query_taxon_id, subject_taxon_id, unnormalized_score, normalized_score)
+create table OrthologTemp as
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.query_taxon_id, bh1.subject_taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -289,40 +301,64 @@ select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
          else  -- score = ( -log10(evalue1) - log10(evalue2) ) / 2
            (log(10, bh1.evalue_mant * bh2.evalue_mant)
             + bh1.evalue_exp + bh2.evalue_exp) / -2
-       end as unnormalized_score,
-       cast(null as number) as normalized_score
+       end as unnormalized_score
 from BestHit bh1, BestHit bh2
 where bh1.query_id < bh1.subject_id
   and bh1.query_id = bh2.subject_id
   and bh1.subject_id = bh2.query_id
 ";
-  runSql($sql, "populate Ortholog", 'ortholog', '10 min');
+  runSql($sql, "create OrthologTemp table", 'ortholog', '10 min');
 }
 
 sub normalizeOrthologs {
-  my $orthologTable = $config->{orthologTable};
+  normalizeOrthologsSub("", getConfig("orthologTable"));
+}
+
+sub normalizeOrthologsSub {
+  my ($co, $orthologTable) = @_;
 
   my $sql = "
-update $orthologTable o
-set normalized_score = (
-  select o.unnormalized_score / t.average
-  from (
-    select avg(o2.unnormalized_score) average
-    from $orthologTable o2
-  ) t
-)
+create table ${co}OrthologAvgScore  as
+select smaller_tax_id, bigger_tax_id, avg(unnormalized_score) avg_score
+from (select case
+         when taxon_id_a < taxon_id_b
+         then taxon_id_a
+         else taxon_id_b
+        end as smaller_tax_id,
+        case
+          when taxon_id_a < taxon_id_b
+          then taxon_id_b
+          else taxon_id_a
+        end as bigger_tax_id,
+        unnormalized_score
+      from ${co}orthologtemp)
+      group by smaller_tax_id, bigger_tax_id
 ";
-  runSql($sql, "updating Orthologs, setting normalized_score", 'normalizeOrthologs', '0');
+
+  runSql($sql, "create ${co}OrthologAvgScore table", "${co}orthologAvg", '1 min');
+
+  $sql = "create index ${co}orthoAvg_ix on ${co}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
+
+  runSql($sql, "create ${co}OrthologAvgScore index", "${co}orthologAvgIndex", '1 min');
+
+  $sql = "
+  insert into $orthologTable (sequence_id_a, sequence_id_b, taxon_id_a, taxon_id_b, unnormalized_score, normalized_score)
+  select ot.sequence_id_a, ot.sequence_id_b, ot.taxon_id_a, ot.taxon_id_b, ot.unnormalized_score, ot.unnormalized_score/a.avg_score
+  from ${co}OrthologTemp ot, ${co}OrthologAvgScore a
+  where (ot.taxon_id_a = a.smaller_tax_id and ot.taxon_id_b = a.bigger_tax_id)
+   or (ot.taxon_id_b = a.smaller_tax_id and ot.taxon_id_a = a.bigger_tax_id)
+";
+
+  runSql($sql, "populate ${co}Orthologs, including normalized_score", "${co}orthologsNormalization", '0');
 }
 
 sub normalizeInparalogs {
-  my $inParalogTable = $config->{inParalogTable};
-  my $orthologTable = $config->{orthologTable};
+  my $inParalogTable = getConfig("inParalogTable");
+  my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
-update $inParalogTable i
-set normalized_score = (
- select i.unnormalized_score / t.average
+create table inparalogAvgScore as
+ select i.taxon_id, i.unnormalized_score / t.average as avg_score
  from
    (
      select case
@@ -334,12 +370,12 @@ set normalized_score = (
      from
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
+         from InParalogTemp i2
          group by i2.taxon_id
        ) allInparalogsAvg,
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
-         from $inParalogTable i2
+         from InParalogTemp i2
          where (i2.sequence_id_a in
                  (select sequence_id_a from $orthologTable
                   union
@@ -353,15 +389,28 @@ set normalized_score = (
          group by i2.taxon_id
        ) haveOrthologsAvg
        where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
-   ) t
+   ) t, inParalogTemp i
  where i.taxon_id = t.taxon_id
+";
+  runSql($sql, "create inParalogAvgScore table", 'inparalogAvg', '1 min');
+
+  $sql = "create index inparalogAvg_ix on inParalogAvgScore(taxon_id,avg_score)";
+
+  runSql($sql, "create inParalogAvgScore index", 'inparalogAvgIndex', '1 min');
+
+  $sql = "
+  insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
+  select it.sequence_id_a, it.sequence_id_b, it.taxon_id_a, it.taxon_id_b, it.unnormalized_score, it.unnormalized_score/a.avg_score
+  from inParalogTemp it, inParalogAvgScore a
+  where it.taxon_id = a.taxon_id
 )
 ";
-  runSql($sql, "update InParalogs, setting normalized_score", 'normalizeInparalogs');
+
+  runSql($sql, "populate InParalogs, including normalized_score", 'inparalogsNormalization', '0');
 }
 
 sub  ortholog2way {
-  my $orthologTable = $config->{orthologTable};
+  my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
 create table ortholog2way as
@@ -374,7 +423,7 @@ select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $orth
 }
 
 sub  inParalog2way {
-  my $inParalogTable = $config->{inParalogTable};
+  my $inParalogTable = getConfig("inParalogTable");
 
   my $sql = "
 create table inparalog2way as
@@ -415,10 +464,10 @@ from (-- twp-way union, part 1: inparalog-ortholog-inparalog
 }
 
 sub  coortholog {
-  my $orthologTable = $config->{orthologTable};
-  my $coOrthologTable = $config->{coOrthologTable};
-  my $pvalueExpThreshold = $config->{pvalueExpThreshold};
-  my $percentMatchThreshold = $config->{percentMatchThreshold};
+  my $orthologTable = getConfig("orthologTable");
+  my $coOrthologTable = getConfig("coOrthologTable");
+  my $evalueExpThreshold = getConfig("evalueExponentCutoff");
+  my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
 insert into $coOrthologTable (sequence_id_a, sequence_id_b, unnormalized_score)
@@ -436,30 +485,18 @@ from $sst ab, $sst ba,
       minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
 where ab.query_id = candidate.sequence_id_a
   and ab.subject_id = candidate.sequence_id_b
-  and ab.pvalue_exp <= $pvalueExpThreshold
+  and ab.evalue_exp <= $evalueExpThreshold
   and ab.percent_match >= $percentMatchThreshold
   and ba.query_id = candidate.sequence_id_b
   and ba.subject_id = candidate.sequence_id_a
-  and ba.pvalue_exp <= $pvalueExpThreshold
+  and ba.evalue_exp <= $evalueExpThreshold
   and ba.percent_match >= $percentMatchThreshold
 ";
   runSql($sql, "populate CoOrtholog", 'coortholog', '30 min');
 }
 
 sub normalizeCoOrthologs {
-  my $coOrthologTable = $config->{coOrthologTable};
-
-  my $sql = "
-update $coOrthologTable c
-set normalized_score = (
-  select c.unnormalized_score / t.average
-  from (
-    select avg(c2.unnormalized_score) average
-    from $coOrthologTable c2
-  ) t
-)
-";
-  runSql($sql, "updating CoOrthologs, setting normalized_score", 'normalizeCoOrthologs', '0');
+  normalizeOrthologsSub("co", getConfig("coOrthologTable"));
 }
 
 sub runSql {
@@ -520,6 +557,12 @@ sub cleanall {
     }
 }
 
+sub getConfig {
+  my ($prop) = @_;
+  die "can't find property $prop in config file" unless $config->{$prop};
+  return $config->{$prop};
+}
+
 sub usage {
   my $stepsString;
   map { $stepsString .= "  $_->[0]\n" } @steps;
@@ -554,7 +597,7 @@ Standard Error:
 
 Sample Config File:
 
-dbVender=oracle  (or mysql)
+dbVendor=oracle  (or mysql)
 dbConnectString=dbi:Oracle:orthomcl
 dbLogin=my_db_login
 dbPassword=my_db_password
