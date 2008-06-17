@@ -103,11 +103,16 @@ sub parseConfigFile {
 
   open(F, $configFile) || die "Can't open config file '$configFile'\n";
 
-  next if /^\#/;
   my $config;
   while(<F>) {
-    /^(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
-    $config->{$1} = $2;
+    chomp;
+    next if /^\#/;
+    /^(\w+)\=(.+)/ || die "illegal line in config file '$_'\n";
+    my $key=$1;
+    my $val=$2;
+    $config->{$key} = $val;
+    $val = '********' if $key eq 'dbPassword';
+    print STDERR localtime() . " configuration: $key=$val\n";
   }
   return $config;
 }
@@ -294,7 +299,7 @@ sub ortholog {
   my $sql = "
 create table OrthologTemp as
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
-       bh1.query_taxon_id, bh1.subject_taxon_id,
+       bh1.query_taxon_id as taxon_id_a, bh1.subject_taxon_id as taxon_id_b,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
          when bh1.evalue_mant < 0.01 or bh2.evalue_mant < 0.01
            then (bh1.evalue_exp + bh2.evalue_exp) / -2
@@ -349,7 +354,7 @@ from (select case
    or (ot.taxon_id_b = a.smaller_tax_id and ot.taxon_id_a = a.bigger_tax_id)
 ";
 
-  runSql($sql, "populate ${co}Orthologs, including normalized_score", "${co}orthologsNormalization", '0');
+  runSql($sql, "populate $orthologTable table, including normalized_score", "${co}orthologsNormalization", '0');
 }
 
 sub normalizeInparalogs {
@@ -358,21 +363,18 @@ sub normalizeInparalogs {
 
   my $sql = "
 create table inparalogAvgScore as
- select i.taxon_id, i.unnormalized_score / t.average as avg_score
- from
-   (
      select case
             when haveOrthologsAvg.average is NULL
               then allInparalogsAvg.average
               else haveOrthologsAvg.average
-            end as average,
+            end as avg_score,
             allInparalogsAvg.taxon_id
      from
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
          from InParalogTemp i2
          group by i2.taxon_id
-       ) allInparalogsAvg,
+       ) allInparalogsAvg LEFT OUTER JOIN
        (
          select avg(i2.unnormalized_score) average, i2.taxon_id
          from InParalogTemp i2
@@ -388,9 +390,7 @@ create table inparalogAvgScore as
                )
          group by i2.taxon_id
        ) haveOrthologsAvg
-       where allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
-   ) t, inParalogTemp i
- where i.taxon_id = t.taxon_id
+       ON allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
 ";
   runSql($sql, "create inParalogAvgScore table", 'inparalogAvg', '1 min');
 
@@ -405,7 +405,7 @@ create table inparalogAvgScore as
   where it.taxon_id = a.taxon_id
 ";
 
-  runSql($sql, "populate InParalogs, including normalized_score", 'inparalogsNormalization', '0');
+  runSql($sql, "populate $inParalogTable table, including normalized_score", 'inparalogsNormalization', '0');
 }
 
 sub  ortholog2way {
@@ -469,9 +469,10 @@ sub  coortholog {
   my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
-insert into $coOrthologTable (sequence_id_a, sequence_id_b, unnormalized_score)
+create table CoOrthologTemp as
 select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
        candidate.sequence_id_a, candidate.sequence_id_b,
+       ab.query_taxon_id as taxon_id_a, ab.subject_taxon_id as taxon_id_b,
        case  -- in case of 0 evalue, use rigged exponent
          when ab.evalue_mant < 0.00001 or ba.evalue_mant < 0.00001
            then (ab.evalue_exp + ba.evalue_exp) / -2
@@ -479,7 +480,7 @@ select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
            (log(10, ab.evalue_mant * ba.evalue_mant)
             + ab.evalue_exp + ba.evalue_exp) / -2
        end as unnormalized_score
-from $sst ab, $sst ba,
+from $sst ab, $sst ba, 
      (select sequence_id_a, sequence_id_b from CoorthologCandidate
       minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
 where ab.query_id = candidate.sequence_id_a
@@ -491,7 +492,7 @@ where ab.query_id = candidate.sequence_id_a
   and ba.evalue_exp <= $evalueExpThreshold
   and ba.percent_match >= $percentMatchThreshold
 ";
-  runSql($sql, "populate CoOrtholog", 'coortholog', '30 min');
+  runSql($sql, "create CoOrthologTemp table", 'coortholog', '30 min');
 }
 
 sub normalizeCoOrthologs {
@@ -593,6 +594,7 @@ Standard Output:
 Standard Error:
   - logging info
 
+NOTE: the database login in the config file must have update/insert/truncate privileges on the tables specified in the config file.
 
 Sample Config File:
 
@@ -600,11 +602,11 @@ dbVendor=oracle  (or mysql)
 dbConnectString=dbi:Oracle:orthomcl
 dbLogin=my_db_login
 dbPassword=my_db_password
-similarSequencesTable=apidb.SimilarSequences
-orthologTable=apidb.Ortholog
-inParalogTable=apidb.InParalog
-coOrthologTable=apidb.CoOrtholog
-interTaxonMatchView=apidb.InterTaxonMatch
+similarSequencesTable=SimilarSequences
+orthologTable=Ortholog
+inParalogTable=InParalog
+coOrthologTable=CoOrtholog
+interTaxonMatchView=InterTaxonMatch
 percentMatchCutoff=50
 evalueExponentCutoff=-5
 
