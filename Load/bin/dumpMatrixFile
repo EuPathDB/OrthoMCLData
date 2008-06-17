@@ -41,6 +41,8 @@ select sum(c) from (
 )
 ";
 
+print STDERR "counting the number of edges in the ortholog, inparalog and coortholog tables...\n";
+
 my $stmt = $dbh->prepare($sql) or die DBI::errstr;
 $stmt->execute() or die DBI::errstr;
 
@@ -59,7 +61,7 @@ begin
 print $header;
 
 $sql = "
-select query_id, subject_id, score from (
+select sequence_id_a, sequence_id_b, normalized_score from (
   select sequence_id_a, sequence_id_b, normalized_score
   from $inParalogTable
   union
@@ -77,7 +79,7 @@ select query_id, subject_id, score from (
   union
   select sequence_id_b, sequence_id_a, normalized_score
   from $coOrthologTable
-) order by query_id, subject_id
+) order by sequence_id_a, sequence_id_b
 ";
 
 $stmt = $dbh->prepare($sql) or die DBI::errstr;
@@ -87,13 +89,14 @@ my $prevQueryId = -1;
 my @row;
 while (my ($queryId, $subjectId, $score) = $stmt->fetchrow_array()) {
   if ($queryId ne $prevQueryId) {
-    print "$prevQueryId\t" . join(" ", @row) . " \n\$" unless $prevQueryId == -1;
+    print "$prevQueryId\t" . join(" ", @row) . " \$\n" unless $prevQueryId == -1;
     @row = ();
     $prevQueryId = $queryId;
   }
+  $score = int($score * 1000 + .5)/1000;
   push(@row, "$subjectId:$score");
 }
-print "$prevQueryId\t" . join(" ", @row) . " \n\$" unless $prevQueryId == -1;
+print "$prevQueryId\t" . join(" ", @row) . " \$\n" unless $prevQueryId == -1;
 print ")\n";
 
 sub parseConfigFile {
@@ -110,3 +113,22 @@ sub parseConfigFile {
   return $config;
 }
 
+sub usage {
+  print STDERR "
+
+Dump orthomcl edges (produced by the orthomclEdges program) from an OrthomclDB database instance into the format expected by the MCL program.
+
+Usage: dumpMatrixFile configFile
+
+Sample Config File (a subset of the properties required by the orthomclEdges program:
+
+dbVendor=oracle  (or mysql)
+dbConnectString=dbi:Oracle:orthomcl
+dbLogin=my_db_login
+dbPassword=my_db_password
+orthologTable=Ortholog
+inParalogTable=InParalog
+coOrthologTable=CoOrtholog
+";
+  exit(1);
+}
