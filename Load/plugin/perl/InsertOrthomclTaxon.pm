@@ -45,10 +45,20 @@ PURPOSE_BRIEF
 my $notes = <<NOTES;
 Both input files are both constructed manually as part of the Orthomcl-DB genome acquistion phase.
 
-The speciesFile is a columnar file with these columns:
-  - three_letter_abbrev
-  - ncbi_tax_id
-  - clade_four_letter_abbrev  # an index into the cladeFile
+The speciesFile is the proteome file with the following tab delimited columns:
+  clade
+  3 letter species abrev
+  species
+  strain
+  version
+  files
+  URL to get file
+  data source
+  ncbi tax id
+  Url for linkout
+  organism group
+  defline example
+  source_id example
 
 The cladesFile is a depth first serialization of the clade tree.  Each clade hasa three letter abbreviation, a display name, and a depth indicated by pipe characters
 
@@ -224,26 +234,23 @@ sub parseSpeciesFile {
 
 	my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
 
-	# pfa APIC 123345
-	if (/([a-z]{3})\t([A-Z]{4})\t(\d+)/) {
-	  my $speciesAbbrev = $1;
-	  my $cladeAbbrev = $2;
-	  my $ncbiTaxonId = $3;
-	  $self->error("duplicate species abbrev '$speciesAbbrev'") if $speciesAbbrevs->{$speciesAbbrev};
-	  $speciesAbbrevs->{$speciesAbbrev} = 1;
-	  $species->setThreeLetterAbbrev($speciesAbbrev);
-	  my $clade = $self->{clades}->{$cladeAbbrev};
-	  my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $ncbiTaxonId);
-	  $species->setTaxonId($taxonId);
-	  $clade || die "can't find clade with code '$cladeAbbrev' for species '$speciesAbbrev'\n";
-	  $species->setParent($clade);
-	  $species->setIsSpecies(1);
-	  $species->setOrderNum($speciesOrder++);
-	  $species->setName($taxonName);
-	  $species->setDepthFirstIndex($clade->getDepthFirstIndex());
-	}  else {
-	  $self->userError("invalid line in species file: '$_'");
-	}
+        my @arr = split(/\t/, $_);
+
+	my $speciesAbbrev = $arr[1];
+	my $cladeAbbrev = $arr[0];
+	my $ncbiTaxonId = $arr[8];
+	$self->error("duplicate species abbrev '$speciesAbbrev'") if $speciesAbbrevs->{$speciesAbbrev};
+	$speciesAbbrevs->{$speciesAbbrev} = 1;
+	$species->setThreeLetterAbbrev($speciesAbbrev);
+	my $clade = $self->{clades}->{$cladeAbbrev};
+	my ($taxonId, $taxonName) = $self->getTaxonId($stmt, $ncbiTaxonId);
+	$species->setTaxonId($taxonId);
+	$clade || die "can't find clade with code '$cladeAbbrev' for species '$speciesAbbrev'\n";
+	$species->setParent($clade);
+	$species->setIsSpecies(1);
+	$species->setOrderNum($speciesOrder++);
+	$species->setName($taxonName);
+	$species->setDepthFirstIndex($clade->getDepthFirstIndex());
     }
 }
 
