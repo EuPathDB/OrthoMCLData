@@ -34,14 +34,20 @@ Insert the Orthomcl-DB specific resource information used by the OrthoMCL Data S
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
-The speciesFile is a columnar file with these columns:
-  - three_letter_abbrev
-  - description
-  - strain
-  - source_name
-  - source_url
-
-
+The speciesFile is the proteome file with the following tab delimited columns:
+  clade
+  3 letter species abrev
+  species
+  strain
+  version
+  files
+  URL to get file
+  data source
+  ncbi tax id
+  Url for linkout
+  organism group
+  defline example
+  source_id example
 
 NOTES
 
@@ -123,14 +129,12 @@ sub parseResourceLine {
 	    $resource = GUS::Model::ApiDB::OrthomclResource->new();
 	    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
 	    $resource->setOrthomclTaxonId($taxonId);
-	    $resource->setResourceName($resData[6]);
-	    $resource->setResourceUrl($resData[8]);
-	    $resource->setResourceVersion($resData[7]);
-	    $resource->setStrain($resData[5]);
-	    $resource->setDescription($resData[3]);
-	    if (scalar @resData > 12) {
-		$resource->setLinkoutUrl($resData[12]);
-	    }
+	    $resource->setResourceName($resData[7]);
+	    $resource->setResourceUrl($resData[6]);
+	    $resource->setResourceVersion($resData[4]);
+	    $resource->setStrain($resData[3]);
+	    $resource->setDescription($resData[10]);
+	    $resource->setLinkoutUrl($resData[9]) if $resData[9];
     }
     
     return $resource;
