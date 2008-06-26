@@ -102,11 +102,12 @@ sub run {
     open(FILE, $resourceFile) || $self->userError("can't open resource file '$resourceFile'");
 
     while(<FILE>) {
-	chomp;
-	my $resource = $self->parseResourceLine($_);
-	if ($resource) {
-	    $resource->submit();
-	}
+      next if ($_ =~ /CLADE/ || $_ =~ /^$/);
+      chomp;
+      my $resource = $self->parseResourceLine($_);
+      if ($resource) {
+	$resource->submit();
+      }
     }
 
     return "Done adding resources.";
