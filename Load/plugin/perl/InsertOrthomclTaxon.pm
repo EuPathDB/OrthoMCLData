@@ -230,6 +230,7 @@ sub parseSpeciesFile {
     my $speciesOrder = 1;
     my $speciesAbbrevs = {};
     while(<FILE>) {
+        next if ($_ =~ /CLADE/ || $_ =~ /^$/);
 	chomp;
 
 	my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
