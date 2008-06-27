@@ -247,8 +247,11 @@ from $sst s
 where s.query_taxon_id = s.subject_taxon_id
   and s.evalue_exp <= $evalueExpThreshold
   and s.percent_match >= $percentMatchThreshold
-  and s.query_id in (select query_id from $sst
-                     minus select query_id from BestIntertaxonScore)
+  and s.query_id in
+     (SELECT distinct sst.query_id
+      from $sst sst
+      LEFT OUTER JOIN BestIntertaxonScore bis ON bis.query_id = sst.query_id
+      WHERE bis.query_id IS NULL)
 ";
   runSql($sql, "create BetterHit table", 'betterHit', '30 min');
 }
@@ -481,8 +484,12 @@ select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
             + ab.evalue_exp + ba.evalue_exp) / -2
        end as unnormalized_score
 from $sst ab, $sst ba, 
-     (select sequence_id_a, sequence_id_b from CoorthologCandidate
-      minus select sequence_id_a, sequence_id_b from $orthologTable) candidate
+     (SELECT sequence_id_a, sequence_id_b
+      FROM CoorthologCandidate cc
+      LEFT OUTER JOIN $orthologTable o
+      ON cc.sequence_id_a = o.sequence_id_a
+      AND cc.sequence_id_b = o.sequence_id_b
+      WHERE o.sequence_id_a IS NULL) candidate
 where ab.query_id = candidate.sequence_id_a
   and ab.subject_id = candidate.sequence_id_b
   and ab.evalue_exp <= $evalueExpThreshold
