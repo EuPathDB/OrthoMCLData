@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+use strict;
+use DBI;
+
+my $configFile = $ARGV[0];
+
+usage() unless $configFile;
+
+my $config = parseConfigFile($configFile);
+
+if ($config->{dbVendor} = 'oracle') {
+  require DBD::Oracle;
+} else {
+  require DBD::mysql;
+}
+
+my $dbh = DBI->connect($config->{dbConnectString}, $config->{dbLogin},
+		       $config->{dbPassword}) or die DBI::errstr;
+
+my $inParalogTable = $config->{inParalogTable};
+my $orthologTable = $config->{orthologTable};
+my $coOrthologTable = $config->{coOrthologTable};
+
+my $sql = "
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $inParalogTable
+  union
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $orthologTable
+  union
+  select sequence_id_a, sequence_id_b, normalized_score
+  from $coOrthologTable
+";
+
+my $stmt = $dbh->prepare($sql) or die DBI::errstr;
+$stmt->execute() or die DBI::errstr;
+while (my ($queryId, $subjectId, $score) = $stmt->fetchrow_array()) {
+  $score = int($score * 1000 + .5)/1000;
+  print "$queryId\t$subjectId\t$score\n";
+}
+
+sub parseConfigFile {
+  my ($configFile) = @_;
+
+  open(F, $configFile) || die "Can't open config file '$configFile'\n";
+
+  next if /^#/;
+  my $config;
+  while(<F>) {
+    /(\w+)\=(.+)/ || "illegal line in config file '$_'\n";
+    $config->{$1} = $2;
+  }
+  return $config;
+}
+
+sub usage {
+  print STDERR "
+
+Dump orthomcl edges (produced by the orthomclEdges program) from an OrthomclDB database instance into the format (abc) expected by the MCL program.
+
+Usage: dumpMclAbcFile configFile
+
+Sample Config File (a subset of the properties required by the orthomclEdges program:
+
+dbVendor=oracle  (or mysql)
+dbConnectString=dbi:Oracle:orthomcl
+dbLogin=my_db_login
+dbPassword=my_db_password
+orthologTable=Ortholog
+inParalogTable=InParalog
+coOrthologTable=CoOrtholog
+";
+  exit(1);
+}
+
