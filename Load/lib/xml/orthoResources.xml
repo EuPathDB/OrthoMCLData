@@ -87,7 +87,7 @@
             contact="EBI"
             institution="EBI"
          />	
-        <unpack>fixSuperfamily @downloadDir@/InterproscanData/17.0/</unpack>
+        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan17.0/iprscan/data</unpack>
         <unpack>cp $PROJECT_HOME/OrthoMCLData/Load/config/insertInterpro-config.xml @downloadDir@/InterproscanData/17.0/</unpack>
         <pluginArgs>--inPath @downloadDir@/InterproscanData/17.0/</pluginArgs>
         <description>
