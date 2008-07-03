@@ -41,12 +41,12 @@ my @steps = (['updateMinimumEvalueExponent'],
 	     ['inParalog2way'],
 	     ['in2a_ix'],
 	     ['in2b_ix'],
-	     ['coorthologCandidate', ['drop table ortholog2way', 'drop table inparalog2way']],
+	     ['coorthologCandidate', ['drop table Ortholog2Way', 'drop table Inparalog2Way']],
 	     ['coortholog', ['drop table CoOrthologCandidate']],
 	     ['coorthologAvg'],
 	     ['coorthologAvgIndex'],
 	     ['coorthologsNormalization', ['drop table CoOrthologAvgScore', 'drop table CoOrthologTemp']],
-	     ['cleanall', ['truncate table inparalog', 'truncate table ortholog', 'truncate table coortholog']],
+	     ['cleanall', ['truncate table Inparalog', 'truncate table Ortholog', 'truncate table CoOrtholog']],
 	    );
 
 my $stepsHash;
@@ -74,7 +74,7 @@ if ($restart) {
 my $config = parseConfigFile($configFile);
 my $sst = getConfig("similarSequencesTable");
 
-if (getConfig("dbVendor") == 'oracle') {
+if (getConfig("dbVendor") eq 'oracle') {
   require DBD::Oracle;
 } else {
   require DBD::mysql;
@@ -325,8 +325,10 @@ sub normalizeOrthologs {
 sub normalizeOrthologsSub {
   my ($co, $orthologTable) = @_;
 
+  my $coCaps = $co? "Co" : "";
+
   my $sql = "
-create table ${co}OrthologAvgScore  as
+create table ${coCaps}OrthologAvgScore  as
 select smaller_tax_id, bigger_tax_id, avg(unnormalized_score) avg_score
 from (select case
          when taxon_id_a < taxon_id_b
@@ -339,20 +341,20 @@ from (select case
           else taxon_id_a
         end as bigger_tax_id,
         unnormalized_score
-      from ${co}orthologtemp)
+      from ${coCaps}OrthologTemp)
       group by smaller_tax_id, bigger_tax_id
 ";
 
-  runSql($sql, "create ${co}OrthologAvgScore table", "${co}orthologAvg", '1 min');
+  runSql($sql, "create ${coCaps}OrthologAvgScore table", "${co}orthologAvg", '1 min');
 
-  $sql = "create index ${co}orthoAvg_ix on ${co}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
+  $sql = "create index ${co}orthoAvg_ix on ${coCaps}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
 
   runSql($sql, "create ${co}OrthologAvgScore index", "${co}orthologAvgIndex", '1 min');
 
   $sql = "
   insert into $orthologTable (sequence_id_a, sequence_id_b, taxon_id_a, taxon_id_b, unnormalized_score, normalized_score)
   select ot.sequence_id_a, ot.sequence_id_b, ot.taxon_id_a, ot.taxon_id_b, ot.unnormalized_score, ot.unnormalized_score/a.avg_score
-  from ${co}OrthologTemp ot, ${co}OrthologAvgScore a
+  from ${coCaps}OrthologTemp ot, ${coCaps}OrthologAvgScore a
   where (ot.taxon_id_a = a.smaller_tax_id and ot.taxon_id_b = a.bigger_tax_id)
    or (ot.taxon_id_b = a.smaller_tax_id and ot.taxon_id_a = a.bigger_tax_id)
 ";
@@ -365,7 +367,7 @@ sub normalizeInparalogs {
   my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
-create table inparalogAvgScore as
+create table InparalogAvgScore as
      select case
             when haveOrthologsAvg.average is NULL
               then allInparalogsAvg.average
@@ -395,16 +397,16 @@ create table inparalogAvgScore as
        ) haveOrthologsAvg
        ON allInparalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
 ";
-  runSql($sql, "create inParalogAvgScore table", 'inparalogAvg', '1 min');
+  runSql($sql, "create InParalogAvgScore table", 'inparalogAvg', '1 min');
 
-  $sql = "create index inparalogAvg_ix on inParalogAvgScore(taxon_id,avg_score)";
+  $sql = "create index inparalogAvg_ix on InParalogAvgScore(taxon_id,avg_score)";
 
   runSql($sql, "create inParalogAvgScore index", 'inparalogAvgIndex', '1 min');
 
   $sql = "
   insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
   select it.sequence_id_a, it.sequence_id_b, it.taxon_id, it.unnormalized_score, it.unnormalized_score/a.avg_score
-  from inParalogTemp it, inParalogAvgScore a
+  from InParalogTemp it, InParalogAvgScore a
   where it.taxon_id = a.taxon_id
 ";
 
@@ -415,51 +417,51 @@ sub  ortholog2way {
   my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
-create table ortholog2way as
+create table Ortholog2Way as
 -- symmetric closure of Ortholog
 select sequence_id_a, sequence_id_b from $orthologTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $orthologTable
 ";
-  runSql($sql, "create ortholog2way", 'ortholog2way', '1.5 hours');
+  runSql($sql, "create Ortholog2Way", 'ortholog2way', '1.5 hours');
 }
 
 sub  inParalog2way {
   my $inParalogTable = getConfig("inParalogTable");
 
   my $sql = "
-create table inparalog2way as
+create table Inparalog2Way as
 select sequence_id_a, sequence_id_b from $inParalogTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
 ";
-  runSql($sql, "create inParalog2way", 'inParalog2way', '1.5 hours');
+  runSql($sql, "create InParalog2Way", 'inParalog2way', '1.5 hours');
 
   $sql = "
-create index in2a_ix on inparalog2way(sequence_id_a, sequence_id_b)
+create index in2a_ix on Inparalog2Way(sequence_id_a, sequence_id_b)
 ";
   runSql($sql, "index in2a_ix", 'in2a_ix', '1.5 hours');
 
   $sql = "
-create index in2b_ix on inparalog2way(sequence_id_b, sequence_id_a)
+create index in2b_ix on Inparalog2Way(sequence_id_b, sequence_id_a)
 ";
   runSql($sql, "index in2b_ix", 'in2b_ix', '1.5 hours');
 }
 
 sub  coorthologCandidate {
   my $sql = "
-create table CoorthologCandidate as
+create table CoOrthologCandidate as
 select distinct
        least(sequence_id_a, sequence_id_b) as sequence_id_a,
        greatest(sequence_id_a, sequence_id_b) as sequence_id_b
 from (-- twp-way union, part 1: inparalog-ortholog-inparalog
       select ip1.sequence_id_a, ip2.sequence_id_b
-      from inparalog2way ip1, ortholog2way o, inparalog2way ip2
+      from Inparalog2Way ip1, Ortholog2Way o, Inparalog2Way ip2
       where ip1.sequence_id_b = o.sequence_id_a
         and o.sequence_id_b = ip2.sequence_id_a
    union -- part 2: ortholog-inparalog
       select ip.sequence_id_a, o.sequence_id_b
-      from inparalog2way ip, ortholog2way o
+      from Onparalog2Way ip, Ortholog2Way o
       where ip.sequence_id_b = o.sequence_id_a)
 ";
   runSql($sql, "create CoOrthologCandidate", 'coorthologCandidate', '10 min');
@@ -485,7 +487,7 @@ select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
        end as unnormalized_score
 from $sst ab, $sst ba, 
      (SELECT sequence_id_a, sequence_id_b
-      FROM CoorthologCandidate cc
+      FROM CoOrthologCandidate cc
       LEFT OUTER JOIN $orthologTable o
       ON cc.sequence_id_a = o.sequence_id_a
       AND cc.sequence_id_b = o.sequence_id_b
@@ -503,7 +505,7 @@ where ab.query_id = candidate.sequence_id_a
 }
 
 sub normalizeCoOrthologs {
-  normalizeOrthologsSub("co", getConfig("coOrthologTable"));
+  normalizeOrthologsSub("Co", getConfig("coOrthologTable"));
 }
 
 sub runSql {
@@ -539,6 +541,10 @@ sub runSql {
 sub clean {
   my ($tag) = @_;
 
+  my $sqlPrefix = getConfig("dbVendor") eq 'oracle'?
+    'select * from all_tables where table_name' :
+      'select * from all_tables where table_name';
+
   my $cleanSqls = $cleanHash->{$tag};
   foreach my $cleanSql (@$cleanSqls) {
     if ($cleanSql) {
@@ -546,7 +552,7 @@ sub clean {
       my $action = $1;
       my $table = uc($2);
       if ($action eq 'drop') {
-	my $stmt = $dbh->prepare("select * from all_tables where table_name = '$table'" ) or die DBI::errstr;
+	my $stmt = $dbh->prepare("$sqlPrefix = '$table'" ) or die DBI::errstr;
 	$stmt->execute() or die DBI::errstr;
 	return unless $stmt->fetchrow();
       }
@@ -560,7 +566,7 @@ sub clean {
 
 sub cleanall {
     foreach my $tag (keys (%$cleanHash)) {
-	clean($tag);   
+	clean($tag);
     }
 }
 
