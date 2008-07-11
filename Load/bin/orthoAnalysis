@@ -18,19 +18,21 @@ my ($mgr, $projectDir, $release, $allSpecies)
 ########   The Pipeline                                               ########
 ##############################################################################
 
-#my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1000000 -e 1e-5";
-my $blastParams = "W=3 wordmask=seq+xnu T=1000 E=1e-5";
+my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1000000 -e 1e-5";
+#my $blastParams = "W=3 wordmask=seq+xnu T=1000 E=1e-5";
 my $minLength = 10;
 my $maxStopCodonPercent = 20;
 my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaasequence";
 
 &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
-&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams Y=70502811","blastp");
+&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","^>([0-9]+)","$blastParams","blastp", "ncbi");
 
 &extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
 &copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+
+&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
 
 &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
