@@ -18,8 +18,11 @@ my ($mgr, $projectDir, $release, $allSpecies)
 ########   The Pipeline                                               ########
 ##############################################################################
 
+
+##### all proteomes vs all proteomes ncbi blastp #####
+
 my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1000000 -e 1e-5";
-#my $blastParams = "W=3 wordmask=seq+xnu T=1000 E=1e-5";
+
 my $minLength = 10;
 my $maxStopCodonPercent = 20;
 my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaasequence";
@@ -30,9 +33,9 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 &extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
-&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+#&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
+#&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
 
 &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
@@ -40,19 +43,23 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
+&parseBlastForSqlldr ($mgr,"ProteinSeqs-ProteinSeqs");
+
 &loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs');
-&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs', '1790,1861');
 
+##### iprscan #####
 
-my $insertInterproConfig = "$projectDir/$release/resources_pipeline/primary/downloads/InterproscanData/insertInterpro-config.xml";
+&documentIPRScan($mgr,"v4.3.1");
+
+&createIprscanDir($mgr, "ProteinSeq.fsa");
+
+&copyFilesToComputeCluster($mgr,"iprscan");
+
+&startIprScanOnComputeCluster($mgr,"ProteinSeq.fsa","apidb", 1);
 
 #&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
 
-my $extDbName = "OrthoMCL";
-my $extDbVersion = "2.0";
-
-#&createExtDbAndDbRls($mgr, $extDbName, $extDbVersion);
 
 #&loadOrthoMCLResults($mgr, $extDbName, $extDbVersion, "all_orthomcl.out");
 
