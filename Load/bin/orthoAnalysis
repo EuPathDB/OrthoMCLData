@@ -45,17 +45,23 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &parseBlastForSqlldr ($mgr,"ProteinSeqs-ProteinSeqs");
 
-&loadProteinBlast($mgr, "ProteinSeqs-ProteinSeqs","DoTS::ExternalAASequence","DoTS::ExternalAASequence", '', '', '', '', '', '', '--noHSPs');
+&loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs");
+
+&orthomclEdges ($mgr, "no");
 
 ##### iprscan #####
 
 &documentIPRScan($mgr,"v4.3.1");
 
-&createIprscanDir($mgr, "ProteinSeq.fsa");
+&createIprscanDir($mgr, "ProteinSeqs.fsa");
 
 &copyFilesToComputeCluster($mgr,"iprscan");
 
-&startIprScanOnComputeCluster($mgr,"ProteinSeq.fsa","apidb", 1);
+&startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
+
+$mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
+
+#&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
 
 #&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
