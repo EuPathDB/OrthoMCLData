@@ -49,6 +49,10 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &orthomclEdges ($mgr, "no");
 
+&makeOrthoAbcFile ($mgr);
+
+&runMcl ($mgr, '1.5');
+
 ##### iprscan #####
 
 &documentIPRScan($mgr,"v4.3.1");
