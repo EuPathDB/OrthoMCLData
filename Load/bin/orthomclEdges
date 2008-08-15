@@ -399,11 +399,11 @@ create table InParalogAvgScore as
        ) haveOrthologsAvg
        ON allInParalogsAvg.taxon_id = haveOrthologsAvg.taxon_id
 ";
-  runSql($sql, "create InParalogAvgScore table", 'inparalogAvg', '1 min');
+  runSql($sql, "create InParalogAvgScore table", 'inParalogAvg', '1 min');
 
-  $sql = "create index inparalogAvg_ix on InParalogAvgScore(taxon_id,avg_score)";
+  $sql = "create index InParalogAvg_ix on InParalogAvgScore(taxon_id,avg_score)";
 
-  runSql($sql, "create inParalogAvgScore index", 'inparalogAvgIndex', '1 min');
+  runSql($sql, "create InParalogAvgScore index", 'inParalogAvgIndex', '1 min');
 
   $sql = "
   insert into $inParalogTable (sequence_id_a, sequence_id_b, taxon_id, unnormalized_score, normalized_score)
@@ -412,7 +412,7 @@ create table InParalogAvgScore as
   where it.taxon_id = a.taxon_id
 ";
 
-  runSql($sql, "populate $inParalogTable table, including normalized_score", 'inparalogsNormalization', '0');
+  runSql($sql, "populate $inParalogTable table, including normalized_score", 'inParalogsNormalization', '0');
 }
 
 sub  ortholog2way {
