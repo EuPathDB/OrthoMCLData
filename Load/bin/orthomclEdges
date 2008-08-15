@@ -556,10 +556,10 @@ sub clean {
     if ($cleanSql) {
       $cleanSql =~ /(\w+) table (\w+)/i || die "invalid clean sql '$cleanSql'";
       my $action = $1;
-      $table = $orthologTable if $table eq 'Ortholog';
-      $table = $coOrthologTable if $table eq 'CoOrtholog';
-      $table = $inParalogTable if $table eq 'InParalog';
       my $table = uc($2);  # NOT COMPATIBLE WITH MYSQL!!!
+      $table = uc($orthologTable) if $table eq 'Ortholog';
+      $table = uc($coOrthologTable) if $table eq 'CoOrtholog';
+      $table = uc($inParalogTable) if $table eq 'InParalog';
       if ($action eq 'drop') {
 	my $stmt = $dbh->prepare("$sqlPrefix = '$table'" ) or die DBI::errstr;
 	$stmt->execute() or die DBI::errstr;
@@ -575,9 +575,6 @@ sub clean {
 
 sub cleanall {
     foreach my $tag (keys (%$cleanHash)) {
-	if ($tag eq 'cleanall') {
-	    
-	}
 	clean($tag);
     }
 }
