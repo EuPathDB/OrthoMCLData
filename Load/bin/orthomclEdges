@@ -156,9 +156,11 @@ sub validateInputTables {
 }
 
 sub updateMinimumEvalueExponent {
-    my $sql = "select min(evalue_exp)
-  from $sst
-  where evalue_mant != 0
+
+    my $sql = "
+select min(evalue_exp)
+from $sst
+where evalue_mant != 0
 ";
 
     # a little bit of a hack here.  mysql can't tolerate finding the
