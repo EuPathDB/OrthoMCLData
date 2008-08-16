@@ -463,7 +463,7 @@ from (-- twp-way union, part 1: inparalog-ortholog-inparalog
         and o.sequence_id_b = ip2.sequence_id_a
    union -- part 2: ortholog-inparalog
       select ip.sequence_id_a, o.sequence_id_b
-      from Onparalog2Way ip, Ortholog2Way o
+      from InParalog2Way ip, Ortholog2Way o
       where ip.sequence_id_b = o.sequence_id_a)
 ";
   runSql($sql, "create CoOrthologCandidate", 'coOrthologCandidate', '10 min');
