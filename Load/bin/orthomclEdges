@@ -328,6 +328,7 @@ sub normalizeOrthologsSub {
   my ($co, $orthologTable) = @_;
 
   my $coCaps = $co? "Co" : "";
+  $co = $co? "coO" : "o";
 
   my $sql = "
 create table ${coCaps}OrthologAvgScore  as
@@ -347,11 +348,11 @@ from (select case
       group by smaller_tax_id, bigger_tax_id
 ";
 
-  runSql($sql, "create ${coCaps}OrthologAvgScore table", "${co}orthologAvg", '1 min');
+  runSql($sql, "create ${coCaps}OrthologAvgScore table", "${co}rthologAvg", '1 min');
 
-  $sql = "create index ${co}orthoAvg_ix on ${coCaps}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
+  $sql = "create index ${co}rthoAvg_ix on ${coCaps}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
 
-  runSql($sql, "create ${co}OrthologAvgScore index", "${co}orthologAvgIndex", '1 min');
+  runSql($sql, "create ${coCaps}OrthologAvgScore index", "${co}rthologAvgIndex", '1 min');
 
   $sql = "
   insert into $orthologTable (sequence_id_a, sequence_id_b, taxon_id_a, taxon_id_b, unnormalized_score, normalized_score)
@@ -361,7 +362,7 @@ from (select case
    or (ot.taxon_id_b = a.smaller_tax_id and ot.taxon_id_a = a.bigger_tax_id)
 ";
 
-  runSql($sql, "populate $orthologTable table, including normalized_score", "${co}orthologsNormalization", '0');
+  runSql($sql, "populate $orthologTable table, including normalized_score", "${co}rthologsNormalization", '0');
 }
 
 sub normalizeInParalogs {
