@@ -350,7 +350,7 @@ from (select case
 
   runSql($sql, "create ${coCaps}OrthologAvgScore table", "${co}rthologAvg", '1 min');
 
-  $sql = "create index ${co}rthoAvg_ix on ${coCaps}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
+  $sql = "create index ${co}orthoAvg_ix on ${coCaps}OrthologAvgScore(smaller_tax_id,bigger_tax_id,avg_score)";
 
   runSql($sql, "create ${coCaps}OrthologAvgScore index", "${co}rthologAvgIndex", '1 min');
 
