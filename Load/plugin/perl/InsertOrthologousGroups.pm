@@ -38,7 +38,7 @@ my $argsDeclaration =
 	     isList    => 0,
 	     reqd  => 1,
 	     constraintFunc => undef,
-	   })
+	   }),
 
  stringArg({ descr => 'List of taxon abbrevs we want to load (eg: pfa, pvi)',
 	     name  => 'taxaToLoad',
@@ -152,7 +152,7 @@ sub _parseGroupFile {
 
 
 sub _parseGroup {
-    my ($self, $line, $dbReleaseId) = @_;
+    my ($self, $line, $dbReleaseId, $taxaToLoad) = @_;
     
     # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
     if ($line = /^(\S+)\: (.*)/) {
@@ -171,9 +171,12 @@ sub _parseGroup {
 
         for (@genes) {
             if (/(\w+)\|(\w+)/) {
-		my $taxonAbbrev = $1
-		my $sequenceId = $2;
+		my $taxonAbbrev = $1;
+		my $sourceId = $2;
 		next unless grep($taxonAbbrev, @$taxaToLoad);
+
+		my $sequenceId =
+		  ApiCommonData::Load::Util::getOneAASeqIdFromGeneId($self,$sourceId);
 
 		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
