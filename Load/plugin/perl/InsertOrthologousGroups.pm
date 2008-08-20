@@ -20,7 +20,7 @@ my $argsDeclaration =
             descr          => 'Ortholog Data (ortho.mcl). OrthologGroupName(gene and taxon count) followed by a colon then the ids for the members of the group',
             reqd           => 1,
             mustExist      => 1,
-	    format         => 'ORTHOMCL9(446 genes,1 taxa): osa1088(osa) osa1089(osa) osa11015(osa)...',
+	    format         => 'OG2_1009: osa|ENS1222992 pfa|PF11_0844...',
             constraintFunc => undef,
             isList         => 0, }),
 
@@ -39,6 +39,14 @@ my $argsDeclaration =
 	     reqd  => 1,
 	     constraintFunc => undef,
 	   })
+
+ stringArg({ descr => 'List of taxon abbrevs we want to load (eg: pfa, pvi)',
+	     name  => 'taxaToLoad',
+	     isList    => 1,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+
 ];
 
 my $purpose = <<PURPOSE;
@@ -104,21 +112,23 @@ sub new {
 sub run {
     my ($self) = @_;
 
-    my $orthologFile = $self->getArgs()->{orthoFile};
-    my $dbReleaseId = $self->getExtDbRlsId($self->getArgs()->{extDbName}, 
- 				           $self->getArgs()->{extDbVersion});
+    my $orthologFile = $self->getArg('orthoFile');
+    my $dbReleaseId = $self->getExtDbRlsId($self->getArg('extDbName'), 
+ 				           $self->getArg('extDbVersion'));
+
+    my $taxaToLoad = $self->getArg('taxaToLoad');
 
     $self->log("Loading ortholog group file");
 
     # parse group file
-    $self->_parseGroupFile($orthologFile, $dbReleaseId);
+    $self->_parseGroupFile($orthologFile, $dbReleaseId, $taxaToLoad);
 }
 
 
 # ----------------------------------------------------------------------
 
 sub _parseGroupFile {
-    my ($self, $orthologFile, $dbReleaseId) = @_;
+    my ($self, $orthologFile, $dbReleaseId, $taxaToLoad) = @_;
 
     open ORTHO_FILE, "<$orthologFile";
     my $groupCount = 0;
@@ -127,7 +137,7 @@ sub _parseGroupFile {
         chomp;
         $lineCount++;
 
-        if (1 == $self->_parseGroup($_, $dbReleaseId)) {
+        if (1 == $self->_parseGroup($_, $dbReleaseId, $taxaToLoad)) {
             $groupCount++;
             
             if (($groupCount % 1000) == 0) {
@@ -144,12 +154,11 @@ sub _parseGroupFile {
 sub _parseGroup {
     my ($self, $line, $dbReleaseId) = @_;
     
-    # example line: ORTHOMCL79685(2 genes,2 taxa): 81703(spn) 32290(ban)
-    if ($line = /^(\S+?)\((\d+) genes\,(\d+) taxa\)\:(.*)/) {
+    # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
+    if ($line = /^(\S+)\: (.*)/) {
         my $groupName = $1;
-        my $geneCount = $2;
-        my $taxonCount = $3;
-        my @genes = split(' ', $4);
+        my @genes = split(' ', $2);
+	my $geneCount = scalar(@genes);
 
         # print "group=$groupName, #genes=$geneCount, #taxon=$taxonCount\n";
 
@@ -161,8 +170,10 @@ sub _parseGroup {
                 });
 
         for (@genes) {
-            if (/(\S+?)\((\S+?)\)/) {
-		my $sequenceId = $1;
+            if (/(\w+)\|(\w+)/) {
+		my $taxonAbbrev = $1
+		my $sequenceId = $2;
+		next unless grep($taxonAbbrev, @$taxaToLoad);
 
 		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
