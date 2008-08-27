@@ -26,10 +26,19 @@ my $sql = "
   select sequence_id_a, sequence_id_b, normalized_score
   from $inParalogTable
   union
+  select sequence_id_b, sequence_id_a, normalized_score
+  from $inParalogTable
+  union
   select sequence_id_a, sequence_id_b, normalized_score
   from $orthologTable
   union
+  select sequence_id_b, sequence_id_a, normalized_score
+  from $orthologTable
+  union
   select sequence_id_a, sequence_id_b, normalized_score
+  from $coOrthologTable
+  union
+  select sequence_id_b, sequence_id_a, normalized_score
   from $coOrthologTable
 ";
 
