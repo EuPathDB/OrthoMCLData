@@ -489,7 +489,7 @@ select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
             + ab.evalue_exp + ba.evalue_exp) / -2
        end as unnormalized_score
 from $sst ab, $sst ba, 
-     (SELECT sequence_id_a, sequence_id_b
+     (SELECT cc.sequence_id_a, cc.sequence_id_b
       FROM CoOrthologCandidate cc
       LEFT OUTER JOIN $orthologTable o
       ON cc.sequence_id_a = o.sequence_id_a
