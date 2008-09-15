@@ -187,7 +187,7 @@ sub bestQueryTaxonScore {
   my $interTaxonMatch = getConfig("interTaxonMatchView");
 
   my $sql = "
-create table BestQueryTaxonScore as
+create table BestQueryTaxonScore nologging as
 select im.query_id, im.subject_taxon_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
 from $interTaxonMatch im,
      (select query_id, subject_taxon_id, min(evalue_exp) as evalue_exp
@@ -209,7 +209,7 @@ create index qtscore_ix on BestQueryTaxonScore(query_id, subject_taxon_id, evalu
 
 sub  bestInterTaxonScore{
   my $sql = "
-create table BestInterTaxonScore as
+create table BestInterTaxonScore nologging as
 select im.query_id, low_exp.evalue_exp, min(im.evalue_mant) as evalue_mant
 from BestQueryTaxonScore im,
      (select query_id, min(evalue_exp) as evalue_exp
@@ -227,7 +227,7 @@ sub  betterHit{
   my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
-create table BetterHit as
+create table BetterHit nologging as
 select s.query_id, s.subject_id,
        s.query_taxon_id as taxon_id,
        s.evalue_exp, s.evalue_mant
@@ -260,7 +260,7 @@ where s.query_taxon_id = s.subject_taxon_id
 
 sub  inParalog{
   my $sql = "
-create table InParalogTemp as
+create table InParalogTemp nologging as
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.taxon_id,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -283,7 +283,7 @@ sub bestHit {
   my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
-create table BestHit as
+create table BestHit nologging as
 select s.query_id, s.subject_id,
        s.query_taxon_id, s.subject_taxon_id,
        s.evalue_exp, s.evalue_mant
@@ -302,7 +302,7 @@ where s.query_id = cutoff.query_id
 
 sub ortholog {
   my $sql = "
-create table OrthologTemp as
+create table OrthologTemp nologging as
 select bh1.query_id as sequence_id_a, bh1.subject_id as sequence_id_b,
        bh1.query_taxon_id as taxon_id_a, bh1.subject_taxon_id as taxon_id_b,
        case -- don't try to calculate log(0) -- use rigged exponents of SimSeq
@@ -331,7 +331,7 @@ sub normalizeOrthologsSub {
   $co = $co? "coO" : "o";
 
   my $sql = "
-create table ${coCaps}OrthologAvgScore  as
+create table ${coCaps}OrthologAvgScore  nologging as
 select smaller_tax_id, bigger_tax_id, avg(unnormalized_score) avg_score
 from (select case
          when taxon_id_a < taxon_id_b
@@ -370,7 +370,7 @@ sub normalizeInParalogs {
   my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
-create table InParalogAvgScore as
+create table InParalogAvgScore nologging as
      select case
             when haveOrthologsAvg.average is NULL
               then allInParalogsAvg.average
@@ -420,7 +420,7 @@ sub  ortholog2way {
   my $orthologTable = getConfig("orthologTable");
 
   my $sql = "
-create table Ortholog2Way as
+create table Ortholog2Way nologging as
 -- symmetric closure of Ortholog
 select sequence_id_a, sequence_id_b from $orthologTable
 union
@@ -433,7 +433,7 @@ sub  inParalog2way {
   my $inParalogTable = getConfig("inParalogTable");
 
   my $sql = "
-create table InParalog2Way as
+create table InParalog2Way nologging as
 select sequence_id_a, sequence_id_b from $inParalogTable
 union
 select sequence_id_b as sequence_id_a, sequence_id_a as sequence_id_b from $inParalogTable
@@ -453,7 +453,7 @@ create index in2b_ix on InParalog2Way(sequence_id_b, sequence_id_a)
 
 sub  coorthologCandidate {
   my $sql = "
-create table CoOrthologCandidate as
+create table CoOrthologCandidate nologging as
 select distinct
        least(sequence_id_a, sequence_id_b) as sequence_id_a,
        greatest(sequence_id_a, sequence_id_b) as sequence_id_b
@@ -477,7 +477,7 @@ sub  coortholog {
   my $percentMatchThreshold = getConfig("percentMatchCutoff");
 
   my $sql = "
-create table CoOrthologTemp as
+create table CoOrthologTemp nologging as
 select /*+ use_nl(candidate, ab) use_nl(candidate, ba)  */
        candidate.sequence_id_a, candidate.sequence_id_b,
        ab.query_taxon_id as taxon_id_a, ab.subject_taxon_id as taxon_id_b,
