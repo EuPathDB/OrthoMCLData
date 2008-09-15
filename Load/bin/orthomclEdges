@@ -56,6 +56,9 @@ for (my $i=0; $i<scalar(@steps); $i++) {
     $cleanHash->{$steps[$i]->[0]} = $steps[$i]->[1] if $steps[$i]->[1];
 }
 
+### Consider atatement to turn logging off for apidb.ortholog,coortholog, and inparalog to increase speed and use fewer resources
+### Ex. Alter table apidb.ortholog nologging;  Can be reversed with Alter table apidb.ortholog logging;
+
 print STDERR "\n\n============================================================================================\n";
 print STDERR localtime(). " orthomclEdges " . join(' ', @ARGV) . "\n";
 print STDERR "=============================================================================================\n\n";
