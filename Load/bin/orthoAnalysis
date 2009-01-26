@@ -33,9 +33,9 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 &extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
-#&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-#&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
+&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
 
 &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
@@ -47,23 +47,25 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs");
 
-&orthomclEdges ($mgr, "no","coOrtholog");
+&orthomclEdges ($mgr, "no", "bestInterTaxonScore");
 
-#&makeOrthoAbcFile ($mgr);
+&makeOrthoAbcFile ($mgr);
 
-#&runMcl ($mgr, '1.5');
+&runMcl ($mgr, '1.5');
 
-##### iprscan #####
+&mclOutToGroupsFile ($mgr);
 
-&documentIPRScan($mgr,"v4.3.1");
+# ##### iprscan #####
 
-&createIprscanDir($mgr, "ProteinSeqs.fsa");
+# &documentIPRScan($mgr,"v4.3.1");
 
-&copyFilesToComputeCluster($mgr,"iprscan");
+# &createIprscanDir($mgr, "ProteinSeqs.fsa");
 
-&startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
+# &copyFilesToComputeCluster($mgr,"iprscan");
 
-$mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
+# &startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
+
+# $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
 #&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
 
@@ -77,10 +79,10 @@ $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan")
 
 #&updateOrthoMCLGroups($mgr, "muscle3.6");
 
-&generateOrthomclDomainKeywords($mgr);
+# &generateOrthomclDomainKeywords($mgr);
 
-my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh";
-my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
+# my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh";
+# my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
 
 # &createBiolayoutData($mgr, $rbhFile, $svgTemplate);
 
