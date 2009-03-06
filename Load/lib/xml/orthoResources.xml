@@ -1,6 +1,15 @@
-<resourcesPipeline downloadDir="@downloadDir@" repository="/files/efr">
-    <cleanups></cleanups>
-    <resource category="Ontology" dbCommit="@dbcommit@" displayName="NCBI Taxonomy" plugin="GUS::Supported::Plugin::LoadTaxon" publicUrl="ftp://ftp.ncbi.nih.gov/pub/taxonomy/" resource="taxonomy" url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/" version="2008-06-25">
+<resourcesPipeline repository="/files/efr"
+                   downloadDir="@downloadDir@">
+    <cleanups>
+    </cleanups> 
+
+    <resource resource="taxonomy" version="2009-03-06" 
+        displayName="NCBI Taxonomy"
+        publicUrl="ftp://ftp.ncbi.nih.gov/pub/taxonomy/"
+        category="Ontology"
+        url="ftp://ftp.ncbi.nih.gov/pub/taxonomy/"
+        plugin="GUS::Supported::Plugin::LoadTaxon"
+        dbCommit="@dbcommit@">
         <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=2 --accept=gi_taxid_prot.dmp.gz,taxdump.tar.gz</wgetArgs>
         <unpack>gunzip @downloadDir@/taxonomy/gi_taxid_prot.dmp.gz</unpack>
         <unpack>gunzip @downloadDir@/taxonomy/taxdump.tar.gz</unpack>
@@ -8,147 +17,104 @@
         <unpack>rm -f @downloadDir@/taxonomy/taxdump.tar</unpack>
         <pluginArgs>--names @downloadDir@/taxonomy/names.dmp --nodes @downloadDir@/taxonomy/nodes.dmp --gencode @downloadDir@/taxonomy/gencode.dmp --merged @downloadDir@/taxonomy/merged.dmp --restart @taxonomy.restart@ --verbose @commit@</pluginArgs>
         <description>
-<![CDATA[
+            <![CDATA[
     The NCBI Taxonomy database contains the names of all organisms that are represented in the Entrez genetic databases.
-          ]]>        </description>
+          ]]>
+        </description>
     </resource>
-    <resource category="Ontology" dbCommit="@dbcommit@" displayName="Gene Ontology" extDbName="Gene Ontology" extDbRlsDescrip="The Gene Ontology from June 23, 2008" extDbRlsVer="4.450" plugin="ApiCommonData::Load::Plugin::InsertGOTermsFromObo" publicUrl="http://www.geneontology.org" resource="GO" url="http://www.geneontology.org/ontology/gene_ontology.obo" version="4.450">
-        <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
-        <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER% --sqlVerbose</pluginArgs>
-        <description>
-<![CDATA[
-                The Gene Ontology (GO) project provides a controlled vocabulary to describe gene and gene product attributes in any organism.
-            ]]>        </description>
-    </resource>
-    <resource category="Ontology" dbCommit="@dbcommit@" displayName="Gene Ontology evidence codes" plugin="ApiCommonData::Load::Plugin::InsertGOEvidenceCodesFromObo" publicUrl="http://www.geneontology.org/GO.evidence.shtml" resource="GO_evidence_codes" url="http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/evidence_code.obo" version="1.16">
+
+<resource resource="GO_evidence_codes" version="1.17"
+        displayName="Gene Ontology evidence codes"        
+        publicUrl="http://song.sourceforge.net"
+        category="Ontology"   
+	url="http://obo.cvs.sourceforge.net/*checkout*/obo/obo/ontology/evidence_code.obo"
+        plugin="ApiCommonData::Load::Plugin::InsertGOEvidenceCodesFromObo"
+        dbCommit="@dbcommit@">
         <wgetArgs>--tries=5 --output-document=evidence_code.obo</wgetArgs>
         <pluginArgs>--oboFile @downloadDir@/GO_evidence_codes/evidence_code.obo</pluginArgs>
         <description>
-<![CDATA[
-   Gene Ontology annotation uses evidence codes to indicate the type of evidence that supports the annotation.
-          ]]>        </description>
+            <![CDATA[
+   Every GO annotation must indicate the type of evidence that supports it; these evidence codes correspond to broad categories of experimental or other support. 
+          ]]>
+        </description>
     </resource>
-    <resource category="Ontology" dbCommit="@dbcommit@" displayName="Sequence Ontology" plugin="GUS::Supported::Plugin::InsertSequenceOntologyOBO" publicUrl="http://song.sourceforge.net" resource="SO" url="http://song.cvs.sourceforge.net/*checkout*/song/ontology/so.obo?revision=1.166" version="1.166">
+
+<resource resource="GO" version="4.540"
+            displayName="Gene Ontology"
+            publicUrl="http://www.geneontology.org"
+            category="Ontology"
+            url="http://www.geneontology.org/ontology/gene_ontology.obo"
+            plugin="ApiCommonData::Load::Plugin::InsertGOTermsFromObo"
+            extDbName="Gene Ontology"
+            extDbRlsVer="4.540"
+            extDbRlsDescrip="The Gene Ontology from 02/20/2009"
+            dbCommit="@dbcommit@">
+      <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
+      <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER%</pluginArgs>
+      <description>
+         <![CDATA[
+   The Gene Ontology (GO) project provides a controlled vocabulary to describe gene and gene product attributes in any organism.
+          ]]>
+      </description>
+  </resource>   
+
+  <resource resource="enzymeDB" version="2009-02-11" 
+            displayName="Enzyme nomenclature database"
+            publicUrl="http://www.expasy.org/enzyme"
+            category="Ontology"
+            url="ftp://ftp.expasy.org/databases/enzyme/"
+            plugin="GUS::Community::Plugin::LoadEnzymeDatabase"
+            extDbName="enzymeDB"
+            extDbRlsVer="2009-02-11"
+            dbCommit="@dbcommit@">
+     <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=enzclass.txt,enzyme.dat</wgetArgs>
+     <pluginArgs>--InPath @downloadDir@/enzymeDB/ --enzymeDbName %EXT_DB_NAME% --enzymeDbRlsVer %EXT_DB_RLS_VER% @commit@</pluginArgs>
+     <description>
+         <![CDATA[
+    ENZYME is a repository of information relative to the nomenclature of enzymes. It is primarily based on the recommendations of the Nomenclature Committee of the International Union of Biochemistry and Molecular Biology (IUBMB) and it describes each type of characterized enzyme for which an EC (Enzyme Commission) number has been provided
+          ]]>
+     </description>
+  </resource>
+
+    <resource resource="SO" version="2.3"
+        displayName="Sequence Ontology"        
+        publicUrl="http://song.sourceforge.net"
+        category="Ontology"      
+	url="http://song.cvs.sourceforge.net/*checkout*/song/ontology/so.obo?revision=2.3"
+        plugin="GUS::Supported::Plugin::InsertSequenceOntologyOBO"
+        dbCommit="@dbcommit@">
         <wgetArgs>--tries=5 --output-document=so.obo</wgetArgs>
-        <pluginArgs>--inputFile @downloadDir@/SO/so.obo --soVersion 1.166 --soCvsVersion 1.166</pluginArgs>
-        <description>
-<![CDATA[
+        <pluginArgs>--inputFile @downloadDir@/SO/so.obo --soVersion @soVer@ --soCvsVersion @soVer@</pluginArgs>
+            <description>
+         <![CDATA[
     The Sequence Ontology Project (SO) is a joint effort by genome annotation centres, including: WormBase, the Berkeley Drosophila Genome Project, FlyBase, the Mouse Genome Informatics group, and the Sanger Institute. They are a part of the Gene Ontology Project  and their aim is to develop an ontology suitable for describing biological sequences.
-          ]]>        </description>
+          ]]>
+     </description>
     </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="InterPro Database" plugin="ApiCommonData::Load::Plugin::InsertInterproDomainDbs" publicUrl="http://www.ebi.ac.uk/interpro" resource="InterproscanData" version="17.0">
-        <manualGet contact="EBI" email="interhelp@ebi.ac.uk" fileOrDir="/files/cbil/data/cbil/toxoDb/manualDelivery/iprscan17.0/" institution="EBI"/>
-        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan17.0/iprscan/data</unpack>
-        <unpack>cp $PROJECT_HOME/OrthoMCLData/Load/config/insertInterpro-config.xml @downloadDir@/InterproscanData/iprscan17.0/iprscan/data</unpack>
-        <pluginArgs>--inPath @downloadDir@/InterproscanData/iprscan17.0/iprscan/data</pluginArgs>
+
+        <resource resource="InterproscanData" version="19.0"
+        plugin="ApiCommonData::Load::Plugin::InsertInterproDomainDbs"
+        displayName="InterPro Database"
+        publicUrl="http://www.ebi.ac.uk/interpro"
+        category="Proteome"
+        dbCommit="@dbcommit@">	
+        <manualGet 
+            fileOrDir = "/files/cbil/data/cbil/toxoDb/manualDelivery/iprscan19.0/"
+            contact = "EBI"
+            email = "interhelp@ebi.ac.uk"
+            institution = "EBI"
+        />
+        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan19.0/iprscan/data/</unpack>
+        <pluginArgs>--inPath @downloadDir@/InterproscanData/iprscan19.0/iprscan/data/</pluginArgs>
         <description>
-<![CDATA[
-                InterPro is a database of protein families, domains and functional sites in which identifiable features found in known proteins can be applied to unknown protein sequences.
-		    ]]>        </description>
+            <![CDATA[
+			InterPro family of databases
+		]]>
+        </description>
         <publication pmid="15608177"/>
-    </resource>
-    <resource category="Ontology" dbCommit="@dbcommit@" displayName="orthoMCL Taxons" plugin="OrthoMCLData::Load::Plugin::InsertOrthomclTaxon" resource="orthomclClades" version="2008-06-17">
-        <manualGet contact="Deborah Pinney" email="pinney@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLClades/2008-06-17/orthomclClades.txt" institution="University of Pennsylvania"/>
-        <pluginArgs>-cladeFile @downloadDir@/orthomclClades/orthomclClades.txt --speciesFile /files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLProteomes/2008-06-17/orthomclProteomesShrt.txt</pluginArgs>
-        <description>
-<![CDATA[
-                Inserts rows in ApiDB.OrthoMCLTaxon
-		    ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="orthoMCL Resources" plugin="OrthoMCLData::Load::Plugin::InsertOrthomclResource" resource="orthomclProteomes" version="2008-06-17">
-        <manualGet contact="Deborah Pinney" email="pinney@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLProteomes/2008-06-17/orthomclProteomesShrt.txt" institution="University of Pennsylvania"/>
-        <pluginArgs>--resourceFile @downloadDir@/orthomclProteomes/orthomclProteomesShrt.txt</pluginArgs>
-        <description>
-<![CDATA[
-                Inserts rows in ApiDB.OrthoMCLResource
-		    ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Aquifex aeolicus Proteins" extDbName="Aquifex aeolicus proteome" extDbRlsVer="2007-12-04" organisms="Aquifex aeolicus" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.ncbi.nlm.nih.gov/entrez/viewer.fcgi?db=protein" resource="proteomeAquifex_aeolicus" url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Aquifex_aeolicus/" version="2007-12-04">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept="*.faa"</wgetArgs>
-        <pluginArgs>--regexSourceId ">gi\|\d+\|\w+\|(\S+)\|" --regexDesc ">gi\|\d+\|\w+\|\S+\|(.+)$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeAquifex_aeolicus/ --ncbiTaxId 224324</pluginArgs>
-        <description>
-<![CDATA[
-                Aquifex aeolicus VF5 Proteome (GenBank)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Plasmodium falciparum Proteins" extDbName="Plasmodium falciparum proteome" extDbRlsVer="5.4" organisms="Plasmodium falciparum" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://plasmodb.org/plasmo/showRecord.do?name=GeneRecordClasses.GeneRecordClass&amp;project_id=PlasmoDB=" resource="proteomePlasmodium_falciparum" url="http://plasmodb.org/common/downloads/release-5.4/Pfalciparum/PfalciparumAnnotatedProteins_plasmoDB-5.4.fasta" version="5.4">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">[^\|]+\|[^\|]+\|([^\|]+)\|" --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\|[^\|]\|(.+)" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomePlasmodium_falciparum/ --ncbiTaxId 36329</pluginArgs>
-        <description>
-<![CDATA[
-                Plasmodium falciparum 3D7 Proteome (ApiDB)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Theileria parva Proteins" extDbName="Theileria parva proteome" extDbRlsVer="2005-08-30" organisms="Theileria parva" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tpa1=" resource="proteomeTheileria_parva" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_parva/annotation_dbs/TPA1.pep" version="2005-08-30">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">[^\|]+\|(\S+)\|" --regexDesc ">[^\|]+\|\S+\|\S+\|([^\|]+)\|" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeTheileria_parva/ --ncbiTaxId 333668</pluginArgs>
-        <description>
-<![CDATA[
-                Theileria parva strain Mugugu Proteome (TIGR2_Sanger)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Trypanosoma brucei Proteins" extDbName="Trypanosoma brucei proteome" extDbRlsVer="2005-07-24" organisms="Trypanosoma brucei" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=tba=" resource="proteomeTrypanosoma_brucei" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/t_brucei/annotation_dbs/TBA1.pep" version="2005-07-24">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">([^\s|]+)" --regexDesc ">[^\s|]+\s(.+)$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeTrypanosoma_brucei/ --ncbiTaxId 185431</pluginArgs>
-        <description>
-<![CDATA[
-                Trypanosoma brucei TREU927 Proteome (TIGR1)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Saccharomyces cerevisiae Proteins" extDbName="Saccharomyces cerevisiae proteome" extDbRlsVer="2008-03-06" organisms="Saccharomyces cerevisiae" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://db.yeastgenome.org/cgi-bin/locus.pl?locus=" resource="proteomeSaccharomyces_cerevisiae" url="ftp://genome-ftp.stanford.edu/yeast/data_download/sequence/genomic_sequence/orf_protein/orf_trans.fasta.gz" version="2008-03-06">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">([^\s|]+)" --regexDesc ">[^\s|]+(.+)\$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeSaccharomyces_cerevisiae/ --ncbiTaxId 4932</pluginArgs>
-        <description>
-<![CDATA[
-                Saccharomyces cerevisiae S288C Proteome (SGD)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Phanerochaete chrysosporium Proteins" extDbName="Phanerochaete chrysosporium proteome" extDbRlsVer="2.1" organisms="Phanerochaete chrysosporium" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://genome.jgi-psf.org/cgi-bin/dispGeneModel?db=Phchr=" resource="proteomePhanerochaete_chrysosporium" url="ftp://ftp.jgi-psf.org/pub/JGI_data/Phanerochaete_chrysosporium/v2.0/BestModels2.1.prot.gz" version="2.1">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">jgi\|[^\|]+\|\d+\|(\S+)" --regexDesc ">jgi\|[^\|]+\|\d+\|([^\|])$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomePhanerochaete_chrysosporium/ --ncbiTaxId 273507</pluginArgs>
-        <description>
-<![CDATA[
-                Phanerochaete chrysosporium RP-78 Proteome (JGI)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Ashbya gossypii Proteins" extDbName="Ashbya gossypii proteome" extDbRlsVer="2.1" organisms="Ashbya gossypii" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://beta.uniprot.org/uniprot/" resource="proteomeAshbya_gossypii" url="ftp://ftp.ebi.ac.uk/pub/databases/SPproteomes/fasta/proteomes/982.A_gossypii.fasta.gz" version="2.1">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">([^\|]+)" --regexDesc ">[^\|]+\|([^\|]+)" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeAshbya_gossypii/ --ncbiTaxId 284811</pluginArgs>
-        <description>
-<![CDATA[
-                Ashbya gossypii ATCC 10895 Proteome (Integr8Uniprot)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Neurospora crassa Proteins" extDbName="Neurospora crassa proteome" extDbRlsVer="3" organisms="Neurospora crassa" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.broad.mit.edu/cgi-bin/annotation/fungi/neurospora_crassa_3/findfeatures.cgi?FEATURETYPES=ANNOTATED_GENE=" resource="proteomeNeurospora_crassa" url="http://www.broad.mit.edu/annotation/genome/neurospora/assets/neurospora_crassa_7_proteins.fasta.gz" version="3">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">([^\s|]+)" --regexDesc ">\S+\s?\|\s?(.+)" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeNeurospora_crassa/ --ncbiTaxId 367110</pluginArgs>
-        <description>
-<![CDATA[
-                Neurospora crassa OR74A Proteome (Dicty_Broad)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Yarrowia lipolytica Proteins" extDbName="Yarrowia lipolytica proteome" extDbRlsVer="2" organisms="Yarrowia lipolytica" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://cbi.labri.u-bordeaux.fr/Genolevures/elt/YALI/" resource="proteomeYarrowia_lipolytica" url="http://cbi.labri.u-bordeaux.fr/Genolevures/download/annotation/Release2/Yali-GL2r2.aa" version="2">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">gnl\|[A-Z]+\|([^\s]+)" --regexDesc ">gnl\|[A-Z]+\|[^\s]+\s+(.+)\$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeYarrowia_lipolytica/ --ncbiTaxId 284591</pluginArgs>
-        <description>
-<![CDATA[
-                Yarrowia lipolytica CLIB99 Proteome (Genolevures)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Drosophila melanogaster Proteins" extDbName="Drosophila melanogaster proteome" extDbRlsVer="49" organisms="Drosophila melanogaster" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.flybase.org/reports/" resource="proteomeDrosophila_melanogaster" url="ftp://ftp.ensembl.org/pub/current_fasta/drosophila_melanogaster/pep/Drosophila_melanogaster.BDGP5.4.49.pep.all.fa.gz" version="49">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">(\S+)" --regexDesc ">\S+\s+(.+)$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeDrosophila_melanogaster/ --ncbiTaxId 7227</pluginArgs>
-        <description>
-<![CDATA[
-                Drosophila melanogaster  Proteome (EnsMart)
-            ]]>        </description>
-    </resource>
-    <resource category="Proteome" dbCommit="@dbcommit@" displayName="Oryza sativa Proteins" extDbName="Oryza sativa proteome" extDbRlsVer="5" organisms="Oryza sativa" plugin="GUS::Supported::Plugin::LoadFastaSequences" publicUrl="http://www.tigr.org/tigr-scripts/euk_manatee/shared/ORF_infopage.cgi?db=osa1r5=" resource="proteomeOryza_sativa" url="ftp://ftp.tigr.org/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_5.0/all.chrs/all.pep" version="5">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--regexSourceId ">[^\|]+\|([^\|]+)\|" --regexDesc ">[^\|]+\|([^\|]+)\|([^|]+)$" --tableName DoTS::ExternalAASequence --externalDatabaseName  %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --seqFileDir @downloadDir@/proteomeOryza_sativa/ --ncbiTaxId 39947</pluginArgs>
-        <description>
-<![CDATA[
-                Oryza sativa japonica cultivar-group Proteome (TIGR_Rice)
-            ]]>        </description>
-    </resource>
+    </resource>   
+
+    
 </resourcesPipeline>
+
+
