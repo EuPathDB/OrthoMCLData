@@ -39,15 +39,15 @@
         </description>
     </resource>
 
-<resource resource="GO" version="4.540"
+<resource resource="GO" version="1.465"
             displayName="Gene Ontology"
             publicUrl="http://www.geneontology.org"
             category="Ontology"
             url="http://www.geneontology.org/ontology/gene_ontology.obo"
             plugin="ApiCommonData::Load::Plugin::InsertGOTermsFromObo"
             extDbName="Gene Ontology"
-            extDbRlsVer="4.540"
-            extDbRlsDescrip="The Gene Ontology from 02/20/2009"
+            extDbRlsVer="1.465"
+            extDbRlsDescrip="The Gene Ontology from 03/04/2009"
             dbCommit="@dbcommit@">
       <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
       <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER%</pluginArgs>
@@ -58,14 +58,14 @@
       </description>
   </resource>   
 
-  <resource resource="enzymeDB" version="2009-02-11" 
+  <resource resource="enzymeDB" version="2009-03-03" 
             displayName="Enzyme nomenclature database"
             publicUrl="http://www.expasy.org/enzyme"
             category="Ontology"
             url="ftp://ftp.expasy.org/databases/enzyme/"
             plugin="GUS::Community::Plugin::LoadEnzymeDatabase"
             extDbName="enzymeDB"
-            extDbRlsVer="2009-02-11"
+            extDbRlsVer="2009-03-03"
             dbCommit="@dbcommit@">
      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=enzclass.txt,enzyme.dat</wgetArgs>
      <pluginArgs>--InPath @downloadDir@/enzymeDB/ --enzymeDbName %EXT_DB_NAME% --enzymeDbRlsVer %EXT_DB_RLS_VER% @commit@</pluginArgs>
