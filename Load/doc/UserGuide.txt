@@ -3,12 +3,7 @@ Version ??
 
 =========== Introduction ==========================
 
-OrthoMCL groups proteins into "ortholog groups."  That name is actually misleading because the groups contain proteins related by:
-  - orthology
-  - co-orthology
-  - paralogy
-
-The OrthoMCL Algorithm is described here: http://???????
+The OrthoMCL Algorithm is described here: http://docs.google.com/Doc?id=dd996jxg_1gsqsp6
 
 The basic input is a set of proteomes and an all-v-all BLAST among them.  
 
@@ -16,10 +11,10 @@ The output is a set of files:
   pregroupingRelationships/
      orthologs.txt
      coorthologs.txt
-     paralogs.txt
+     inparalogs.txt
   groups.txt
 
-The pregroupingRelationships files contain the pairwise relationships between proteins, and there scores, categorized into orthologs, coorthologs and paralogs as defined in the OrthoMCL Algorithm.
+The pregroupingRelationships files contain the pairwise relationships between proteins, and their scores, categorized into orthologs, co-orthologs and inparalogs as defined in the OrthoMCL Algorithm.
 
 The groups.txt file contains the final groups.
 
@@ -27,6 +22,9 @@ The OrthoMCL algorithm runs in a relational database.  Supported vendors are:
   - Oracle
   - MySql
 
+Using OrthoMCL entails a series of steps.  Most of these are simple, and entail running a provided program.  All programs except mysql and mcl are provided as part of the OrthoMCL download.
+
+The provided programs all begin with 'orthomcl' and all will provide help if called with no arguments.
 
 =========== Overview of steps =======================
 
@@ -36,9 +34,9 @@ There are 12 steps, but most are trivial to run, so don't be discouraged.
 
 (2) download and install the mcl program according to provided instructions.
 
-(3) run orthomclAdjustFasta (or your own simple script) to generate proteome fasta files in the required format
+(3) run orthomclAdjustFasta (or your own simple script) to generate protein fasta files in the required format
 
-(4) run orthomclPrepareProteomeFasta to filter poor quality proteins, creating a single large goodProteins.fasta file (and a set of taxoncode.rejects.fasta files)
+(4) run orthomclFilterFasta to filter poor quality proteins, and optionally remove alternative proteins. Creates a single large goodProteins.fasta file (and a rejectProteins.fasta file)
 
 (5) run all-v-all NCBI BLAST on goodProteins.fasta (output format is tab delimited text)
 
@@ -55,5 +53,29 @@ There are 12 steps, but most are trivial to run, so don't be discouraged.
 (11) run the mcl program on file created in step 11.
 
 (12) run orthomclMclToGroups to convert mcl output to groups.txt
+
+
+========== Step 1: MySql ============
+
+
+========== Step 2: install mcl ==========
+
+
+========== Step 3: orthomclAdjustFasta ==========
+
+This step prepares a set of protein fasta files required by the next step.  There are two requirements:
+  1) each .fasta file must have a name in the form 'xxxx.fasta' where xxxx is a three or four letter unique taxon code.  For example: hsa.fasta or eco.fasta
+  2) each protein in those files must have a definition line in the following format:
+     >xxxx|yyyyyyyy
+     where xxxx is the three or four letter taxon code and yyyyyyy is a sequence identifier unique within that taxon.
+
+We provide the convenience program orthomclAdjustFasta that takes a GenBank style fasta file and produces the required file.  If your fasta files don't work with this program, write a simple script to produce compliant fasta files.
+
+
+======== Step 4: orthomclFilterFasta ===========
+
+This step takes a set of compliant fasta files in a directory and produces two files:
+  - goodProteins.fasta (used in Step 5)
+  - rejectProteins.fasta (for your reference)
 
 
