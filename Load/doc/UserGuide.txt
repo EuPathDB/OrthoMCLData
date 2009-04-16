@@ -1,0 +1,59 @@
+OrthoMCL User's Guide
+Version ??
+
+=========== Introduction ==========================
+
+OrthoMCL groups proteins into "ortholog groups."  That name is actually misleading because the groups contain proteins related by:
+  - orthology
+  - co-orthology
+  - paralogy
+
+The OrthoMCL Algorithm is described here: http://???????
+
+The basic input is a set of proteomes and an all-v-all BLAST among them.  
+
+The output is a set of files:
+  pregroupingRelationships/
+     orthologs.txt
+     coorthologs.txt
+     paralogs.txt
+  groups.txt
+
+The pregroupingRelationships files contain the pairwise relationships between proteins, and there scores, categorized into orthologs, coorthologs and paralogs as defined in the OrthoMCL Algorithm.
+
+The groups.txt file contains the final groups.
+
+The OrthoMCL algorithm runs in a relational database.  Supported vendors are:
+  - Oracle
+  - MySql
+
+
+=========== Overview of steps =======================
+
+There are 12 steps, but most are trivial to run, so don't be discouraged.
+
+(1) install or get access to a supported relational database.  If using MySql, a specific installation configuration is required, so it may require installing your own MySql, which is straightforward.
+
+(2) download and install the mcl program according to provided instructions.
+
+(3) run orthomclAdjustFasta (or your own simple script) to generate proteome fasta files in the required format
+
+(4) run orthomclPrepareProteomeFasta to filter poor quality proteins, creating a single large goodProteins.fasta file (and a set of taxoncode.rejects.fasta files)
+
+(5) run all-v-all NCBI BLAST on goodProteins.fasta (output format is tab delimited text)
+
+(6) run orthomclBlastParser on NCBI BLAST tab output to create file of similarities in required format
+
+(7) run orthomclInstallSchema to install the required schema into the database
+
+(8) run orthomclLoadBlastResults to bulk load the output of orthomclBlastParser into the SimilarSequences table.
+
+(9) configure and run the orthomclEdges program to compute pairwise relationships
+
+(10) run the orthomclEdgesDumpFiles program to dump files from the database
+
+(11) run the mcl program on file created in step 11.
+
+(12) run orthomclMclToGroups to convert mcl output to groups.txt
+
+
