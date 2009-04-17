@@ -3,9 +3,9 @@ Version ??
 
 =========== Introduction ==========================
 
-The OrthoMCL Algorithm is described here: http://docs.google.com/Doc?id=dd996jxg_1gsqsp6
+The OrthoMCL Algorithm is described in detail here: http://docs.google.com/Doc?id=dd996jxg_1gsqsp6
 
-The basic input is a set of proteomes and an all-v-all BLAST among them.  
+The input is a set of proteomes.
 
 The output is a set of files:
   pregroupingRelationships/
@@ -14,39 +14,72 @@ The output is a set of files:
      inparalogs.txt
   groups.txt
 
-The pregroupingRelationships files contain the pairwise relationships between proteins, and their scores, categorized into orthologs, co-orthologs and inparalogs as defined in the OrthoMCL Algorithm.
+The pregroupingRelationships files contain the pairwise relationships between proteins, and their scores, categorized into orthologs, co-orthologs and inparalogs as defined in the OrthoMCL Algorithm.  The groups.txt file contains the final groups.
 
-The groups.txt file contains the final groups.
+There are three overall stages:
+  - all-v-all BLAST
+  - the OrthoMCL Edges program to find pairwise biological relatedness between  proteins
+  - the MCL program to cluster related proteins into groups
 
-The OrthoMCL algorithm runs in a relational database.  Supported vendors are:
-  - Oracle
-  - MySql
+These overall stages are executed in a series of twelve steps detailed below.  Most simply involve running a provided program.  They are broken into steps for ease of backtracking and recoverability.
 
-Using OrthoMCL entails a series of steps.  Most of these are simple, and entail running a provided program.  All programs except mysql and mcl are provided as part of the OrthoMCL download.
+========= Requirements ==========
 
-The provided programs all begin with 'orthomcl' and all will provide help if called with no arguments.
+(1) UNIX
+  - The OrthoMCL Edges program has only been tested on UNIX
+  - The MCL program is only UNIX compatible
+
+(2) BLAST
+  - we recommend NCBI BLAST for two reasons
+     a) theoretically: XXXXXXX
+     b) practically: NCBI BLAST provides a tab delimited output which provide parsers for.  See Step 6 below.
+  - for large datasets (e.g. 1M proteins) all-v-all BLAST will likely require a compute cluster. Otherwise, they could run for months. 
+
+(3) Relational Database 
+  - The OrthoMCL Edges algorithm runs in a relational database.  Supported vendors are:
+    - Oracle
+    - MySql
+  - If you don't already have one of these installed, you will need to install MySql which should be doable without significant systems administration support.
+
+(4) Perl
+  - standard perl
+  - DBI libraries
+
+(5) MCL program
+
+(6) Time
+
+As a benchmark, OrthoMCL-DB Version 3 had:
+  - 100 genomes (eukaryotes and prokaryotes)
+  - 1M protein sequences
+  - 500M significant pairwise BLAST matches
+
+This set took XXXX days to run all-v-all BLAST on a 200 node compute cluster.  The processing to find groups took XXXX hours on a XXXX machine.
 
 =========== Overview of steps =======================
 
 There are 12 steps, but most are trivial to run, so don't be discouraged.
+Using OrthoMCL entails a series of steps.  Most of these are simple, and entail running a provided program.  All programs except mysql and mcl are provided as part of the OrthoMCL download.
+
+The provided programs all begin with 'orthomcl' and all will provide help if called with no arguments.
 
 (1) install or get access to a supported relational database.  If using MySql, a specific installation configuration is required, so it may require installing your own MySql, which is straightforward.
 
-(2) download and install the mcl program according to provided instructions.
+(2) run orthomclInstallSchema to install the required schema into the database
 
-(3) run orthomclAdjustFasta (or your own simple script) to generate protein fasta files in the required format
+(3) download and install the mcl program according to provided instructions.
 
-(4) run orthomclFilterFasta to filter poor quality proteins, and optionally remove alternative proteins. Creates a single large goodProteins.fasta file (and a rejectProteins.fasta file)
+(4) run orthomclAdjustFasta (or your own simple script) to generate protein fasta files in the required format
 
-(5) run all-v-all NCBI BLAST on goodProteins.fasta (output format is tab delimited text)
+(5) run orthomclFilterFasta to filter poor quality proteins, and optionally remove alternative proteins. Creates a single large goodProteins.fasta file (and a rejectProteins.fasta file)
 
-(6) run orthomclBlastParser on NCBI BLAST tab output to create file of similarities in required format
+(6) run all-v-all NCBI BLAST on goodProteins.fasta (output format is tab delimited text).  This step is entirely your responsibility.
 
-(7) run orthomclInstallSchema to install the required schema into the database
+(7) run orthomclBlastParser on NCBI BLAST tab output to create file of similarities in required format
 
-(8) run orthomclLoadBlastResults to bulk load the output of orthomclBlastParser into the SimilarSequences table.
+(8) run orthomclLoadBlast to bulk load the output of orthomclBlastParser into the SimilarSequences table.
 
-(9) configure and run the orthomclEdges program to compute pairwise relationships
+(9) run the orthomclEdges program to compute pairwise relationships.  (This is the core computational program)
 
 (10) run the orthomclEdgesDumpFiles program to dump files from the database
 
@@ -54,14 +87,19 @@ There are 12 steps, but most are trivial to run, so don't be discouraged.
 
 (12) run orthomclMclToGroups to convert mcl output to groups.txt
 
+We recommend you save the output of each step so that you can easily redo stuff if things go wrong.
+
 
 ========== Step 1: MySql ============
 
 
-========== Step 2: install mcl ==========
+========== Step 2: install schema ========
 
 
-========== Step 3: orthomclAdjustFasta ==========
+========== Step 3: install mcl ==========
+
+
+========== Step 4: orthomclAdjustFasta ==========
 
 This step prepares a set of protein fasta files required by the next step.  There are two requirements:
   1) each .fasta file must have a name in the form 'xxxx.fasta' where xxxx is a three or four letter unique taxon code.  For example: hsa.fasta or eco.fasta
@@ -72,10 +110,46 @@ This step prepares a set of protein fasta files required by the next step.  Ther
 We provide the convenience program orthomclAdjustFasta that takes a GenBank style fasta file and produces the required file.  If your fasta files don't work with this program, write a simple script to produce compliant fasta files.
 
 
-======== Step 4: orthomclFilterFasta ===========
+======== Step 5: orthomclFilterFasta ===========
 
-This step takes a set of compliant fasta files in a directory and produces two files:
+This step takes a set of compliant fasta files in a single directory and produces two files:
   - goodProteins.fasta (used in Step 5)
   - rejectProteins.fasta (for your reference)
+
+Use the orthomclFilterFasta program for this step.  It takes two inputs:
+   - directory of compliant fasta files
+   - optionally a file grouping proteins into genes (used to remove alternative proteins)
+
+It should run in a few minutes
+ 
+
+========= Step 6: All-v-all BLAST =========
+
+You are on your own with this step.  For large datasets you should consider gaining access to a compute cluster.  (For 1M sequences we ran on a 200 node cluster and it took XXXX days).
+
+We expect you to:
+  - use NCBI BLAST (XXXX reasons....)
+  - run with the -m 8 option to provide tab delimited output required by Step 7 
+
+If you are a power user you can deviate from this, as long as you can ultimately provide output in exactly the format provided by NCBI BLAST using the -m 8 option, and expected by Step 7.
+
+If you are a super-power user you can deviate from that, and also skip Step 7.   But you must be able to provide the exact format file created by that step as expected by Step 8.  The tricky part is computing percent match.  
+
+
+========= Step 7: orthomclBlastParser ========
+
+This step parses NCBI BLAST -m 8 output into the format that can be loaded into the orthomcl database.  
+
+Use the orthomclBlastParser for this.  It will run in XXXXX.
+
+
+========= Step 8: orthomclLoadBlast  ===========
+
+This step loads the BLAST results into the orthomcl database. 
+
+Use the orthomclLoadBlast program for this.  It may take a few hours to run.
+
+
+========= Step 9: orthomclEdges =========
 
 
