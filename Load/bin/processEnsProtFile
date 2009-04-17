@@ -1,0 +1,100 @@
+#! /usr/bin/perl
+
+#####################################################################################################################
+### script to process protein fasta file to get one protein exemplar per gene with gene id                        ###
+### input: Example = ftp://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.NCBI36.53.pep.all.fa.gz###
+#####################################################################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+use CBIL::Bio::SequenceUtils;
+
+my ($maxStopCodonPercent,$fastaFile,$outputFile, $log, $verbose);
+&GetOptions("maxStopCodonPercent=i" => \$maxStopCodonPercent,
+            "fastaFile=s" => \$fastaFile,
+            "outputFile=s" => \$outputFile,
+	    "log=s" => \$log,
+            "verbose!" => \$verbose);
+
+print STDERR "processEnsProtFile --fastaFile --maxStopCodonPercent --outputFile --log --verbose\n" unless ($fastaFile && $maxStopCodonPercent && $outputFile && $log);
+
+my $f  = ($fastaFile =~ /\.gz$|\.Z$/) ? "zcat $fastaFile|" : '<'. $fastaFile;
+my $fastaFh = FileHandle->new($f);
+die "Can't open file $fastaFile\n" unless $fastaFh;
+
+my $outputFh = FileHandle->new(">$outputFile");
+die "Can't open file $outputFile for writing\n" unless $outputFh;
+
+my $logFh = FileHandle->new(">$log");
+die "Can't open log file $log for writing\n" unless $logFh;
+
+my %printHsh;
+
+my %geneHsh;
+
+my ($gene,$prot,$seq);
+
+while (<$fastaFh>){
+  if ($_ =~ /^>/ && $seq) {
+    &makePrintHsh();
+    ($prot,$gene) = &getIds($_);
+    $seq = "";
+  }
+  elsif ($_ =~ /^>/ ) {
+    ($prot,$gene) = &getIds($_);
+  }
+  else {
+    $_ =~ s/\s//g;
+    $seq .= $_;
+  }
+}
+
+&makePrintHsh();
+
+&printFile();
+
+&printLog();
+
+sub getIds {
+  my ($line) = @_;
+
+  if ($line =~ /^>(\S+)[\s|\S]+gene\:(\S+)/){
+    $geneHsh{$2} = 1;
+    return ($1,$2);
+  }
+  else{
+    die "Ids cannot be parsed from defline:\n     $line\n";
+  }
+}
+
+sub makePrintHsh {
+  my $count=($seq =~ tr/\*//);
+
+  my $aaLength = length ($seq);	
+  my $aaCount = ($seq =~ tr/[^A-Za-z]//);
+  my $aaStopCodonPercent = (($aaLength - $aaCount)/($aaLength)) * 100;
+
+  $printHsh{$gene}={'seq'=>$seq, 'prot'=>$prot} if ($aaLength > length($printHsh{$gene}->{'seq'}) && $aaStopCodonPercent <= $maxStopCodonPercent);
+
+}
+
+sub printFile {
+  foreach my $geneId (keys %printHsh) {
+    my $defline = "\>".$printHsh{$geneId}->{'prot'};
+    $defline =~ s/\s+/ /g;
+    $defline .= "\n";
+
+    my $sequence = $printHsh{$geneId}->{'seq'};
+    print $outputFh ("$defline" . CBIL::Bio::SequenceUtils::breakSequence($sequence,60));
+  }
+}
+
+
+sub printLog {
+  my $geneNum = scalar (keys %geneHsh);
+  my $protNum = scalar (keys %printHsh);
+  print $logFh ("There are $geneNum genes in $fastaFile\n    There are $protNum in $outputFile\n");
+}
