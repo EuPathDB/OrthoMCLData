@@ -1,0 +1,163 @@
+#! /usr/bin/perl
+
+#########################################################################################
+### script to process protein fasta file to get one protein exemplar per gene         ###
+### input: gene2accession.gz (ftp://ftp.ncbi.nih.gov/gene/DATA/), protein fasta file, ###
+### ncbi tax_id, and regex for protein id.  Longest protein with fewest stops chosen. ###
+#########################################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+
+my ($maxStopCodonPercent,$gene2AccFile,$fastaFile,$idRegex,$ncbiTaxId,$outputFile,$log,$verbose);
+&GetOptions("maxStopCodonPercent=i" => \$maxStopCodonPercent,
+            "gene2AccFile=s" => \$gene2AccFile,
+            "fastaFile=s" => \$fastaFile,
+            "outputFile=s" => \$outputFile,
+            "log=s" => \$log,
+            "idRegex=s" => \$idRegex,
+            "ncbiTaxId=i" => \$ncbiTaxId,
+            "verbose!" => \$verbose);
+
+print STDERR "processProteinFile --gene2AccFile --fastaFile --idRegex --ncbiTaxId --outputFile --maxStopCodonPercent --log --verbose\n" unless ($gene2AccFile && $fastaFile && $idRegex && $ncbiTaxId && $outputFile && $maxStopCodonPercent && $log);
+
+my $g2a  = ($gene2AccFile =~ /\.gz$|\.Z$/) ? "zcat $fastaFile|" : '<'. $gene2AccFile;
+my $g2aFh = FileHandle->new($g2a);
+die "Can't open file $gene2AccFile\n" unless $g2aFh;
+
+my $f  = ($fastaFile =~ /\.gz$|\.Z$/) ? "zcat $fastaFile|" : '<'. $fastaFile;
+my $fastaFh = FileHandle->new($f);
+die "Can't open file $fastaFile\n" unless $fastaFh;
+
+my $outputFh = FileHandle->new(">$outputFile");
+die "Can't open file $outputFile for writing\n" unless $outputFh;
+
+my $logFh = FileHandle->new(">$log");
+die "Can't open log file $log for writing\n" unless $logFh;
+
+my %geneHsh;
+
+my %protHsh;
+
+my %printHsh;
+
+&makeGeneHash();
+
+&makeProtHash();
+
+&makePrintHash();
+
+&printLog();
+
+&printOutputFile();
+
+sub makeGeneHash {
+  while(<$g2aFh>){
+
+    my @arr = split (/\t/, $_);
+
+    next unless ($arr[0] = $ncbiTaxId && $arr[5] ne "-");
+
+    push (@{$geneHsh{$arr[1]}}, $arr[5]);
+  }
+}
+
+
+sub makeProtHash{
+
+  my ($id,$seq);
+
+  while (<$fastaFh>){
+    if ($_ =~ /^>/ && $seq) {
+      my $aaLength = length ($seq);
+      my $aaCount = ($seq =~ tr/[^A-Za-z]//);
+      my $aaStopCodonPercent = (($aaLength - $aaCount)/($aaLength)) * 100;
+
+      &makeProtHsh($id,$aaLength) if $aaStopCodonPercent <= $maxStopCodonPercent;
+      $id = &getId($_);
+      $seq = "";
+    }
+    elsif ($_ =~ /^>/ ) {
+      $id = &getId($_);
+    }
+    else {
+      $_ =~ s/\s//g;
+      $seq .= $_;
+    }
+  }
+
+  my $length = length($seq);
+
+  &makeProtHsh($id,$length);
+}
+
+sub makePrintHash {
+
+  foreach my $geneId (keys %geneHsh) {
+    my $longest;
+    my $length = 0;
+    foreach my $acc (@{$geneHsh{$geneId}}) {
+      $acc =~ s/\.\d+//;
+      if ($protHsh{$acc} > $length){
+	$length = $protHsh{$acc};
+	$longest = $acc;
+      }
+    }
+
+    $printHsh{$longest} = 1;
+  }
+}
+
+sub printOutputFile {
+  my ($longId,$longSeq);
+
+  while (<$fastaFh>){
+    if ($_ =~ /^>/) {
+      my $Id = &getId($_);
+      if ($printHsh{$Id} == 1){
+	print $outputFh  "$_";
+	$longId = $Id;
+      }
+      else{
+	$longId = "";
+      }
+    }
+    else {
+      print $outputFh  "$_" if ($longId);
+    }
+  }
+}
+
+
+sub getId {
+  my ($line) = @_;
+
+  if ($line =~ /$idRegex/){
+    print $logFh ("$1\n");
+    return $1;
+  }
+  else{
+    die "Id cannot be parsed from defline using the regex: $idRegex\n     $line\n";
+  }
+}
+
+sub makeProtHsh {
+  my ($protId,$length) = @_;
+
+  $protHsh{$protId} = $length;
+}
+
+sub printLog {
+  my $geneNum = scalar (keys %geneHsh);
+  my $protNum = scalar (keys %printHsh);
+  print $logFh ("There are $geneNum genes in $gene2AccFile\n    There are $protNum in $outputFile\n");
+}
+
+
+#####perl ~/gusApps/orthomcl/project_home/OrthoMCLData/Load/bin/processProteinFile --gene2AccFile humanGene2Acc --fastaFile ../../../3.0/resources_pipeline/primary/downloads/Homo_sapiens_proteome/protein.fa --idRegex "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d+\|" --ncbiTaxId 9606 --outputFile testFile
+
+#######perl -e '%hsh;while(<>){@arr=split(/\t/,$_); if ($arr[5] !~ /\-/){$hsh{$arr[1]}=1;}} $num = scalar (keys %hsh); print "Total number genes: $num\n";' humanGene2Acc
+##########Total number genes: 26238
