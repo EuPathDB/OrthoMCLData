@@ -46,11 +46,11 @@ my $notes = <<NOTES;
 Both input files are both constructed manually as part of the Orthomcl-DB genome acquistion phase.
 
 The speciesFile is a columnar file with these columns:
-  - three_letter_abbrev
+  - four_letter_abbrev
   - ncbi_tax_id
   - clade_four_letter_abbrev  # an index into the cladeFile
 
-The cladesFile is a depth first serialization of the clade tree.  Each clade hasa three letter abbreviation, a display name, and a depth indicated by pipe characters
+The cladesFile is a depth first serialization of the clade tree.  Each clade has a four letter abbreviation, a display name, and a depth indicated by pipe characters
 
 The head of a sample cladesFile looks like this: 
 ALL All
@@ -225,7 +225,7 @@ sub parseSpeciesFile {
 	my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
 
 	# pfa APIC 123345
-	if (/([a-z]{3})\t([A-Z]{4})\t(\d+)/) {
+	if (/([a-z]{4})\t([A-Z]{4})\t(\d+)/) {
 	  my $speciesAbbrev = $1;
 	  my $cladeAbbrev = $2;
 	  my $ncbiTaxonId = $3;
