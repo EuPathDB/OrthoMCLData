@@ -21,7 +21,7 @@ my ($mgr, $projectDir, $release, $allSpecies)
 
 ##### all proteomes vs all proteomes ncbi blastp #####
 
-my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1000000 -e 1e-5";
+my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1300000 -e 1e-5";
 
 my $minLength = 10;
 my $maxStopCodonPercent = 20;
@@ -39,7 +39,7 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
-$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
+#$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
 
 &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
@@ -47,7 +47,7 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs");
 
-&orthomclEdges ($mgr, "no", "bestInterTaxonScore");
+&orthomclPairs ($mgr, "no", "ortholog2WayIndex");
 
 &makeOrthoAbcFile ($mgr);
 
