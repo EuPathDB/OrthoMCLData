@@ -57,13 +57,13 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 # ##### iprscan #####
 
-# &documentIPRScan($mgr,"v4.3.1");
+&documentIPRScan($mgr,"v4.3.1");
 
-# &createIprscanDir($mgr, "ProteinSeqs.fsa");
+&createIprscanDir($mgr, "ProteinSeqs.fsa");
 
-# &copyFilesToComputeCluster($mgr,"iprscan");
+&copyFilesToComputeCluster($mgr,"iprscan");
 
-# &startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
+&startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
 
 # $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
