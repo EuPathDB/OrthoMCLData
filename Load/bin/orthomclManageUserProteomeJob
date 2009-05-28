@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+
+my $controlDir = $ARGV[0];
+
+=pod
+ config file:
+ clusterServer=
+ clusterUserName=
+ clusterQueue=
+ numNodes=
+ ppn=
+
+the dir structure looks like this:
+controlDir/
+  newJobs/
+    92hty2k/
+      info.txt
+      proteome.fasta
+  runningJobs/
+     
+=cut
+
+# handle completed jobs
+
+
+# handle new jobs
