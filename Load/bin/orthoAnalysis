@@ -76,6 +76,8 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 #&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence");  #we need to upgrade the UpdateOrthomclGroupsPlugin to use the SimilarSequences table instead of Dots.Similarity 
 
+#&updateOrthoMCLGroups($mgr, "muscle3.6");  #this is what makes the msax
+
 #&loadMsaResult($mgr, $msaName);#where are we getting this file???
 
 # &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
