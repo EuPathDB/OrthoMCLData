@@ -10,6 +10,8 @@ use FileHandle;
 
 use GUS::Model::ApiDB::OrthologGroup;
 use GUS::Model::ApiDB::OrthologGroupAaSequence;
+use GUS::Model::SRes::ExternalDatabase;
+use GUS::Model::SRes::ExternalDatabaseRelease;
 
 use ApiCommonData::Load::Util;
 
@@ -106,8 +108,8 @@ sub run {
     my ($self) = @_;
 
     my $orthologFile = $self->getArg('orthoFile');
-    my $dbReleaseId = $self->getExtDbRlsId($self->getArg('extDbName'), 
- 				           $self->getArg('extDbVersion'));
+
+    my $dbReleaseId = $self->getDbRls();
 
     open ORTHO_FILE, "<$orthologFile";
     my $groupCount = 0;
@@ -127,6 +129,34 @@ sub run {
         }
     }
     $self->log("total $lineCount lines processed, and $groupCount groups loaded.");
+}
+
+sub getDbRls {
+  my ($self) = @_;
+
+  my $name = $self->getArg('extDbName');
+
+  my $version = $self->getArg('extDbVersion');
+
+  my $externalDatabase = GUS::Model::SRes::ExternalDatabase->new({"name" => $name});
+  $externalDatabase->retrieveFromDB();
+
+  if (! $externalDatabase->getExternalDatabaseId()) {
+    $externalDatabase->submit();
+  }
+  my $external_db_id = $externalDatabase->getExternalDatabaseId();
+
+  my $externalDatabaseRel = GUS::Model::SRes::ExternalDatabaseRelease->new ({'external_database_id'=>$external_db_id,'version'=>$version});
+
+  $externalDatabaseRel->retrieveFromDB();
+
+  if (! $externalDatabaseRel->getExternalDatabaseReleaseId()) {
+    $externalDatabaseRel->submit();
+  }
+
+  my $external_db_rel_id = $externalDatabaseRel->getExternalDatabaseReleaseId();
+
+  return $external_db_rel_id;
 }
 
 
