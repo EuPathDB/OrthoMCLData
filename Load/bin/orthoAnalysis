@@ -56,7 +56,8 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 &mclOutToGroupsFile ($mgr);
 
 # ##### iprscan #####
-
+my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
+ 
 &documentIPRScan($mgr,"v4.3.1");
 
 &createIprscanDir($mgr, "ProteinSeqs.fsa");
@@ -65,26 +66,30 @@ my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaas
 
 &startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
 
+&loadOrthoMCLResultsgForOrthomclDB($mgr, "OrthoMCL", "3.0", "orthomclGroups.txt");
+
 # $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
 #&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
 
-#&loadIprscanResults($mgr,"pfam_iprscan", "INTERPRO","14.1",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+#&loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
+#&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence");  #we need to upgrade the UpdateOrthomclGroupsPlugin to use the SimilarSequences table instead of Dots.Similarity 
 
+#&loadMsaResult($mgr, $msaName);#where are we getting this file???
 
-#&loadOrthoMCLResults($mgr, $extDbName, $extDbVersion, "all_orthomcl.out");
+# &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
 
-#&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence");
-
-#&updateOrthoMCLGroups($mgr, "muscle3.6");
-
-# &generateOrthomclDomainKeywords($mgr);
-
-# my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh";
-# my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
+# my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh"; #do differently
+# my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
 
 # &createBiolayoutData($mgr, $rbhFile, $svgTemplate);
+
+# add step to map old ids to new ones
+
+#add step to map to inprot
+
+#add a step to use orthomclDumpPairsFiles for download site 
 
 #
 #
