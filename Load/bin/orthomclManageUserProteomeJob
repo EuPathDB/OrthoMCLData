@@ -53,6 +53,7 @@ orthomclUserProteomeJobs
   i83j89/
     info.txt
     input/
+    log
     master/   
     processId 
     proteome.fasta
@@ -91,34 +92,35 @@ sub handleNewJobs {
 
     foreach my $newJob (@newJobs) {
 	next if $newJob =~ /^\./;
-	my $jobDir = "$controlDir/newJobs/$newJob";
+	my $newJobDir = "$controlDir/newJobs/$newJob";
 
-	validateProteomeFile("$jobDir/proteome.fasta");
+	validateProteomeFile("$newJobDir/proteome.fasta");
 
        # move dir from new/ to running/
 	mkpath("$controlDir/runningJobs");
-	my $runDir = "$controlDir/runningJobs/$newJob"
+	my $localRunningDir = "$controlDir/runningJobs"
 	move("$controlDir/newJobs/$newJob", $runDir);
 
 	# move proteome file to localInputDir
-	my $localInputDir = "$runDir/input";
-	move("$jobDir/proteome.fasta", $localInputDir);
+	my $localInputDir = "$localRunningDir/$newJob/input";
+	move("$newJobDir/proteome.fasta", $localInputDir);
 
 	# build master/ dir
-	my $masterDir = "$runDir/master";
+	my $masterDir = "$localRunningDir/master";
 	mkpath($masterDir);
 
 	# build input/ dir
 	mkpath($localInputDir);
-	my $clusterInputDir = "";
+	my $clusterRunningDir = $mgr->getConfig('clusterServerDir');
+	my $clusterInputDir = "$clusterRunningDir/$newJob/input";
 	makeTaskFile($localInputDir, $clusterInputDir);
 	makeControllerFile($localInputDir, $clusterInputDir);
 
-	# copy to cluster
-	copyToCluster();
+	# mirror job to cluster
+	mirrorToCluster($localRunningDir, $newJob, $clusterRunningDir);
 
 	# start job
-	startJob();
+	startJob("$clusterRunningDir/$newJob");
     }
 
 }
@@ -174,7 +176,7 @@ sub makeControllerFile {
 "masterdir=$clusterMasterDir
 inputdir=$clusterInputDir
 nodedir=$nodePath
-slotspernode=$slotsPerNode>
+slotspernode=$slotsPerNode
 subtasksize=$taskSize
 taskclass=$taskClass
 nodeclass=$nodeClass
@@ -183,11 +185,21 @@ restart=no
     close(F);
 }
 
-sub copyToCluster {
-    
+sub mirrorToCluster {
+    my ($fromDir, $fromFile, $toDir) = @_;
+    $mgr->getCluster()->copyTo($fromDir, $fromFile, $toDir); 
 }
 
 sub startJob {
+    my ($clusterJobDir) = @_;
+
+    my $clusterUser = $mgr->getConfig('clusterUser');
+    my $clusterServer = $mgr->getConfig('clusterServer');
+    my $numNodes = $mgr->getConfig('numNodes');
+    my $clusterQueue = $mgr->getConfig('clusterQueue');
+    my $ppn = $mgr->getConfig('ppn');
+    
+    $mgr->runClusterTask($clusterUser, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/log", "$clusterJobDir/input/controller.prop", $numNodes, 1400, $clusterQueue, $ppn);
 }
 
 
