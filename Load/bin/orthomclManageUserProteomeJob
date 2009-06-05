@@ -4,7 +4,7 @@ use lib "$ENV{GUS_HOME}/lib/perl";
 use File::Path;
 use File::Copy;
 use GUS::Workflow::SshCluster;
-use OrthoMCLData::Load::ProteomeJobMgr
+use OrthoMCLData::Load::ProteomeJobMgr;
 use strict;
 
 =pod 
