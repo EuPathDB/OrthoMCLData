@@ -70,8 +70,11 @@ usage() unless scalar(@ARGV) == 1;
 
 my $configFile = $ARGV[0];
 
+my $mgr;
+
 eval {
-    my $mgr = OrthoMCLData::Load:ProteomeJobMgr->new($configFile);
+    $mgr = OrthoMCLData::Load:ProteomeJobMgr->new($configFile);
+
     handleNewJobs();
 
     my $doneJobs = checkRunningJobs();
@@ -199,7 +202,7 @@ sub startJob {
     my $clusterQueue = $mgr->getConfig('clusterQueue');
     my $ppn = $mgr->getConfig('ppn');
     
-    $mgr->runClusterTask($clusterUser, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/log", "$clusterJobDir/input/controller.prop", $numNodes, 1400, $clusterQueue, $ppn);
+    $mgr->runClusterTask($clusterUser, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
 }
 
 
