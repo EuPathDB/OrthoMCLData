@@ -2,14 +2,16 @@ package GUS::Workflow::WorkflowStepInvoker;
 
 use strict;
 use GUS::Workflow::SshCluster;
+use Carp;
+
 sub getConfig {}
 
 sub getCluster {
     my ($self) = @_;
 
     if (!$self->{cluster}) {
-	my $clusterServer = $getConfig('clusterServer');
-	my $clusterUser = $getConfig('clusterUserName');
+	my $clusterServer = getConfig('clusterServer');
+	my $clusterUser = getConfig('clusterUserName');
 	$self->{cluster} = GUS::Workflow::SshCluster->new($clusterServer,
 							  $clusterUser,
 							  $self);
@@ -29,7 +31,7 @@ sub runCmd {
 sub error {
     my ($self, $msg) = @_;
 
-    confess "$msg\n\n";
+    confess("$msg\n\n");
 }
 
 sub runClusterTask {
