@@ -7,7 +7,7 @@ use GUS::Workflow::SshCluster;
 use OrthoMCLData::Load::ProteomeJobMgr;
 use strict;
 
-=pod
+=pod 
 
 probe the state of orthomcl user's proteome analysis jobs
 
@@ -27,16 +27,16 @@ controlDir/
         proteome.fasta
         task.prop
       master/
-
-
+      
+      
 ** cluster dir structure **
 orthomclUserProteomeJobs
   i83j89/
     info.txt
     input/
-    log
-    master/
-    processId
+    master/   
+      log
+    processId 
     proteome.fasta
 
 
@@ -44,6 +44,7 @@ orthomclUserProteomeJobs
 email=
 fastaFileName=
 submitTime=
+zipOrGzip=
 
 =cut
 
@@ -52,35 +53,42 @@ usage() unless scalar(@ARGV) == 1;
 my $configFile = $ARGV[0];
 
 my $mgr;
+my $controlDir;
+my $clusterRunningDir;
+
 
 eval {
     $mgr = OrthoMCLData::Load::ProteomeJobMgr->new($configFile);
 
+    $controlDir = $mgr->getConfig('controlDir');
+    $clusterRunningDir = $mgr->getConfig('clusterServerDir');
     handleNewJobs();
 
-    my $doneJobs = checkRunningJobs();
+    my ($doneJobs, $failedJobs) = checkRunningJobs();
 
     handleCompletedJobs($doneJobs);
-};
+
+    handleFailedJobs($failedJobs);
+}
 
 ##################################################
 # handle new jobs 
 ##################################################
 sub handleNewJobs {
-    my $controlDir = $mgr->getConfig('controlDir');
+    my $localRunningDir = "$controlDir/runningJobs"
 
     # find all subdirs of newJobs/ (put there by front end)
     opendir(DIR, "$controlDir/newJobs") || die "Can't open newJobs/ directory '$controlDir/newJobs'\n";
     my @newJobs = readdir(DIR);
     closedir(DIR);
-
+    
     foreach my $newJob (@newJobs) {
 	next if $newJob =~ /^\./;
 	my $newJobDir = "$controlDir/newJobs/$newJob";
 
 	validateProteomeFile("$newJobDir/proteome.fasta");
 
-       # move dir from new/ to running/
+        # move dir from new/ to running/
 	my $localRunningDir = "$controlDir/runningJobs";
 	mkpath($localRunningDir);
 	move("$controlDir/newJobs/$newJob", $localRunningDir);
@@ -95,13 +103,12 @@ sub handleNewJobs {
 
 	# build input/ dir
 	mkpath($localInputDir);
-	my $clusterRunningDir = $mgr->getConfig('clusterServerDir');
 	my $clusterInputDir = "$clusterRunningDir/$newJob/input";
 	makeTaskFile($localInputDir, $clusterInputDir);
 	makeControllerFile($localInputDir, $clusterInputDir);
 
 	# mirror job to cluster
-	mirrorToCluster($localRunningDir, $newJob, $clusterRunningDir);
+	$mgr->getCluster()->copyTo($localRunningDir, $newJob, $clusterRunningDir); 
 
 	# start job
 	startJob("$clusterRunningDir/$newJob");
@@ -170,10 +177,6 @@ restart=no
     close(F);
 }
 
-sub mirrorToCluster {
-    my ($fromDir, $fromFile, $toDir) = @_;
-    $mgr->getCluster()->copyTo($fromDir, $fromFile, $toDir); 
-}
 
 sub startJob {
     my ($clusterJobDir) = @_;
@@ -184,7 +187,7 @@ sub startJob {
     my $clusterQueue = $mgr->getConfig('clusterQueue');
     my $ppn = $mgr->getConfig('ppn');
     
-    $mgr->runClusterTask($clusterUser, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
+    $mgr->runClusterTask($clusterUser, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/master/log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
 }
 
 
@@ -192,24 +195,90 @@ sub startJob {
 # handle running jobs
 ##################################################
 
-# check process id of workflowclusterjob on cluster, based on processId file
+sub checkRunningJobs {
 
-# if failed, notify user and admin
+    my $controlDir = $mgr->getConfig('controlDir');
+    my $clusterRunningDir = $mgr->getConfig('clusterServerDir');
+    my $clusterUser = $mgr->getConfig('clusterUser');
+    my $clusterServer = $mgr->getConfig('clusterServer');
 
-# if done, handle complted job
+    opendir(DIR, "$controlDir/runningJobs") || die "Can't open newJobs/ directory '$controlDir/runningJobs'\n";
+    my @runningJobs = readdir(DIR);
+    closedir(DIR);
+
+    my $doneJobs;
+    my $failedJobs;
+    foreach my $runningJob (@runningJobs) {
+	next if $runningJob =~ /^\./;
+	my $clusterJobDir = "$clusterRunningDir/$runningJob";
+	if (!clusterTaskRunning($runningJobDir, $clusterUser, $clusterServer)) {
+	    my $logFile = "$clusterJobDir/log";
+	    my $done = $mgr->runCmd("ssh -2 $clusterUser\@$clusterServer '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
+	    if ($done && $done =~ /Done/) {
+		push(@$doneJobs, $runningJob);
+	    } else {
+		push(@$failedJobs, $runningJob);
+	    }
+	}
+    }
+
+    return ($doneJobs, $failedJobs);
+}
+
+sub clusterTaskRunning {
+    my ($clusterJobDir, $clusterUser, $clusterServer) = @_;
+
+    my $processId = `ssh -2 $clusterUser\@$clusterServer 'if [ -a $clusterJobDir/processId ];then cat $clusterJobDir/$processId; fi'`;
+
+    chomp $processId;
+
+    my $status = 0;
+    if ($processId) {
+      system("ssh -2 $clusterUser\@$clusterServer 'ps -p $processId > /dev/null'");
+      $status = $? >> 8;
+      $status = !$status;
+    }
+    return $status;
+}
 
 
 ##################################################
 # handle completed jobs
 ##################################################
+sub handleCompletedJobs {
+    my ($doneJobs) = @_;
 
-# copy result from cluster
+    my $controlDir = $mgr->getConfig('controlDir');
+    my $clusterRunningDir = $mgr->getConfig('clusterServerDir');
+    my $clusterUser = $mgr->getConfig('clusterUser');
+    my $clusterServer = $mgr->getConfig('clusterServer');
+    my $groupsFile = $mgr->getConfig('groupsFile');
+    my $localRunningDir = "$controlDir/runningJobs"
 
-# map to groups
+    foreach my $doneJob (@doneJobs) {
+        # copy result from cluster
+	$mgr->getCluster()->copyFrom("$clusterRunningDir/$doneJob", 'master', "$localRunningDir/$doneJob"); 
 
-# deliver result
+        # map to groups
+	$mgr->runCmd("orthomclMapProteomeToGroups $localRunningDir/$doneJob/master/blastSimilarity.out $groupsFile >> $localRunningDir/$doneJob/result");
 
-# clean up cluster server
+        # deliver result
+	$mgr->runCmd("orthomclMapProteomeToGroups $localRunningDir/$doneJob/master/blastSimilarity.out $groupsFile >> $localRunningDir/$doneJob/result");
+
+        # clean up cluster dir
+	my $done = $mgr->runCmd("ssh -2 $clusterUser\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningDir/$doneJob\"'");
+
+	# clean up local dir
+	remove("$localRunningDir/$doneJob");
+    }
+}
+
+##################################################
+# handle failed jobs
+##################################################
+sub handleFailedJobs {
+    my ($failedJobs) = @_;
+}
 
 sub usage {
   print STDERR "
