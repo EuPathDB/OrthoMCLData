@@ -7,30 +7,11 @@ use GUS::Workflow::SshCluster;
 use OrthoMCLData::Load::ProteomeJobMgr;
 use strict;
 
-=pod 
+=pod
 
 probe the state of orthomcl user's proteome analysis jobs
 
 should be called by cron once every few minutes
-
-** config file **
-controlDir=           (local dir to control this job)
-clusterUserName=      (login to use to get into cluster server)
-clusterServer=        (name of machine)   
-clusterServerDir=     (dir there to put our stuff in)
-clusterQueue=         (queue to use)
-numNodes=             (num of nodes to request)
-slotsPerNode=         (slots per each node)
-ppn=                  (parallelization)
-nodePath=             (???)
-nodeClass=            (perl class to represent this type of node)
-taskSize=             (number of seqs to process in one batch)
-taskClass=            (perl class to manage that processing)
-subjectFile=          (blast database file)
-blastArgs=            (arguments for blast)
-blastBinDir=          (location of blast executable)
-groupsFile=           (orthomcl groups to map blast results to)
-
 
 ** local dir structure **
 controlDir/
@@ -46,16 +27,16 @@ controlDir/
         proteome.fasta
         task.prop
       master/
-      
-      
+
+
 ** cluster dir structure **
 orthomclUserProteomeJobs
   i83j89/
     info.txt
     input/
     log
-    master/   
-    processId 
+    master/
+    processId
     proteome.fasta
 
 
@@ -73,14 +54,14 @@ my $configFile = $ARGV[0];
 my $mgr;
 
 eval {
-    $mgr = OrthoMCLData::Load:ProteomeJobMgr->new($configFile);
+    $mgr = OrthoMCLData::Load::ProteomeJobMgr->new($configFile);
 
     handleNewJobs();
 
     my $doneJobs = checkRunningJobs();
 
     handleCompletedJobs($doneJobs);
-}
+};
 
 ##################################################
 # handle new jobs 
@@ -100,9 +81,9 @@ sub handleNewJobs {
 	validateProteomeFile("$newJobDir/proteome.fasta");
 
        # move dir from new/ to running/
-	mkpath("$controlDir/runningJobs");
-	my $localRunningDir = "$controlDir/runningJobs"
-	move("$controlDir/newJobs/$newJob", $runDir);
+	my $localRunningDir = "$controlDir/runningJobs";
+	mkpath($localRunningDir);
+	move("$controlDir/newJobs/$newJob", $localRunningDir);
 
 	# move proteome file to localInputDir
 	my $localInputDir = "$localRunningDir/$newJob/input";
@@ -134,24 +115,25 @@ sub validateProteomeFile {
 
 sub makeTaskFile {
     my ($localInputDir,$clusterInputDir) = @_;
-      open(F, ">$localInputDir/task.prop") || die "Can't open task prop file '$inputDir/task.prop' for writing";
+      open(F, ">$localInputDir/task.prop") || die "Can't open task prop file '$localInputDir/task.prop' for writing";
 
     my $blastPath = $mgr->getConfig('blastPath');
     my $subjectFile = $mgr->getConfig('subjectFile');
+    my $blastArgs = $mgr->getConfig('blastArgs');
 
     print F
 "blastBinDir=$blastPath
 dbFilePath=$subjectFile
 inputFilePath=$clusterInputDir/proteome.fasta
 dbType=p
-regex='$idRegex'
+regex='(\S+)'
 blastProgram=blastp
 blastParamsFile=blastParams
 ";
     close(F);
 
     # make blastParams file
-    open(F, ">$localInputDir/blastParams") || die "Can't open blast params file '$localBlastParamsFile' for writing";;
+    open(F, ">$localInputDir/blastParams") || die "Can't open blast params file '$localInputDir/blastParams' for writing";;
     print F "$blastArgs\n";
     close(F);
 }
@@ -228,5 +210,34 @@ sub startJob {
 # deliver result
 
 # clean up cluster server
+
+sub usage {
+  print STDERR "
+
+usage:
+   orthomclManageUserProteomeJob config_file
+
+** config file **
+controlDir=           (local dir to control this job)
+clusterUserName=      (login to use to get into cluster server)
+clusterServer=        (name of machine)
+clusterServerDir=     (dir there to put our stuff in)
+clusterQueue=         (queue to use)
+numNodes=             (num of nodes to request)
+slotsPerNode=         (slots per each node)
+ppn=                  (parallelization)
+nodePath=             (???)
+nodeClass=            (perl class to represent this type of node)
+taskSize=             (number of seqs to process in one batch)
+taskClass=            (perl class to manage that processing)
+subjectFile=          (blast database file)
+blastArgs=            (arguments for blast)
+blastBinDir=          (location of blast executable)
+groupsFile=           (orthomcl groups to map blast results to)
+";
+
+exit(1);
+
+}
 
 
