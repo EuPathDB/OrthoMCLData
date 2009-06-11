@@ -20,9 +20,9 @@ sub getCluster {
 }
 
 sub runCmd {
-    my ($self) = @_;
+    my ($self, $cmd) = @_;
 
-    my $output = `$cmd 2>> $err`;
+    my $output = `$cmd`;
     my $status = $? >> 8;
     $self->error("Failed with status $status running: \n$cmd") if ($status);
     return $output;
@@ -39,12 +39,12 @@ sub runClusterTask {
 
     # if not already started, start it up (otherwise the local process was restarted)
     if (!$self->clusterTaskRunning($processIdFile, $user, $server)) {
-	my $cmd = "workflowclustertask $propFile $logFile $processIdFile $numNodes $time $queue $ppn";
-	$self->runCmd($test, "ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'&");
+	my $cmd = "workflowclustertask $controllerPropFile $logFile $processIdFile $numNodes $time $queue $ppn";
+	$self->runCmd("ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'&");
     }
 
+    my $done = $self->runCmd("ssh -2 $user\@$server '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
 
-    my $done = $self->runCmd($test, "ssh -2 $user\@$server '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
     return $done && $done =~ /Done/;
 }
 
@@ -64,3 +64,4 @@ sub clusterTaskRunning {
     return $status;
 }
 
+1;
