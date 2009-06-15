@@ -44,7 +44,6 @@ orthomclUserProteomeJobs
 email=
 fastaFileName=
 submitTime=
-zipOrGzip=
 
 =cut
 
@@ -264,6 +263,8 @@ sub handleCompletedJobs {
 
         # deliver result
 	$mgr->runCmd("orthomclMapProteomeToGroups $localRunningDir/$doneJob/master/blastSimilarity.out $groupsFile >> $localRunningDir/$doneJob/result");
+	$mgr->runCmd("zip $localRunningDir/$doneJob/result.zip $localRunningDir/$doneJob/result");
+	$mgr->runCmd("rm $localRunningDir/$doneJob/result");
 
         # clean up cluster dir
 	my $done = $mgr->runCmd("ssh -2 $clusterUser\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningDir/$doneJob\"'");
