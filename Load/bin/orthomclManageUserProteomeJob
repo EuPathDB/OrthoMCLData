@@ -27,14 +27,14 @@ controlDir/
         proteome.fasta
         task.prop
       master/
-      
-      
+
+
 ** cluster dir structure **
 orthomclUserProteomeJobs
   i83j89/
     info.txt
     input/
-    master/   
+    master/
       log
     processId 
     proteome.fasta
@@ -68,10 +68,10 @@ eval {
     handleCompletedJobs($doneJobs);
 
     handleFailedJobs($failedJobs);
-}
+};
 
 ##################################################
-# handle new jobs 
+# handle new jobs
 ##################################################
 sub handleNewJobs {
     my $localRunningDir = "$controlDir/runningJobs"
