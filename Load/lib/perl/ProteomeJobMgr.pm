@@ -1,17 +1,44 @@
-package GUS::Workflow::WorkflowStepInvoker;
+package OrthoMCLData::Load::ProteomeJobMgr;
 
 use strict;
 use GUS::Workflow::SshCluster;
 use Carp;
 
-sub getConfig {}
+sub new {
+  my ($class, $configFile) = @_;
+
+  my $self = {};
+  bless($self,$class);
+  $self->{configFile} = $configFile;
+  return $self;
+}
+
+sub getConfig {
+  my ($self, $tag) = @_;
+
+  if (!$self->{config}) {
+    open(F, $self->{configFile}) || $self->error("Can't open config file '$self->{configFile}'\n");
+
+    while(<F>) {
+      chomp;
+      s/\s+$//;
+      next if /^\#/;
+      /^(\w+)\=(.+)/ || die "illegal line '$_' in config file '$self->{configFile}'\n";
+      my $key=$1;
+      my $val=$2;
+      $self->{config}->{$key} = $val;
+    }
+  }
+  $self->error("Config file does not have a property '$tag'") unless $self->{config}->{$tag};
+  return $self->{config}->{$tag};
+}
 
 sub getCluster {
     my ($self) = @_;
 
     if (!$self->{cluster}) {
-	my $clusterServer = getConfig('clusterServer');
-	my $clusterUser = getConfig('clusterUserName');
+	my $clusterServer = $self->getConfig('clusterServer');
+	my $clusterUser = $self->getConfig('clusterUserName');
 	$self->{cluster} = GUS::Workflow::SshCluster->new($clusterServer,
 							  $clusterUser,
 							  $self);
@@ -32,6 +59,11 @@ sub error {
     my ($self, $msg) = @_;
 
     confess("$msg\n\n");
+}
+
+sub log {
+  my ($self, $msg) = @_;
+  print STDERR "$msg\n";
 }
 
 sub runClusterTask {
