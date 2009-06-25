@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+# read our orthomcl proteins into a hash, with Key=id and Value=organism
+
+# scan through uniprot id mapping file, trying to find a match into the hash
+# delete from hash on a match
+
+my $orthomclIdsFile = $ARGV[0];
+
+if (!$orthomclIdsFile) {
+  print STDERR "
+usage:
+  zcat idmapping.dat.gz | findIdsNotMappedToUniprot orthomcl_ids_file
+
+where:
+  orthomcl_ids_file has two columns:  source_id and taxonname
+  idmapping.dat.gz, the uniprot mapping file, has three columns: uniprot_id source external_id
+";
+  exit(1);
+}
+
+open(F,$orthomclIdsFile) || "Can't open orthomcl IDs file '$orthomclIdsFile'\n";
+
+my $idHash;
+print STDERR "building hash of orthomcl IDs\n";
+while(<F>) {
+  chomp;
+  my @a = split(/\s/);
+  my $k = shift(@a);
+  my $v = join(" ", @a);
+  $idHash->{$k} = $v;
+}
+close(F);
+
+print STDERR "scanning uniprot mapping file, comparing against hash\n";
+while(<STDIN>) {
+  chomp;
+  my @a = split(/\t/);
+  my $id = $a[2];
+  if ($idHash->{$id}) {
+    $idHash->{$id} = undef;
+  }
+}
+
+print STDERR "printing output\n";
+foreach my $id (keys(%$idHash)) {
+  print "$id\t$idHash->{$id}\n" if $idHash->{$id};
+}

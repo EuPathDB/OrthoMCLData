@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+
+while (<STDIN>) {
+  chomp;
+  if (/RefSeq/) {
+    s/\.\d+$//;
+  }
+
+  print "$_\n";
+}

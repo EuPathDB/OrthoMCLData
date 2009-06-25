@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+
+my $h;
+while(<STDIN>) {
+  chomp;
+  @a = split(/\t/);
+  $h->{$a[1]} +=1;
+}
+
+foreach my $o (keys(%$h)) {
+  print "$h->{$o}\t$o\n";
+}
