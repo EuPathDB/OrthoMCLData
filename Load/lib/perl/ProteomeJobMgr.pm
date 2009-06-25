@@ -29,7 +29,7 @@ sub getConfig {
       $self->{config}->{$key} = $val;
     }
   }
-  $self->error("Config file does not have a property '$tag'") unless $self->{config}->{$tag};
+  $self->error("Config file does not have a property '$tag'") unless defined($self->{config}->{$tag});
   return $self->{config}->{$tag};
 }
 
@@ -46,8 +46,10 @@ sub getCluster {
     return $self->{cluster};
 }
 
+#include unused $testmode arg for compatibility w/ workflow code (SshCluster)
 sub runCmd {
-    my ($self, $cmd) = @_;
+    my ($self, $testmode, $cmd) = @_;
+
 
     my $output = `$cmd`;
     my $status = $? >> 8;
@@ -72,10 +74,11 @@ sub runClusterTask {
     # if not already started, start it up (otherwise the local process was restarted)
     if (!$self->clusterTaskRunning($processIdFile, $user, $server)) {
 	my $cmd = "workflowclustertask $controllerPropFile $logFile $processIdFile $numNodes $time $queue $ppn";
-	$self->runCmd("ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'&");
+	$self->log("running cmd: $cmd");
+	$self->runCmd(0, "ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'&");
     }
 
-    my $done = $self->runCmd("ssh -2 $user\@$server '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
+    my $done = $self->runCmd(0, "ssh -2 $user\@$server '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
 
     return $done && $done =~ /Done/;
 }
