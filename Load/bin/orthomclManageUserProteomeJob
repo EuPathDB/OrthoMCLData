@@ -148,7 +148,7 @@ sub makeTaskFile {
 dbFilePath=$subjectFile
 inputFilePath=$clusterInputDir/proteome.fasta
 dbType=p
-regex='(\S+)'
+regex='(\\S+)'
 blastProgram=blastp
 blastParamsFile=blastParams
 blastVendor=ncbi
