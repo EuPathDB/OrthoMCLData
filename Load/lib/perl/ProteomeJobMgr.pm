@@ -57,6 +57,14 @@ sub runCmd {
     return $output;
 }
 
+sub runCmdInBackground {
+    my ($self, $cmd) = @_;
+
+    system("$cmd &");
+    my $status = $? >> 8;
+    $self->error("Failed running '$cmd' with stderr:\n $!") if ($status);
+}
+
 sub error {
     my ($self, $msg) = @_;
 
@@ -74,8 +82,9 @@ sub runClusterTask {
     # if not already started, start it up (otherwise the local process was restarted)
     if (!$self->clusterTaskRunning($processIdFile, $user, $server)) {
 	my $cmd = "workflowclustertask $controllerPropFile $logFile $processIdFile $numNodes $time $queue $ppn";
-	$self->log("running cmd: $cmd");
-	$self->runCmd(0, "ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'&");
+	my $sshCmd = "ssh -2 $user\@$server '/bin/bash -login -c \"$cmd\"'";
+	$self->log("Running cmd: $sshCmd");
+	$self->runCmdInBackground($sshCmd);
     }
 
     my $done = $self->runCmd(0, "ssh -2 $user\@$server '/bin/bash -login -c \"if [ -a $logFile ]; then tail -1 $logFile; fi\"'");
