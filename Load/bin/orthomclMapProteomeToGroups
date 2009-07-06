@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+
+print STDERR "mapping to groups.  not implemented yet\n";
+
+my $similarityFile = $ARGV[0];
+my $groupsFile = $ARGV[1];
+
+# correct for 0 exponent
+
+# make hash of orthomcl proteins to groups
+
+# sort similarity by query,score
+
+# find best match over threshold
+
+# assign that to groups
