@@ -54,6 +54,8 @@ my $documentation = { purpose          => $purpose,
                       howToRestart     => $howToRestart,
                       failureCases     => $failureCases };
 
+
+
 # ----------------------------------------------------------------------
 
 sub new {
@@ -64,7 +66,6 @@ sub new {
   $self->initialize({ requiredDbVersion => 3.5,
                       cvsRevision       => '$Revision$',
                       name              => ref($self),
-                      argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
 
   return $self;
