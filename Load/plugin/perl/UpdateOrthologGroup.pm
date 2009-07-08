@@ -15,7 +15,8 @@ use GUS::Model::SRes::ExternalDatabaseRelease;
 
 use ApiCommonData::Load::Util;
 
-
+my $argsDeclaration =
+[];
 
 my $purpose = <<PURPOSE;
 update ApiDB::OrthologGroup and ApiDB::OrthologGroupAaSequence tablesxs.
@@ -66,6 +67,7 @@ sub new {
   $self->initialize({ requiredDbVersion => 3.5,
                       cvsRevision       => '$Revision$',
                       name              => ref($self),
+		      argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
 
   return $self;
@@ -134,6 +136,7 @@ EOF
   my $sth = $dbh->prepare($sqlSelectOrthGrpAASeq);
 
   foreach my $groupId (@{$unfinished}) {
+    $self->log ("Processing group_id: $groupId\n");
 
     my @seqIdArr;
 
@@ -160,11 +163,16 @@ EOF
 sub processSeqsInGroup {
   my ($self,$seqIdArr, $groupId) = @_;
 
+  my $num = @{$seqIdArr};
+
+  $self->log ("Processing $num seqs in $groupId\n");
+
   my $pairCount = 0;
   my $sumPercentIdentity = 0;
   my $sumPercentMatch = 0;
   my $sumEvalue = 0;
   my %connectivity;
+  my %lengthHsh;
 
   my $grpSize = @{$seqIdArr};
 
@@ -172,8 +180,8 @@ sub processSeqsInGroup {
 
   my $sqlSelectSimSeqs = <<"EOF";
      SELECT
-       s.query_id , s.subject_id, s.query_match_length, s.subject_match_length, s.evalue_mant, s.evalue_exp,
-       s.percent_identity
+       s.evalue_mant, s.evalue_exp,
+       s.percent_identity, s.percent_match
      FROM apidb.SimilarSequences s
      WHERE (s.query_id = ? AND s.subject_id = ?)
             OR (s.subject_id = ? AND s.query_id = ?)
@@ -187,64 +195,30 @@ EOF
 
       my $sequence2 = $seqIdArr->[$j];
 
-      $sth->execute($sequence1, $sequence2);
+      $sth->execute($sequence1, $sequence2, $sequence2, $sequence1);
 
       while (my @row = $sth->fetchrow_array()) {
 	$pairCount++;
-	$sumPercentMatch += $self->getPercentMatch($row[0],$row[1],$row[2],$row[3]);
-	$sumPercentIdentity += $row[7];
-	$sumEvalue +=  $row[4] . "e" . $row[5];
+	$sumPercentMatch += $row[3];
+	$sumPercentIdentity += $row[2];
+	$sumEvalue +=  $row[0] . "e" . $row[1];
 	$connectivity{$seqIdArr->[$i]}++;
 	$connectivity{$seqIdArr->[$j]}++;
       }
     }
   }
-
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($seqIdArr, \%connectivity);
 
   my $groupsUpdated += $self->updateOrthologGroup($groupId, $pairCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
 
-  return ($groupsUpdated,$grpAaSeqUpdated); 
+  return ($groupsUpdated,$grpAaSeqUpdated);
 
-}
-
-sub getPercentMatch {
-  my ($self, $queryId, $subjectId, $queryMatchLength, $subjectMatchLength) = @_;
-
-  my $id;
-  my $matchLength;
-
-  if ($queryMatchLength < $subjectMatchLength) {
-    $id = $queryId;
-    $matchLength = $queryMatchLength;
-  }
-  else {
-    $id = $subjectId;
-    $matchLength = $subjectMatchLength;
-  }
-
-  my $dbh = $self->getQueryHandle();
-
-  my $sqlLengthSeq = <<"EOF";
-  SELECT
-    length
-  FROM dots.aasequence
-  WHERE aa_sequence_id = $id
-EOF
-
-  my $sth = $dbh->prepareAndExecute($sqlLengthSeq);
-
-  my @row = $sth->fetchrow_array();
-
-  $sth-finish();
-
-  my $percentMatch = 100 * $matchLength/$row[0];
-
-  return $percentMatch;
 }
 
 sub updateOrthologGroup {
   my ($self, $groupId, $pairCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
+
+  $self->log ("Updating row for ortholog group_id $groupId\n");
 
   my $avgPercentIdentity = $sumPercentIdentity/$pairCount;
 
@@ -308,6 +282,8 @@ sub getAvgConnectivity {
 
 sub updateOrthologGroupAaSequences {
   my ($self, $seqIdArr, $connectivity) = @_;
+
+  $self->log ("Updating orthologgroupaasequence rows\n");
 
   my $submitted;
 
