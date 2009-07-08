@@ -70,13 +70,16 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 # $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
-#&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
+&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
 
-#&loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+&loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
-#&updateOrthoMCLGroups($mgr, "dots.ExternalAaSequence");  #we need to upgrade the UpdateOrthomclGroupsPlugin to use the SimilarSequences table instead of Dots.Similarity 
+&updateOrthoMCLGroups();
 
 #&updateOrthoMCLGroups($mgr, "muscle3.6");  #this is what makes the msa
+#muscle -in <inputfile> -out <outputfile> -clw -log       
+# must have a step to make the fasta files in groups but only those groups with less than 100 sequences
+#use extractGroupFastaFiles in OrthoMCLData/Load/bin to make the files - not tested yet
 
 #&loadMsaResult($mgr, $msaName);#where are we getting this file???
 
