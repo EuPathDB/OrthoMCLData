@@ -74,7 +74,7 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
-&updateOrthoMCLGroups();
+&updateOrthologGroups($mgr);
 
 #&updateOrthoMCLGroups($mgr, "muscle3.6");  #this is what makes the msa
 #muscle -in <inputfile> -out <outputfile> -clw -log       
