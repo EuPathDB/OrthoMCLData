@@ -228,7 +228,7 @@ sub updateOrthologGroup {
 
   my $avgEvalue = $sumEvalue/$pairCount;
 
-  my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'group_id'=>$groupId});
+  my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
 
   my($avgMant,$avgExp) = split(/e/,$sumEvalue);
 
