@@ -234,12 +234,12 @@ sub updateOrthologGroup {
 
   $orthologGroup->retrieveFromDB();
 
-  if ($orthologGroup->get('average_percent_identity') != $avgPercentIdentity) {
-    $orthologGroup->set('average_percent_identity', $avgPercentIdentity);
+  if ($orthologGroup->get('avg_percent_identity') != $avgPercentIdentity) {
+    $orthologGroup->set('avg_percent_identity', $avgPercentIdentity);
   }
 
-  if ($orthologGroup->get('average_percent_match') != $avgPercentMatch) {
-    $orthologGroup->set('average_percent_match', $avgPercentMatch);
+  if ($orthologGroup->get('avg_percent_match') != $avgPercentMatch) {
+    $orthologGroup->set('avg_percent_match', $avgPercentMatch);
   }
 
   if ($orthologGroup->get('avg_connectivity') != $avgConnectivity) {
