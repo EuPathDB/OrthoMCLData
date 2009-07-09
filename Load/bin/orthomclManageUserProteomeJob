@@ -25,11 +25,16 @@ controlDir/
         info.txt
         input/
           controller.prop
-          proteome.fasta
           task.prop
+        proteome.fasta
     doneJobs/
       43k8sl0/
-        blastSimilarity1.out
+        blastSimilarity.out
+        info.txt
+        input/
+          controller.prop
+          task.prop
+        proteome.fasta
     failedJobs/
       a7bbe32/                (copied from runningJobs/)
   phase2/                     (same as phase1)
@@ -42,7 +47,8 @@ orthomclUserProteomeJobs/
       i83j89/
         info.txt
         input/
-          proteome.fasta
+          controller.prop
+          task.prop
         master/
           completedSubtasks.log
           failures/
@@ -50,6 +56,7 @@ orthomclUserProteomeJobs/
           running/
         i83j89.log
         processId
+        proteome.fasta
     failedJobs/
       i83j89/        (copied from runningJobs/)
       i83j89.log     (copied from runningJobs/)
@@ -80,7 +87,7 @@ eval {
 
     my ($doneJobs, $failedJobs) = checkRunningJobs('phase2');
 
-    handlePhase2DoneJobs($doneJobs);
+    handleDoneJobs($doneJobs, 'phase2');
 
     handleFailedJobs($failedJobs, 'phase2');
 
@@ -93,7 +100,7 @@ eval {
     # phase 1 (blast of user proteome against orthomcl proteins)
     my ($doneJobs, $failedJobs) = checkRunningJobs('phase1');
 
-    handlePhase1DoneJobs($doneJobs);
+    handleDoneJobs($doneJobs, 'phase1');
 
     handleFailedJobs($failedJobs, 'phase1');
 
@@ -161,6 +168,64 @@ sub clusterTaskRunning {
 
 
 ##################################################
+# handle completed jobs
+##################################################
+sub handleDoneJobs {
+    my ($doneJobs, $phase) = @_;
+
+    my $clusterUserName = $mgr->getConfig('clusterUserName');
+    my $clusterServer = $mgr->getConfig('clusterServer');
+    my $localRunningDir = "$controlDir/$phase/runningJobs";
+    my $localPhase1RunningDir = "$controlDir/phase1/runningJobs";
+    my $localDoneDir = "$controlDir/$phase/doneJobs";
+
+    foreach my $doneJob (@$doneJobs) {
+
+      $mgr->log("Handling done $phase job: $doneJob");
+      mkpath($localDoneDir);
+      move("$localRunningDir/$doneJob", "$localDoneDir/$doneJob");
+
+      # copy result from cluster
+      $mgr->log("  copying from cluster");
+      my $clusterRunningJobDir = "$clusterServerDir/$phase/runningJobs/$doneJob";
+      $mgr->getCluster()->copyFrom("$clusterRunningJobDir/master/mainresult", 'blastSimilarity.out', "$localDoneDir/$doneJob");
+
+      # clean up cluster dir
+      $mgr->log("  cleaning up cluster job dir");
+      my $done = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
+
+      if ($phase eq 'phase2') { 
+	  deliverResult("$localPhase1RunningDir/$doneJob", "$localRunningDir/$doneJob");
+
+	  # clean up local dir
+	  $mgr->log("  cleaning up local phase1 job dir");
+	  #remove("$localPhase1RunningDir/$doneJob");
+
+	  $mgr->log("  cleaning up local phase2 job dir");
+	  #remove("$localRunningDir/$doneJob");
+      }
+    }
+}
+
+sub deliverResult {
+    my ($donePhase1JobDir, $donePhase2JobDir) = @_;
+
+    my $groupsFile = $mgr->getConfig('groupsFile');
+
+    # map to groups
+    $mgr->log("  mapping to groups");
+    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase1JobDir/blastSimilarity.out $donePhase2JobDir/blastSimilarity.out $groupsFile >> $donePhase2JobDir/result");
+
+    # zip result
+    $mgr->log("  zipping");
+    $mgr->runCmd(0, "zip $donePhase2JobDir/result.zip $donePhase2JobDir/result");
+    $mgr->runCmd(0, "rm $donePhase2JobDir/result");
+
+    # email result
+}
+
+
+##################################################
 # handle new jobs
 ##################################################
 sub handleNewJobs {
@@ -175,6 +240,8 @@ sub handleNewJobs {
 	next if $newJob =~ /^\./;
 	$mgr->log("New job: $newJob");
 
+	my $clusterUserName = $mgr->getConfig('clusterUserName');
+	my $clusterServer = $mgr->getConfig('clusterServer');
 	my $newJobDir = "$newJobsDir/$newJob";
 	my $runningJobDir = "$localRunningDir/$newJob";
 	my $localInputDir = "$runningJobDir/input";
@@ -192,16 +259,21 @@ sub handleNewJobs {
 
 	# move proteome file to localInputDir
 	mkpath($localInputDir);
-	move("$runningJobDir/proteome.fasta", $localInputDir);
+	#$move("$runningJobDir/proteome.fasta", $localInputDir);
 
 	my $dbFilePath =  $mgr->getConfig('dbFilePath');
 	if ($phase eq 'phase2') {
+
+	    $dbFilePath = "$clusterRunningJobDir/proteome.fasta";
+
 	    # format db
-	    $dbFilePath = "";
+	    my $blastBinDir = $mgr->getConfig('blastBinDir');
+	    my $cmd = "$blastBinDir/formatdb -i $dbFilePath -p T";
+	    $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"$cmd\"'");
 	}
 
 	# build input/ dir
-	makeTaskFile($localInputDir, $clusterInputDir, $dbFilePath);
+	makeTaskFile($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath);
 	makeControllerFile($localInputDir, $clusterInputDir);
 
 	# mirror job to cluster
@@ -219,7 +291,7 @@ sub validateProteomeFile {
 }
 
 sub makeTaskFile {
-    my ($localInputDir, $clusterInputDir, $dbFilePath) = @_;
+    my ($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath) = @_;
       open(F, ">$localInputDir/task.prop") || die "Can't open task prop file '$localInputDir/task.prop' for writing";
 
     my $blastBinDir = $mgr->getConfig('blastBinDir');
@@ -228,7 +300,7 @@ sub makeTaskFile {
     print F
 "blastBinDir=$blastBinDir
 dbFilePath=$dbFilePath
-inputFilePath=$clusterInputDir/proteome.fasta
+inputFilePath=$clusterRunningJobDir/proteome.fasta
 dbType=p
 regex='(\\S+)'
 blastProgram=blastp
@@ -286,83 +358,6 @@ sub startJob {
 
     $mgr->log("Starting job on cluster in $clusterJobDir");
     $mgr->runClusterTask($clusterUserName, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/$jobName.log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
-}
-
-
-##################################################
-# handle completed jobs
-##################################################
-sub handleDonePhase1Jobs {
-    my ($doneJobs) = @_;
-
-    my $clusterUserName = $mgr->getConfig('clusterUserName');
-    my $clusterServer = $mgr->getConfig('clusterServer');
-    my $groupsFile = $mgr->getConfig('groupsFile');
-    my $localRunningDir = "$controlDir/runningJobs";
-    my $localDoneDir = "$controlDir/doneJobs";
-
-    foreach my $doneJob (@$doneJobs) {
-
-      $mgr->log("Handling done phase1 job: $doneJob");
-      mkpath($localDoneDir);
-      move("$localRunningDir/$doneJob", "$localDoneDir/$doneJob");
-
-      # copy result from cluster
-      $mgr->log("  copying from cluster");
-      my $clusterRunningJobDir = "$clusterServerDir/runningJobs/$doneJob";
-      $mgr->getCluster()->copyFrom("$clusterRunningJobDir/master/mainresult", 'blastSimilarity.out', "$localDoneDir/$doneJob");
-
-      # clean up cluster dir
-      $mgr->log("  cleaning up cluster job dir");
-      my $done = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
-
-      # email result
-
-      # clean up local dir
-      $mgr->log("  cleaning up local job dir");
-      #remove("$localRunningDir/$doneJob");
-    }
-}
-
-sub handleDonePhase2Jobs {
-    my ($doneJobs) = @_;
-
-    my $clusterUserName = $mgr->getConfig('clusterUserName');
-    my $clusterServer = $mgr->getConfig('clusterServer');
-    my $groupsFile = $mgr->getConfig('groupsFile');
-    my $localRunningDir = "$controlDir/runningJobs";
-    my $localDoneDir = "$controlDir/doneJobs";
-
-    foreach my $doneJob (@$doneJobs) {
-
-      $mgr->log("Handling done phase1 job: $doneJob");
-      mkpath($localDoneDir);
-      move("$localRunningDir/$doneJob", "$localDoneDir/$doneJob");
-
-      # copy result from cluster
-      $mgr->log("  copying from cluster");
-      my $clusterRunningJobDir = "$clusterServerDir/runningJobs/$doneJob";
-      $mgr->getCluster()->copyFrom("$clusterRunningJobDir/master/mainresult", 'blastSimilarity.out', "$localDoneDir/$doneJob");
-
-      # map to groups
-      $mgr->log("  mapping to groups");
-      $mgr->runCmd(0, "orthomclMapProteomeToGroups $localDoneDir/$doneJob/blastSimilarity.out $groupsFile >> $localDoneDir/$doneJob/result");
-
-      # zip result
-      $mgr->log("  zipping");
-      $mgr->runCmd(0, "zip $localDoneDir/$doneJob/result.zip $localDoneDir/$doneJob/result");
-      $mgr->runCmd(0, "rm $localDoneDir/$doneJob/result");
-
-      # clean up cluster dir
-      $mgr->log("  cleaning up cluster job dir");
-      my $done = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
-
-      # email result
-
-      # clean up local dir
-      $mgr->log("  cleaning up local job dir");
-      #remove("$localRunningDir/$doneJob");
-    }
 }
 
 
