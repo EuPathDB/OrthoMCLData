@@ -76,7 +76,9 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &updateOrthologGroups($mgr);
 
-&extractFilesForMsa($mgr);
+#&extractFilesForMsa($mgr); #done manually while testing previous step
+
+#&runMuscleForMSAFile($mgr);
 
 #&updateOrthoMCLGroups-not called this($mgr, "muscle3.6");  #this is what makes the msa
 #muscle -in <inputfile> -out <outputfile> -clw -log       
