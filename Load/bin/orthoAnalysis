@@ -76,7 +76,9 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &updateOrthologGroups($mgr);
 
-#&updateOrthoMCLGroups($mgr, "muscle3.6");  #this is what makes the msa
+&extractFilesForMsa($mgr);
+
+#&updateOrthoMCLGroups-not called this($mgr, "muscle3.6");  #this is what makes the msa
 #muscle -in <inputfile> -out <outputfile> -clw -log       
 # must have a step to make the fasta files in groups but only those groups with less than 100 sequences
 #use extractGroupFastaFiles in OrthoMCLData/Load/bin to make the files - not tested yet
