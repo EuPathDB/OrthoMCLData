@@ -1,0 +1,71 @@
+#!@perl@
+
+## dumps sequences from dots.aasequence for each ortho group into individual files 
+
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use GUS::ObjRelP::DbiDatabase;
+use CBIL::Bio::SequenceUtils;
+use GUS::Supported::GusConfig;
+
+my ($gusConfigFile,$debug,$verbose,$outDir,$idSQL,$minLength);
+&GetOptions("verbose!"=> \$verbose,
+            "outputDir=s" => \$outDir,"idSQL=s" => \$idSQL, 
+            "gusConfigFile=s" => \$gusConfigFile);
+
+if(!$outDir){
+	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+}
+
+
+print STDERR "Establishing dbi login\n" if $verbose;
+my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
+
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					$gusconfig->getReadOnlyDatabaseLogin(),
+					$gusconfig->getReadOnlyDatabasePassword,
+					$verbose,0,1,
+					$gusconfig->getCoreSchemaName,
+					$gusconfig->getOracleDefaultRollbackSegment());
+
+my $dbh = $db->getQueryHandle();
+
+$dbh->{LongReadLen} = 8192 * 1024;
+
+my $count = 0;
+
+my $groupSQL = "select ortholog_group_id, name from apidb.OrthologGroup where number_of_members < 100 and number_of_members > 1";
+
+my $idStmt = $dbh->prepareAndExecute($groupSQL);
+
+my $seqSQL = "select x.source_id, x.sequence from dots.externalaasequence x, apidb.orthologgroupaasequence g where g.aa_sequence_id = x.aa_sequence_id and g.ortholog_group_id = ?";
+
+my $seqStmt = $dbh->prepare($seqSQL);
+
+my %ids;
+
+my $outFile;
+my %done;
+
+while(my (@row) = $idStmt->fetchrow_array()){
+  $ids{$row[0]} = $row[1];
+}
+
+foreach my $id (keys %ids) {
+  open(FILE, ">>$outDir/$ids{$id}.msa");
+
+  $seqStmt->execute($id);
+
+  while(my (@row) = $seqStmt->fetchrow_array()){
+
+    my $defline = "\>".$row[0]."\n";
+    my $sequence = $row[1];
+
+    print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+  }
+    close(file);
+}
+
+
