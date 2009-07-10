@@ -232,7 +232,7 @@ sub updateOrthologGroup {
 
   my $fixedAvgEValue = sprintf("%e",$avgEvalue);
 
-  my($avgMant,$avgExp) = split(/e/,$fixedAvgEvalue);
+  my($avgMant,$avgExp) = split(/e/,$fixedAvgEValue);
 
   $orthologGroup->retrieveFromDB();
 
