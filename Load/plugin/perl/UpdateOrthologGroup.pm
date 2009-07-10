@@ -220,17 +220,19 @@ sub updateOrthologGroup {
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
-  my $avgPercentIdentity = $sumPercentIdentity/$pairCount;
+  my $avgPercentIdentity = sprintf("$.1f", $sumPercentIdentity/$pairCount);
 
-  my $avgPercentMatch = $sumPercentMatch/$pairCount;
+  my $avgPercentMatch = sprintf("$.1f", $sumPercentMatch/$pairCount);
 
-  my $avgConnectivity = $self->getAvgConnectivity($connectivity,$grpSize);
+  my $avgConnectivity = sprintf("$.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
   my $avgEvalue = $sumEvalue/$pairCount;
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
 
-  my($avgMant,$avgExp) = split(/e/,$sumEvalue);
+  my $fixedAvgEValue = sprintf("%e",$avgEvalue);
+
+  my($avgMant,$avgExp) = split(/e/,$fixedAvgEvalue);
 
   $orthologGroup->retrieveFromDB();
 
