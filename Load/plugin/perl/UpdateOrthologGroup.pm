@@ -220,11 +220,11 @@ sub updateOrthologGroup {
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
-  my $avgPercentIdentity = sprintf("$.1f", $sumPercentIdentity/$pairCount);
+  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$pairCount);
 
-  my $avgPercentMatch = sprintf("$.1f", $sumPercentMatch/$pairCount);
+  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$pairCount);
 
-  my $avgConnectivity = sprintf("$.1f", $self->getAvgConnectivity($connectivity,$grpSize));
+  my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
   my $avgEvalue = $sumEvalue/$pairCount;
 
