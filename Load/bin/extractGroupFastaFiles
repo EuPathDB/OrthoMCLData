@@ -36,7 +36,7 @@ $dbh->{LongReadLen} = 8192 * 1024;
 
 my $count = 0;
 
-my $groupSQL = "select ortholog_group_id, name from apidb.OrthologGroup where number_of_members < 100 and number_of_members > 1";
+my $groupSQL = "select ortholog_group_id, name from apidb.OrthologGroup where number_of_members <= 100 and number_of_members > 1";
 
 my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
@@ -54,7 +54,8 @@ while(my (@row) = $idStmt->fetchrow_array()){
 }
 
 foreach my $id (keys %ids) {
-  open(FILE, ">>$outDir/$ids{$id}.msa");
+
+  open(FILE, ">$outDir/$ids{$id}.msa");
 
   $seqStmt->execute($id);
 
