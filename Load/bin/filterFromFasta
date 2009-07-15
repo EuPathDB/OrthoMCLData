@@ -10,27 +10,32 @@ while(<STDIN>) {
   $idHash->{$_} = 1;
 }
 
-open(F, $fastaFile) || die "can't open fasta file '$fastaFile'\n";
+if ($fastaFile =~ m/\.gz$/) {
+  open(F, "gunzip -c $fastaFile |") or die $!;
+}
+else {
+  open(F, "<$fastaFile") or die $!;
+}
 
 my $currentSeq;
 my $currentId;
 my $filteredCount;
-while(<F>) {
-    chomp;
-    # handle prev seq
-    if (/\>(\S+)/) {
-      if ($currentSeq) {
-	if (!$idHash->{$currentId}) {
-	  print $currentSeq;
-	} else {
-	  $filteredCount++;
-	}
-	$currentSeq = "";
+while (<F>) {
+  chomp;
+  # handle prev seq
+  if (/\>(\S+)/) {
+    if ($currentSeq) {
+      if (!$idHash->{$currentId}) {
+	print $currentSeq;
+      } else {
+	$filteredCount++;
       }
+      $currentSeq = "";
     }
-    $currentSeq .= "$_\n";
   }
+  $currentSeq .= "$_\n";
 }
+
 
 sub usage {
   print "

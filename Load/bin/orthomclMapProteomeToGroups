@@ -6,7 +6,7 @@ print STDERR "mapping to groups.  not implemented yet\n";
 my $sortedSimilarityFile = $ARGV[0];
 my $groupsFile = $ARGV[1];
 
-my $threshold = -50;  
+my $threshold = -50;
 my $minPercentMatch = 80;
 
 # correct for 0 exponent (do this upstream)
@@ -31,8 +31,7 @@ close(G);
 # scan sorted similarities
 ###########################################
 # for ortholog matches, find group based on best match of user's protein
-# for paralog matches, find pairs using standard orthomcl inparalog approach.  
-
+# for paralog matches, find pairs using standard orthomcl inparalog approach.
 my $prevQueryId;
 my $runOfParalogs;
 my $paralogPairsHash;
@@ -76,15 +75,15 @@ sub handleParalogSim {
     if ($q_id < $s_id) {
 	$paralogPairsHash->{$q_id}->{$s_id} = 
 	    {mant=>$evalue_mant, exp=>$evalue_exp} ;
-    } 
+    }
 
     # now we are seeing it in opposite direction.  only keep it if we already
-    # saw it in first direction (ie, it is a mutual better hit)
+    # saw it in first direction (ie, it is a "mutual better hit")
     else {
-	my $firstSeenScore = $paralogPairsHash->{$s_id}->{$q_id}
+	my $firstSeenScore = $paralogPairsHash->{$s_id}->{$q_id};
 	if ($firstSeenScore) {  # seen before in opp. direction
-	    my $score = computeParalogPairScore($scores->{mant}, 
-						$scores->{exp}, 
+	    my $score = computeParalogPairScore($firstSeenScore->{mant},
+						$firstSeenScore->{exp},
 						$evalue_mant, $evalue_exp);
 	    print PARA "$q_id\t$s_id\t$score\n";
 	}
@@ -96,7 +95,7 @@ sub computeParalogPairScore {
     # borrowed from orthomclPairs
     
     # if either mant is approx 0, use only exp
-    if ($mant1 < 0.01 || $mant2 < 0.01) return ($exp1 + $exp2) / -2;
+    if ($mant1 < 0.01 || $mant2 < 0.01) { return ($exp1 + $exp2) / -2; }
 
     # ( -log10(evalue1) - log10(evalue2) ) / 2
     return (log($mant1 ** $exp1)/log(10) - log($mant2 ** $exp2)/log(10)) / 2; 
