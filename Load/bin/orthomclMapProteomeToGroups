@@ -2,15 +2,121 @@
 
 print STDERR "mapping to groups.  not implemented yet\n";
 
-my $similarityFile = $ARGV[0];
+&usage() unless scalar(@ARGV) == 2;
+my $sortedSimilarityFile = $ARGV[0];
 my $groupsFile = $ARGV[1];
 
-# correct for 0 exponent
+my $threshold = -50;  
+my $minPercentMatch = 80;
 
+# correct for 0 exponent (do this upstream)
+
+# sort similarity by query,score (upstream)
+
+###########################################
 # make hash of orthomcl proteins to groups
+###########################################
+open(G, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
+my $proteinGroupHash;
+while(<G>) {
+    my @line = split(/\s/);
+    my $group = shift(@line);
+    foreach my $protein (@line) {
+	$proteinGroupHash->{$protein} = $group;
+    }
+}
+close(G);
 
-# sort similarity by query,score
+###########################################
+# scan sorted similarities
+###########################################
+# for ortholog matches, find group based on best match of user's protein
+# for paralog matches, find pairs using standard orthomcl inparalog approach.  
 
-# find best match over threshold
+my $prevQueryId;
+my $runOfParalogs;
+my $paralogPairsHash;
 
-# assign that to groups
+open(S, $sortedSimilarityFile)  || die "Can't open similarity file '$similarityFile'\n";
+open(ORTHO, ">orthologGroups") || die "Can't open orthologGroups file for writing\n";
+open(PARA, ">paralogPairs") || die "Can't open paralogPairs file for writing\n";
+while(<S>) {
+    my ($q_id, $q_taxon, $s_id, $s_taxon, $evalue_mant, $evalue_exp, $pmatch) = split(/\s/);
+
+    next if $q_id eq $s_id;
+
+    # in-species
+    if ($q_taxon eq $s_taxon) {
+	if ($q_id ne $prevQueryId) {
+	    $runOfParalogs = 1;
+	    handleParalogSim($paralogPairsHash, $q_id, $s_id, $evalue_mant, $evalue_exp);
+	    $prevQueryId = $q_id;	    
+	} elsif ($runOfParalogs) {
+	    handleParalogSim($paralogPairsHash, $q_id, $s_id, $evalue_mant, $evalue_exp);
+	}
+    } 
+
+    # out-species
+    else {
+	$runOfParalogs = 0;
+	if ($q_id ne $prevQueryId && $evalue_exp <= $threshold && $pmatch >= $minPercentMatch) {
+	    print ORTHO "$q_id\t$proteinGroupHash->{$s_id}\n";
+	    $prevQueryId = $q_id;
+	}
+    }
+}
+
+#####################################################################
+
+# 
+sub handleParalogSim {
+    my ($paralogPairsHash, $q_id, $s_id, $evalue_mant, $evalue_exp) = @_;
+
+    # first time we have seen this pair.  remember the score
+    if ($q_id < $s_id) {
+	$paralogPairsHash->{$q_id}->{$s_id} = 
+	    {mant=>$evalue_mant, exp=>$evalue_exp} ;
+    } 
+
+    # now we are seeing it in opposite direction.  only keep it if we already
+    # saw it in first direction (ie, it is a mutual better hit)
+    else {
+	my $firstSeenScore = $paralogPairsHash->{$s_id}->{$q_id}
+	if ($firstSeenScore) {  # seen before in opp. direction
+	    my $score = computeParalogPairScore($scores->{mant}, 
+						$scores->{exp}, 
+						$evalue_mant, $evalue_exp);
+	    print PARA "$q_id\t$s_id\t$score\n";
+	}
+    }
+}
+
+sub computeParalogPairScore {
+    my ($mant1, $exp1, $mant2, $exp2) = @_;
+    # borrowed from orthomclPairs
+    
+    # if either mant is approx 0, use only exp
+    if ($mant1 < 0.01 || $mant2 < 0.01) return ($exp1 + $exp2) / -2;
+
+    # ( -log10(evalue1) - log10(evalue2) ) / 2
+    return (log($mant1 ** $exp1)/log(10) - log($mant2 ** $exp2)/log(10)) / 2; 
+}
+
+sub usage {
+    print STDERR "
+Map a set of proteins to OrthoMCL groups.  
+
+usage:  orthomclMapProteomeToGroups sorted_similarity_file self_similarity_file groups_file
+
+where:
+  sorte_similarity_file:   concise (orthomcl-style) similarity output for input
+                           proteins v. orthomcl proteins, sorted by query_id, 
+                           evalue_exp, evalue_mant
+  groups_file              standard orthomcl groups file
+
+output:
+  ./orthologGroups
+  ./paralogPairs
+";
+    exit(1);
+}
