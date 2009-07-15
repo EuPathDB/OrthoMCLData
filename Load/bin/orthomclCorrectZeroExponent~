@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+print STDERR "mapping to groups.  not implemented yet\n";
+
+&usage() unless scalar(@ARGV) == 2;
+
+
+sub usage {
+    print STDERR "
+Correct evalue exponents of zero, setting to smallest minus 1
+
+usage: orthomclCorrectZeroExponent similarity_file
+
+where: 
+  similarity_file: blast results in orthomcl standard format
+";
+exit(1);
+}
