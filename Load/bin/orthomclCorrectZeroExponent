@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+&usage() unless scalar(@ARGV) == 1;
+
+my $inputfile = $ARGV[0];
+
+open(F, $inputfile) || die "can't open similarity file '$inputfile'\n";
+# first pass, find smallest exponent
+my $minExp = 0;
+while(<F>) {
+  my @fields = split(/\s/);
+  $minExp = $fields[3] if $fields[3] < $minExp;
+}
+close(F);
+
+# second pass, do the replace
+open(F, $inputfile) || die "can't open similarity file '$inputfile'\n";
+# first pass, find smallest exponent
+while(<F>) {
+  my @fields = split(/\s/);
+  $fields[3] = $minExp if $fields[3] == 0;
+  print join("\t", @fields);
+}
+
+
+sub usage {
+    print STDERR "
+Correct evalue exponents of zero, setting to smallest minus 1
+
+usage: orthomclCorrectZeroExponent similarity_file
+
+where: 
+  similarity_file: blast results in orthomcl standard format (SimilarSequences table compatible).
+";
+exit(1);
+}
