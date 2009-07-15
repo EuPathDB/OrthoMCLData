@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+my $fastaFile = $ARGV[0];
+
+&usage unless $fastaFile;
+
+my $idHash;
+while(<STDIN>) {
+  chomp;
+  $idHash->{$_} = 1;
+}
+
+open(F, $fastaFile) || die "can't open fasta file '$fastaFile'\n";
+
+my $currentSeq;
+my $currentId;
+my $filteredCount;
+while(<F>) {
+    chomp;
+    # handle prev seq
+    if (/\>(\S+)/) {
+      if ($currentSeq) {
+	if (!$idHash->{$currentId}) {
+	  print $currentSeq;
+	} else {
+	  $filteredCount++;
+	}
+	$currentSeq = "";
+      }
+    }
+    $currentSeq .= "$_\n";
+  }
+}
+
+sub usage {
+  print "
+remove from a fasta file sequences with an ID found on STDIN
+
+usage:  cat ids > filterFromFasta fasta_file
+";
+}
