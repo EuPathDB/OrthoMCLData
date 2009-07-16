@@ -23,7 +23,7 @@ my $filteredCount;
 while (<F>) {
   chomp;
   # handle prev seq
-  if (/\>(\S+)/) {
+  if (/\>\d+ (\S+)/) {
     if ($currentSeq) {
       if (!$idHash->{$currentId}) {
 	print $currentSeq;
@@ -32,10 +32,16 @@ while (<F>) {
       }
       $currentSeq = "";
     }
+    $currentId = $1;
   }
   $currentSeq .= "$_\n";
 }
-
+if (!$idHash->{$currentId}) {
+  print $currentSeq;
+} else {
+  $filteredCount++;
+}
+print STDERR "filtered away $filteredCount sequences\n";
 
 sub usage {
   print "
