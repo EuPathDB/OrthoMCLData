@@ -10,13 +10,14 @@ use GUS::ObjRelP::DbiDatabase;
 use CBIL::Bio::SequenceUtils;
 use GUS::Supported::GusConfig;
 
-my ($gusConfigFile,$debug,$verbose,$outDir,$idSQL,$minLength);
+my ($gusConfigFile,$debug,$verbose,$outDir,$tarBall);
 &GetOptions("verbose!"=> \$verbose,
-            "outputDir=s" => \$outDir,"idSQL=s" => \$idSQL, 
-            "gusConfigFile=s" => \$gusConfigFile);
+            "outputDir=s" => \$outDir,
+            "gusConfigFile=s" => \$gusConfigFile,
+	    "tarBall=i" => \$tarBall);
 
 if(!$outDir){
-	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
 }
 
 
@@ -34,39 +35,83 @@ my $dbh = $db->getQueryHandle();
 
 $dbh->{LongReadLen} = 8192 * 1024;
 
-my $count = 0;
+my $fileNames = &getGroupNames;
 
-my $groupSQL = "select ortholog_group_id, name from apidb.OrthologGroup where number_of_members <= 100 and number_of_members > 1";
+&makeFiles;
 
-my $idStmt = $dbh->prepareAndExecute($groupSQL);
+&makeTarBalls if $tarBall;
 
-my $seqSQL = "select x.source_id, x.sequence from dots.externalaasequence x, apidb.orthologgroupaasequence g where g.aa_sequence_id = x.aa_sequence_id and g.ortholog_group_id = ?";
 
-my $seqStmt = $dbh->prepare($seqSQL);
 
-my %ids;
 
-my $outFile;
-my %done;
 
-while(my (@row) = $idStmt->fetchrow_array()){
-  $ids{$row[0]} = $row[1];
-}
+sub getGroupNames {
 
-foreach my $id (keys %ids) {
+  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= 100 and number_of_members > 1";
 
-  open(FILE, ">$outDir/$ids{$id}.msa");
+  my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
-  $seqStmt->execute($id);
+  my %files;
 
-  while(my (@row) = $seqStmt->fetchrow_array()){
-
-    my $defline = "\>".$row[0]."\n";
-    my $sequence = $row[1];
-
-    print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+  while(my (@row) = $idStmt->fetchrow_array()){
+    $files{$row[0]}{'id'} = $row[1];
+    $files{$row[0]}{'num'} = $row[2];
   }
-    close(file);
+
+  return \%files;
 }
 
+sub makeFiles {
 
+  my $seqSQL = "select ot.three_letter_abbrev || '|' || x.source_id, x.sequence from dots.externalaasequence x, apidb.orthomcltaxon ot,apidb.orthologgroupaasequence g where g.aa_sequence_id = x.aa_sequence_id and x.taxon_id = ot.taxon_id and g.ortholog_group_id = ?";
+
+  my $seqStmt = $dbh->prepare($seqSQL);
+
+  foreach my $name (keys %{$fileNames}) {
+
+    open(FILE, ">$outDir/$name");
+
+    $seqStmt->execute($fileNames->{$name}->{'id'});
+
+    while(my (@row) = $seqStmt->fetchrow_array()){
+
+      my $defline = "\>".$row[0]."\n";
+      my $sequence = $row[1];
+
+      print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+    }
+    close(FILE);
+
+  }
+}
+
+sub makeTarBalls {
+
+  my $num = 0;
+
+  my @tarFiles;
+
+  my $tarNum = 1;
+
+  opendir(DIR, $outDir) || die "Can't open directory '$outDir'";
+
+  while (defined (my $file = readdir (DIR))) {
+    next if ($file eq "." || $file eq "..");
+    $num += $fileNames->{$file}->{'num'};
+    push (@tarFiles,"$outDir/$file");
+    if ($num >= $tarBall) {
+      my $list = join (' ',@tarFiles);
+      `tar -xcf "$outDir/tarrBall_${tarNum}.tar.gz $list`;
+      `rm -f $list`;
+      @tarFiles=();
+      $num = 0;
+      $tarNum++;
+    }
+  }
+
+  my $finalList = join (' ',@tarFiles);
+  `tar -xcf "$outDir/tarrBall_${tarNum}.tar.gz $finalList`;
+
+  closedir(DIR);
+
+}
