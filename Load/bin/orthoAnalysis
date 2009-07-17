@@ -25,7 +25,7 @@ my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1300000 -e 1e-5";
 
 my $minLength = 10;
 my $maxStopCodonPercent = 20;
-my $fetchSql = "select aa_sequence_id, source_id, sequence FROM dots.externalaasequence";
+my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence from dots.externalaasequence x, apidb.orthomcltaxon ot where ot.taxon_id = x.taxon_id";
 
 &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
@@ -74,16 +74,11 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
-&updateOrthologGroups($mgr);
+#&updateOrthologGroups($mgr);
 
-#&extractFilesForMsa($mgr); #done manually while testing previous step
+&extractFilesForMsa($mgr, 500);
 
 #&runMuscleForMSAFile($mgr);
-
-#&updateOrthoMCLGroups-not called this($mgr, "muscle3.6");  #this is what makes the msa
-#muscle -in <inputfile> -out <outputfile> -clw -log       
-# must have a step to make the fasta files in groups but only those groups with less than 100 sequences
-#use extractGroupFastaFiles in OrthoMCLData/Load/bin to make the files - not tested yet
 
 #&loadMsaResult($mgr, $msaName);#where are we getting this file???
 
