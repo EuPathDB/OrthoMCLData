@@ -23,7 +23,7 @@ my $filteredCount;
 while (<F>) {
   chomp;
   # handle prev seq
-  if (/\>\d+ (\S+)/) {
+  if (/\>(\S+)/) {
     if ($currentSeq) {
       if (!$idHash->{$currentId}) {
 	print $currentSeq;
