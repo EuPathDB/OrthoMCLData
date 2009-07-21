@@ -185,16 +185,20 @@ sub handleDoneJobs {
       mkpath($localDoneDir);
       move("$localRunningDir/$doneJob", "$localDoneDir/$doneJob");
 
+      # zip blast result
+      $mgr->log("  gzipping blast result on cluster");
+      my $clusterRunningJobDir = "$clusterServerDir/$phase/runningJobs/$doneJob";
+      $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"gzip $clusterRunningJobDir/master/mainresult/blastSimilarity.out\"'");
+
       # copy result from cluster
       $mgr->log("  copying from cluster");
-      my $clusterRunningJobDir = "$clusterServerDir/$phase/runningJobs/$doneJob";
-      $mgr->getCluster()->copyFrom("$clusterRunningJobDir/master/mainresult", 'blastSimilarity.out', "$localDoneDir/$doneJob");
-      move("$localDoneDir/$doneJob/blastSimilarity.out", "$localDoneDir/$doneJob/${phase}BlastSimilarity.out");
+      $mgr->getCluster()->copyFrom("$clusterRunningJobDir/master/mainresult", 'blastSimilarity.out.gz', "$localDoneDir/$doneJob");
+      move("$localDoneDir/$doneJob/blastSimilarity.out.gz", "$localDoneDir/$doneJob/${phase}BlastSimilarity.out.gz");
 
 
       # clean up cluster dir
       $mgr->log("  cleaning up cluster job dir");
-      my $done = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
+      $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
 
       if ($phase eq 'phase2') { 
 	  deliverResult("$localDoneDir/$doneJob");
@@ -294,7 +298,9 @@ sub makeTaskFile {
       open(F, ">$localInputDir/task.prop") || die "Can't open task prop file '$localInputDir/task.prop' for writing";
 
     my $blastBinDir = $mgr->getConfig('blastBinDir');
-    my $blastArgs = $mgr->getConfig('blastArgs');
+    my $clusterUserName = $mgr->getConfig('clusterUserName');
+    my $clusterServer = $mgr->getConfig('clusterServer');
+    my $dbFilePath = $mgr->getConfig('dbFilePath');
 
     print F
 "blastBinDir=$blastBinDir
@@ -308,9 +314,14 @@ blastVendor=ncbi
 ";
     close(F);
 
+    # discover size of blast db (ie, count of orthomcl proteins)
+    my $dbSize = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"grep \\> $dbFilePath |wc -l\"'");
+
     # make blastParams file
+    my $blastArgs = $mgr->getConfig('blastArgs');
+    die "error: do not include -z arg in blastArgs property.  it is discovered dynamically" if $blastArgs =~ /z/;
     open(F, ">$localInputDir/blastParams") || die "Can't open blast params file '$localInputDir/blastParams' for writing";;
-    print F "$blastArgs\n";
+    print F "$blastArgs -z $dbSize\n";
     close(F);
 }
 
@@ -380,7 +391,7 @@ sub handleFailedJobs {
       # clean up cluster dir
       $mgr->log("  moving cluster job to failed dir");
       my $clusterRunningJobDir = "$clusterServerDir/$phase/runningJobs/$failedJob";
-      my $done = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"mv $clusterRunningJobDir $clusterServerDir/$phase/failedJobs\"'");
+      $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"mv $clusterRunningJobDir $clusterServerDir/$phase/failedJobs\"'");
     }
 }
 
