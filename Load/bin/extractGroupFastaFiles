@@ -4,6 +4,7 @@
 
 
 use strict;
+
 use lib "$ENV{GUS_HOME}/lib/perl";
 use Getopt::Long;
 use GUS::ObjRelP::DbiDatabase;
@@ -58,6 +59,10 @@ sub getGroupNames {
     $files{$row[0]}{'num'} = $row[2];
   }
 
+
+  my $num = scalar (keys %files);
+  print STDERR ("$groupSQL\n   $num groups returned\n");
+
   return \%files;
 }
 
@@ -66,6 +71,8 @@ sub makeFiles {
   my $seqSQL = "select ot.three_letter_abbrev || '|' || x.source_id, x.sequence from dots.externalaasequence x, apidb.orthomcltaxon ot,apidb.orthologgroupaasequence g where g.aa_sequence_id = x.aa_sequence_id and x.taxon_id = ot.taxon_id and g.ortholog_group_id = ?";
 
   my $seqStmt = $dbh->prepare($seqSQL);
+
+  my $num;
 
   foreach my $name (keys %{$fileNames}) {
 
@@ -79,10 +86,18 @@ sub makeFiles {
       my $sequence = $row[1];
 
       print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+
     }
+
+    $num++;
+
+    print STDERR ("$num files printed\n") if $num % 1000 == 0;
+
     close(FILE);
 
   }
+
+  print STDERR ("$num files printed\n") if $num;
 }
 
 sub makeTarBalls {
@@ -93,25 +108,32 @@ sub makeTarBalls {
 
   my $tarNum = 1;
 
-  opendir(DIR, $outDir) || die "Can't open directory '$outDir'";
+  my $fileNum;
 
-  while (defined (my $file = readdir (DIR))) {
-    next if ($file eq "." || $file eq "..");
+  foreach  my $file (keys %{$fileNames}) {
     $num += $fileNames->{$file}->{'num'};
-    push (@tarFiles,"$outDir/$file");
+    push (@tarFiles,"$file");
     if ($num >= $tarBall) {
       my $list = join (' ',@tarFiles);
-      `tar -xcf "$outDir/tarrBall_${tarNum}.tar.gz $list`;
+      chdir $outDir || die "Can't change directory to $outDir\n";
+      `tar -zcf $outDir/tarrBall_${tarNum}.tar.gz $list`;
+
+      print STDERR ("$outDir/tarrBall_${tarNum}.tar.gz\n");
       `rm -f $list`;
       @tarFiles=();
       $num = 0;
       $tarNum++;
     }
+    $fileNum++;
   }
 
   my $finalList = join (' ',@tarFiles);
-  `tar -xcf "$outDir/tarrBall_${tarNum}.tar.gz $finalList`;
+  chdir $outDir || die "Can't change directory to $outDir\n";
+  `tar -zcf $outDir/tarrBall_${tarNum}.tar.gz $finalList`;
+  `rm -f $finalList`;
 
-  closedir(DIR);
+  print STDERR ("$outDir/tarrBall_${tarNum}.tar.gz\n");
 
+
+  print STDERR ("$fileNum files used to make tar balls\n");
 }
