@@ -311,11 +311,14 @@ regex='(\\S+)'
 blastProgram=blastp
 blastParamsFile=blastParams
 blastVendor=ncbi
+printSimSeqsFile=yes
 ";
     close(F);
 
     # discover size of blast db (ie, count of orthomcl proteins)
-    my $dbSize = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"grep \\> $dbFilePath |wc -l\"'");
+    my $dbSizeOut = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"grep \\> $dbFilePath |wc -l\"'");
+    my @a = split(/\s/, $dbSizeOut);  # ignore output from login
+    my $dbSize = $a[$#a];
 
     # make blastParams file
     my $blastArgs = $mgr->getConfig('blastArgs');
