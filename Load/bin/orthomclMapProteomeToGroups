@@ -105,13 +105,19 @@ while(<SS>) {
     $evalue_exp = -181 unless $evalue_exp;
 
     my $bestOutSpeciesHit = $bestOutSpeciesHits->{$q_id};
-    if ($bestOutSpeciesHit->[0] > $evalue_exp
-       || ($bestOutSpeciesHit->[0] == $evalue_exp
-	  && $bestOutSpeciesHit->[1] > $evalue_mant)) {
+    if ($bestOutSpeciesHit->[1] > $evalue_exp
+       || ($bestOutSpeciesHit->[1] == $evalue_exp
+	  && $bestOutSpeciesHit->[0] > $evalue_mant)) {
       handleParalogSim($q_id, $s_id, $evalue_mant, $evalue_exp);
     }
 }
 print STDERR "\n";
+close(PARA);
+
+####################################################################
+# call mcl
+####################################################################
+system("");
 
 
 #####################################################################
