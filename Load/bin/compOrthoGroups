@@ -1,0 +1,187 @@
+#! /usr/bin/perl
+
+#########################################################################################
+### script to compare two sets of orthoMCL groups                                     ###
+#########################################################################################
+
+use strict;
+#use warnings;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+
+my ($groupFile1,$groupFile2,$outFile1,$outFile2, $log,$verbose);
+&GetOptions("groupFile1=s" => \$groupFile1,
+            "groupFile2=s" => \$groupFile2,
+            "outputFile1=s" => \$outFile1,
+            "outputFile2=s" => \$outFile2,
+            "log=s" => \$log,
+            "verbose!" => \$verbose);
+
+print STDERR "validation_1 --groupFile1 --groupFile2 --outputFile1 --outputFile2  --log --verbose\n" unless ($groupFile1 && $groupFile2 && $outFile1 && $outFile2  && $log);
+
+my $logFh = FileHandle->new(">$log");
+die "Can't open log file $log for writing\n" unless $logFh;
+
+my $g1Hsh = &makeGroupsHash($groupFile1);
+
+my $g2Hsh = &makeGroupsHash($groupFile2);
+
+my $sharedIdHsh = &makeSharedHash($g1Hsh,$g2Hsh);
+
+&makeFile($groupFile1,$outFile1);
+
+&makeFile($groupFile2,$outFile2);
+
+sub makeSharedHash {
+  my ($g1,$g2) = @_;
+
+  my %sharedHsh;
+
+  foreach my $id (keys %{$g1}) {
+    next() unless $g2->{$id} == 1;
+    $sharedHsh{$id} = 1;
+    delete ($g1->{$id});
+    delete ($g2->{$id});
+  }
+
+  my $num = scalar (keys %sharedHsh);
+
+  print $logFh("Total shared ids: $num\n");
+
+  return \%sharedHsh;
+}
+
+sub makeGroupsHash {
+  my ($gF) = @_;
+
+  my $gFh = FileHandle->new($gF);
+  die "Can't open file $gF\n" unless $gFh;
+
+  my $counter = 0;
+
+  my %groupsHsh;
+
+  while (<$gFh>) {
+    my $line = $_;
+
+    if ($line =~ /^$/) {
+      next();
+    }
+
+    $counter++;
+
+    my $sourceIds = &getSourceIdsFromLine($line);
+
+    if ($counter % 1000 == 0) {
+      print $logFh("Processed $counter lines\n");
+    }
+
+    foreach my $Id (@{$sourceIds}) {
+      $groupsHsh{$Id}++;
+    }
+  }
+
+  $gFh->close;
+
+  return \%groupsHsh;
+}
+
+sub getSourceIdsFromLine {
+  my ($line) = @_;
+
+  chomp($line);
+
+  my $counter++;
+
+  if ($counter % 1000 == 0) {
+    print $logFh("Processed $counter lines\n");
+  }
+
+  my ($orthoName, $restOfLine) = split(/\:/, $line);
+
+  $restOfLine =~ s/^\s+//;
+
+  my @elements =  split(/\s+/, $restOfLine);
+
+  my @sourceIds;
+
+  foreach my $element (@elements) {
+    next() unless $element;
+
+    my ($taxonCode, $sourceId) = split(/\|/, $element);
+
+    push(@sourceIds, split(/\//, $sourceId));
+  }
+
+  return \@sourceIds;
+}
+
+sub makeFile {
+   my ($gF,$oF) = @_;
+
+   my $gFh = FileHandle->new($gF);
+   die "Can't open file $gF\n" unless $gFh;
+
+   my $oFh = FileHandle->new(">$oF");
+   die "Can't open log file $oF for writing\n" unless $oFh;
+
+   my $singletonWithShared = 0;
+
+   my $totalClusters = 0;
+
+   my $totalWithShared = 0;
+
+   my $noSharedPairs = 0;
+
+   while (<$gFh>) {
+     my $line = $_;
+
+     $totalClusters++;
+
+     my $haveShared = 0;
+     my $pairNotShared = 0;
+
+     my $sourceIds = &getSourceIdsFromLine($line);
+
+     @{$sourceIds} = sort(@{$sourceIds});
+
+     for (my $i=0;$i<@{$sourceIds};$i++){
+       if ( @{$sourceIds} == 1 && $sharedIdHsh->{$sourceIds->[$i]} == 1) {
+	 $singletonWithShared++;
+       }
+       if ($sharedIdHsh->{$sourceIds->[$i]} == 1) {
+	 $haveShared = 1;
+	 my $n = $i+1;
+	 for ($n;$n<@{$sourceIds};$n++){
+	   if ($sharedIdHsh->{$sourceIds->[$n]} == 1){
+	     print $oFh "$sourceIds->[$i]|$sourceIds->[$n]\n";
+	   }
+	   else {
+	     $pairNotShared = 1;
+	     next();
+	   }
+	 }
+       }
+       else {
+	 next();
+       }
+     }
+     $noSharedPairs += $pairNotShared;
+     $totalWithShared += $haveShared;
+   }
+   print $logFh ("File 1 = $groupFile1\nFile 2 = $groupFile2\nTotal number of clusters: $totalClusters\n Number of clusters in this analysis (have at least one common id): $totalWithShared\n  Singleton clusters that are common ids: $singletonWithShared\n  Non-singleton clusters but have no common id pairs: $noSharedPairs\n");
+   $gFh->close;
+   $oFh->close;
+}
+
+
+
+#here's a sort of clumsy command line perl to see how many pairs are in both output files - the above code sorts so this can be done -could incorporate into the code
+#perl -e '$file1=$ARGV[0];open(FILE1,$file1);%hsh;while(<FILE1>){chomp;if($_ =~ /^(\S+)/){$hsh{$1}=1;}} close(FILE1); $file2=$ARGV[1];open(FILE2,$file2); $num; while(<FILE2>){chomp;if($_ =~ /^(\S+)/){ if ($hsh{$1}==1){$num++;}}} print "Total pairs in both files: $num\n";' validation_1.output1 validation_1.output2
+
+
+
+
+

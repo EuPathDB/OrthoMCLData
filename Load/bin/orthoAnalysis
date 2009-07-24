@@ -78,6 +78,8 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &extractFilesForMsa($mgr, 500);
 
+&copyFilesToComputeCluster($mgr,"groups","seqfiles");
+
 #&runMuscleForMSAFile($mgr);
 
 #&loadMsaResult($mgr, $msaName);#where are we getting this file???
