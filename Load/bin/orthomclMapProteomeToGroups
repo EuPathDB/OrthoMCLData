@@ -2,8 +2,8 @@
 use strict;
 
 &usage() unless scalar(@ARGV) == 3;
-my $similarityFile = $ARGV[0];
-my $selfSimilarityFile = $ARGV[1];
+my $selfSimilarityFile = $ARGV[0];
+my $similarityFile = $ARGV[1];
 my $groupsFile = $ARGV[2];
 
 my $threshold = -5;
@@ -32,7 +32,7 @@ while(<G>) {
     $group =~ s/\://;
     foreach my $protein (@line) {
 	$proteinGroupHash->{$protein} = $group;
-	print T "$protein\t$group" if $protein =~ /^pfal/;
+	print T "$protein\t$group\n" if $protein =~ /^pfal/;
     }
 }
 close(G);
@@ -46,6 +46,7 @@ close(T);
 # protein, used in second pass paralog processing
 my $prevQueryId;
 my $bestOutSpeciesHits;
+my $assignedProteins;
 
 open(ORTHO, ">orthologGroups") || die "Can't open orthologGroups file for writing\n";
 if ($similarityFile =~ m/\.gz$/) {
@@ -68,6 +69,7 @@ while(<S>) {
       print ORTHO "$q_id\t$proteinGroupHash->{$s_id}\n";
       $prevQueryId = $q_id;
       $bestOutSpeciesHits->{$q_id} = [$evalue_mant, $evalue_exp];
+      $assignedProteins->{$q_id} = 1;
     }
 }
 close(ORTHO);
@@ -98,9 +100,7 @@ while(<SS>) {
     my ($q_id, $s_id, $q_taxon, $s_taxon, $evalue_mant, $evalue_exp, $pctIdent, $pctMatch) = split(/\s/);
 
 
-    next if $q_id eq $s_id;
-
-    next if $pctMatch < 50;
+    next if ($q_id eq $s_id) || ($pctMatch < 50) || ($assignedProteins->{$q_id});
 
     $evalue_exp = -181 unless $evalue_exp;
 
