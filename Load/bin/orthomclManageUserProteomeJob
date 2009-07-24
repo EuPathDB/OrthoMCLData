@@ -279,7 +279,7 @@ sub handleNewJobs {
 	    # format db
 	    my $blastBinDir = $mgr->getConfig('blastBinDir');
 	    my $cmd = "$blastBinDir/formatdb -i $dbFilePath -p T";
-	    $mgr->log("formatting proteome.fasta for self-self blast");
+	    $mgr->log("Formatting proteome.fasta for self-self blast");
 	    $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"$cmd\"'");
 	}
 
@@ -300,7 +300,6 @@ sub makeTaskFile {
     my $blastBinDir = $mgr->getConfig('blastBinDir');
     my $clusterUserName = $mgr->getConfig('clusterUserName');
     my $clusterServer = $mgr->getConfig('clusterServer');
-    my $dbFilePath = $mgr->getConfig('dbFilePath');
 
     print F
 "blastBinDir=$blastBinDir
