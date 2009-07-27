@@ -310,7 +310,7 @@ regex='(\\S+)'
 blastProgram=blastp
 blastParamsFile=blastParams
 blastVendor=ncbi
-printSimSeqsFile=yes
+printSimSeqsFile=no
 ";
     close(F);
 
