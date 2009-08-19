@@ -11,10 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import oracle.sql.CLOB;
 
@@ -26,7 +22,7 @@ import org.apache.log4j.Logger;
 
 /**
  * @author xingao
- *
+ * 
  */
 public class LoadMsaPlugin implements Plugin {
 
@@ -77,7 +73,7 @@ public class LoadMsaPlugin implements Plugin {
         try {
             // get sequence map
             logger.info("Getting sequence names...");
-            Map<String, String> sequences = getSequences(connection);
+            //Map<String, String> sequences = getSequences(connection);
 
             logger.info("Getting svg content...");
 
@@ -94,10 +90,8 @@ public class LoadMsaPlugin implements Plugin {
                 int groupId = resultSet.getInt("ortholog_group_id");
                 String name = resultSet.getString("name");
 
-                List<String> contents = getContent(name, msaDir);
-                if (contents.size() > 0) {
-                    String content = fixContent(contents, sequences);
-
+                String content = getContent(name, msaDir);
+                if (content.length() > 0) {
                     // update clob
                     CLOB clob = CLOB.createTemporary(connection, false,
                             CLOB.DURATION_SESSION);
@@ -129,93 +123,92 @@ public class LoadMsaPlugin implements Plugin {
         }
     }
 
-    private Map<String, String> getSequences(Connection connection)
-            throws SQLException {
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT eas.aa_sequence_id, "
-                + "      eas.source_id, ot.three_letter_abbrev "
-                + " FROM dots.ExternalAaSequence eas, apidb.OrthomclTaxon ot, "
-                + "      apidb.OrthologGroupAaSequence ogs "
-                + " WHERE eas.aa_sequence_id = ogs.aa_sequence_id "
-                + "   AND eas.taxon_id = ot.taxon_id");
-        Map<String, String> sequences = new HashMap<String, String>();
-        while (rs.next()) {
-            String sequenceId = rs.getString("aa_sequence_id");
-            String sourceId = rs.getString("source_id");
-            String taxonName = rs.getString("three_letter_abbrev");
-            String name = taxonName + "|" + sourceId;
-            sequences.put(sequenceId, name.intern());
-        }
-        rs.close();
-        stmt.close();
-        return sequences;
-    }
+//    private Map<String, String> getSequences(Connection connection)
+//            throws SQLException {
+//        Statement stmt = connection.createStatement();
+//        ResultSet rs = stmt.executeQuery("SELECT eas.aa_sequence_id, "
+//                + "      eas.source_id, ot.three_letter_abbrev "
+//                + " FROM dots.ExternalAaSequence eas, apidb.OrthomclTaxon ot, "
+//                + "      apidb.OrthologGroupAaSequence ogs "
+//                + " WHERE eas.aa_sequence_id = ogs.aa_sequence_id "
+//                + "   AND eas.taxon_id = ot.taxon_id");
+//        Map<String, String> sequences = new HashMap<String, String>();
+//        while (rs.next()) {
+//            String sequenceId = rs.getString("aa_sequence_id");
+//            String sourceId = rs.getString("source_id");
+//            String taxonName = rs.getString("three_letter_abbrev");
+//            String name = taxonName + "|" + sourceId;
+//            sequences.put(sequenceId, name.intern());
+//        }
+//        rs.close();
+//        stmt.close();
+//        return sequences;
+//    }
 
-    private List<String> getContent(String name, File msaDir)
-            throws IOException {
-        List<String> content = new ArrayList<String>();
+    private String getContent(String name, File msaDir) throws IOException {
+        StringBuffer buffer = new StringBuffer();
 
-        File msaFile = new File(msaDir, name);
+        File msaFile = new File(msaDir, name + ".msa");
         if (!msaFile.exists()) {
             logger.warn("MSA not found for group name: " + name);
-            return content;
+            return buffer.toString();
         }
         String line;
         BufferedReader reader = new BufferedReader(new FileReader(msaFile));
         while ((line = reader.readLine()) != null) {
-            content.add(line);
+            buffer.append(line).append("\n");
         }
         reader.close();
-        return content;
+        return buffer.toString().trim();
     }
-
-    private String fixContent(List<String> contents,
-            Map<String, String> sequences) {
-        // get id mapping
-        int newMax = 0;
-        int oldOffset = 0;
-        for (String line : contents) {
-            if (line.matches("\\S+\\s{5,}\\S.*")) {
-                String[] parts = line.split("\\s{5,}", 2);
-
-                String oldId = parts[0];
-                String newId = sequences.get(oldId);
-                if (newId == null) newId = oldId;
-
-                if (newId.length() > newMax) newMax = newId.length();
-
-                int offset = line.indexOf(parts[1], oldId.length() + 4);
-                if (offset > oldOffset) oldOffset = offset;
-            }
-        }
-        int newOffset = newMax + 10; // get the offset of new alignments
-        if (newOffset < oldOffset) newOffset = oldOffset;
-
-        // generate output
-        StringBuffer buffer = new StringBuffer();
-        for (String line : contents) {
-            if (line.matches("\\S+\\s{5,}\\S.*")) {
-                String[] parts = line.split("\\s{5,}", 2);
-
-                String oldId = parts[0];
-                String newId = sequences.get(oldId);
-                if (newId == null) newId = oldId;
-
-                buffer.append(newId);
-                for (int i = newId.length(); i < newOffset; i++) {
-                    buffer.append(' ');
-                }
-                buffer.append(parts[1]);
-            } else if (line.matches("\\s{6,}.*")) {
-                for (int i = oldOffset; i < newOffset; i++) {
-                    buffer.append(' ');
-                }
-                buffer.append(line);
-            } else {
-                buffer.append(line);
-            }
-            buffer.append("\n");
-        }
-        return buffer.toString();
-    }
+    //
+    // private String fixContent(List<String> contents,
+    // Map<String, String> sequences) {
+    // // get id mapping
+    // int newMax = 0;
+    // int oldOffset = 0;
+    // for (String line : contents) {
+    // if (line.matches("\\S+\\s{5,}\\S.*")) {
+    // String[] parts = line.split("\\s{5,}", 2);
+    //
+    // String oldId = parts[0];
+    // String newId = sequences.get(oldId);
+    // if (newId == null) newId = oldId;
+    //
+    // if (newId.length() > newMax) newMax = newId.length();
+    //
+    // int offset = line.indexOf(parts[1], oldId.length() + 4);
+    // if (offset > oldOffset) oldOffset = offset;
+    // }
+    // }
+    // int newOffset = newMax + 10; // get the offset of new alignments
+    // if (newOffset < oldOffset) newOffset = oldOffset;
+    //
+    // // generate output
+    // StringBuffer buffer = new StringBuffer();
+    // for (String line : contents) {
+    // if (line.matches("\\S+\\s{5,}\\S.*")) {
+    // String[] parts = line.split("\\s{5,}", 2);
+    //
+    // String oldId = parts[0];
+    // String newId = sequences.get(oldId);
+    // if (newId == null) newId = oldId;
+    //
+    // buffer.append(newId);
+    // for (int i = newId.length(); i < newOffset; i++) {
+    // buffer.append(' ');
+    // }
+    // buffer.append(parts[1]);
+    // } else if (line.matches("\\s{6,}.*")) {
+    // for (int i = oldOffset; i < newOffset; i++) {
+    // buffer.append(' ');
+    // }
+    // buffer.append(line);
+    // } else {
+    // buffer.append(line);
+    // }
+    // buffer.append("\n");
+    // }
+    // return buffer.toString();
+    // }
 }
