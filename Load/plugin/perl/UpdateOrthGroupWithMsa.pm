@@ -23,6 +23,7 @@ my $argsDeclaration =
 	     name  => 'fileRegex',
 	     isList    => 0,
 	     reqd  => 1,
+	     mustExist      => 1,
 	     constraintFunc => undef,
 	   }),
 ];
