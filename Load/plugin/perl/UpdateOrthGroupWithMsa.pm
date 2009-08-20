@@ -105,9 +105,11 @@ sub getUnfinishedOrthologGroups {
 
   my $sqlGetUnfinishedGroups = <<"EOF";
      SELECT
-       ortholog_group_id
+       ortholog_group_id,name
      FROM apidb.OrthologGroup
-     WHERE multiple_sequence_alignment IS NULL
+     WHERE multiple_sequence_alignment IS NULL 
+     AND number_of_members > 1 
+     AND number_of_members <= 100
 EOF
 
   $self->log ("     SQL: $sqlGetUnfinishedGroups\n");
@@ -117,7 +119,7 @@ EOF
   my $sth = $dbh->prepareAndExecute($sqlGetUnfinishedGroups);
 
   while (my @row = $sth->fetchrow_array()) {
-    $unfinished{$row[0]}=1;
+    $unfinished{$row[1]}=$row[0];
   }
 
   my $num = scalar (keys %unfinished);
@@ -141,11 +143,12 @@ sub loadMsaResults {
   while (defined (my $file = readdir (DIR))) {
     next if ($file eq "." || $file eq "..");
 
-    my $groupId;
+    my $groupName;
 
     if ($file =~ /$regex/){
-      $groupId = $1;
-      $updatedGrps += $self->processFile($msaDir/$file,$groupId) if ($unfinished->{$groupId} == 1);
+      $groupName = $1;
+
+      $updatedGrps += $self->processFile("$msaDir/$file",$unfinished->{$groupName}) if ($unfinished->{$groupName} > 1);
 
       $self->log("$updatedGrps apidb.orthologgroup rows have been updated\n") if ($updatedGrps % 1000 ==0);
     }
@@ -160,7 +163,7 @@ sub loadMsaResults {
 sub processFile {
    my ($self, $file,$groupId) = @_;
 
-   open(FILE,$file);
+   open(FILE,$file) || die "Can't open $file for reading\n";
 
    my $msa;
 
@@ -178,6 +181,8 @@ sub updateOrthologGroup {
   my ($self, $msa, $groupId) = @_;
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup-> new({'ortholog_group_id'=>$groupId});
+
+  $orthologGroup->retrieveFromDB();
 
   $orthologGroup->set('multiple_sequence_alignment', $msa);
 
