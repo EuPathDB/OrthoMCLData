@@ -80,9 +80,19 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &copyFilesToComputeCluster($mgr,"groups","seqfiles");
 
+#&createMuscleDir       MAKE THIS STEP
+
+#&copyFilesToComputeCluster();  MAKE THIS STEP
+
 #&runMuscleForMSAFile($mgr);
 
-#&loadMsaResult($mgr, $msaName);#where are we getting this file???
+#$mgr->waitForCluster("Running muscle for msa", "waitMuscle");
+
+&copyFilesFromComputeCluster($mgr,, "msa");
+
+&loadMsaResultFiles($mgr,"msaFiles","(OG30_\\d+).msa","yes");
+
+&loadGroupTaxonMatrix($mgr);
 
 # &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
 
