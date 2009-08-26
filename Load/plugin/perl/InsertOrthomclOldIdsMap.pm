@@ -30,7 +30,7 @@ my $argsDeclaration =
 ];
 
 my $purpose = <<PURPOSE;
-Insert a mapping from old orthomcl sequence IDs to new ones.  
+Insert a mapping from old orthomcl sequence IDs to new ones.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
@@ -94,18 +94,19 @@ sub run {
     # process one taxon at a time
     foreach my $oldTaxon (keys(%$taxonMap)) {
 
-	my $newIDsHash = getNewIds($taxonMap->{$oldTaxon}); # from db
+        my $newTaxon = $taxonMap->{$oldTaxon};
+	my $newIDsHash = $self->getNewIds($newTaxon); # from db
 
-	my $missingIDsHash = subtract($oldIDsHash->{$oldTaxon}, $newIDsHash);
+	my $missingIDsHash = subtract($newTaxon, $newIDsHash);
 	my $candidateIDsHash = subtract($newIDsHash, $oldIDsHash->{$oldTaxon});
 
 	my $missingSeqHash = getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIdsFastaFile);
-	my $candidateSeqHash = getCandSeqHash($candidateIDsHash);
+	my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
 
 	foreach my $missingSeq (keys(%$missingSeqHash)) {
 	    my $foundId = $candidateSeqHash->{$missingSeq};
 	    if ($foundId) {
-		insertMatch($missingSeqHash->{$missingSeq}, $foundId);
+		$self->insertMatch($missingSeqHash->{$missingSeq}, $foundId);
 	    }
 	}
     }
@@ -137,7 +138,7 @@ sub getOldIds {
 }
 
 sub getNewIds {
-    my ($taxonAbbrev) = @_;
+    my ($self, $taxonAbbrev) = @_;
     my $sql = "
 select source_id
 from apidb.OrthomclTaxon ot, dots.ExternalAaSequence s
@@ -157,18 +158,16 @@ sub subtract {
     my ($idHash1, $idHash2) = @_;
 
     my $answer;
-    
+
     # $idHash1 - $idHash2
     foreach my $id2 (keys (%$idHash2)) {
-	if (!$idHash1->{$id2}) {
-	    $answer->{$id1} = 1;
-	}
+	$idHash1->{$id2} = undef;
     }
     return $answer;
 }
 
 sub getMissingSeqHash {
-    my ($oldTaxon, $missingIDsHash, $oldIdsFastaFile) = @_;
+    my ($oldTaxon, $missingIdsHash, $oldIdsFastaFile) = @_;
     my $currentSeq;
     my $currentTaxon;
     my $currentId;
@@ -176,7 +175,7 @@ sub getMissingSeqHash {
     open(F, $oldIdsFastaFile);
     while (<F>) {
 	chomp;
-	if (/\>(\w+)\|(\S+)/) {	    
+	if (/\>(\w+)\|(\S+)/) {
 	    if ($currentSeq) {
 		if ($currentTaxon eq $oldTaxon && $missingIdsHash->{$currentId}) {
 		    $missingSeqHash->{$currentSeq} = $currentId;
@@ -185,7 +184,6 @@ sub getMissingSeqHash {
 	    }
 	    $currentTaxon = $1;
 	    $currentId = $2;
-	    
 	} else {
 	    $currentSeq .= "$_\n";
 	}
@@ -199,7 +197,7 @@ sub getMissingSeqHash {
 }
 
 sub getCandSeqHash {
-    my ($candidateIDsHash) = @_;
+    my ($self, $taxonAbbrev, $candidateIDsHash) = @_;
     my $sql = "select sequence
 from apidb.OrthomclTaxon ot, dots.ExternalAaSequence s
 where ot.three_letter_abbrev = '$taxonAbbrev';
@@ -216,8 +214,8 @@ and s.source_id = ?";
 }
 
 sub insertMatch {
-    my ($oldId, $newId) = @_;
-} 
+    my ($self, $oldId, $newId) = @_;
+}
 
 
 # ----------------------------------------------------------------------
