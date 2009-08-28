@@ -94,7 +94,30 @@ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
 &loadGroupTaxonMatrix($mgr);
 
-# &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
+&generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
+
+my $downloadSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
+                   CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description ,x.sequence 
+                   from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
+                   apidb.orthologgroupaasequence oga 
+                   where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
+                   and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
+
+
+&extractProteinSeqs($mgr, "seqs_orthomcl-3", $downloadSql);
+
+&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/seqs_orthomcl-3.fsa", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/seqs_orthomcl-3.fasta", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
+
+my $deflineSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
+                   CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description
+                   from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
+                   apidb.orthologgroupaasequence oga 
+                   where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
+                   and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
+
+&extractProteinSeqs($mgr, "deflines", $deflineSql,"","",1);
+
+&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
 
 # my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh"; #do differently
 # my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
