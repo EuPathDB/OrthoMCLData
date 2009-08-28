@@ -27,7 +27,7 @@ import org.apache.log4j.Logger;
 
 /**
  * @author xingao
- *
+ * 
  */
 public class GenerateBioLayoutPlugin implements Plugin {
 
@@ -68,7 +68,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
     }
 
     public enum EdgeType {
-        BestHit, BetterHit, General
+        Ortholog, Coortholog, Inparalog, General
     }
 
     public static class Sequence {
@@ -102,6 +102,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
          * The weight is a function of pvalue, scaling into [0, 255]
          */
         public double Weight;
+        public boolean TwoWay = true;
 
         public OrthomclEdge(int queryId, int subjectId) {
             QueryId = queryId;
@@ -134,13 +135,19 @@ public class GenerateBioLayoutPlugin implements Plugin {
         }
     }
 
+    public static final int MAX_GROUP_SZIE = 500;
+
     private static final Logger logger = Logger.getLogger(GenerateBioLayoutPlugin.class);
 
     private Object processor;
     private Method saveMethod;
 
     private Connection connection;
-    private File rbhFile;
+    private PreparedStatement psSequence;
+    private PreparedStatement psBlast;
+    private PreparedStatement psEdge;
+    private PreparedStatement psUpdateImage;
+
     private File svgFile;
     private File signalFile;
 
@@ -162,29 +169,22 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
     public void setArgs(String[] args) throws OrthoMCLException {
-        if (args.length != 6) {
-            throw new OrthoMCLException("The args should be: <rbh_file> "
-                    + " <svg_template> <signal_file> <connection_string> "
-                    + " <login> <password>");
+        if (args.length != 5) {
+            throw new OrthoMCLException("The args should be: <svg_template> "
+                    + "<signal_file> <connection_string> <login> <password>");
         }
 
-        String rbhFileName = args[0];
-        String svgFileName = args[1];
-        String signalFileName = args[2];
-        String connectionString = args[3];
-        String login = args[4];
-        String password = args[5];
+        String svgFileName = args[0];
+        String signalFileName = args[1];
+        String connectionString = args[2];
+        String login = args[3];
+        String password = args[4];
 
         try {
             // create connection
             DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
             connection = DriverManager.getConnection(connectionString, login,
                     password);
-
-            // check if RBH file exists
-            rbhFile = new File(rbhFileName);
-            if (!rbhFile.exists() || !rbhFile.isFile())
-                throw new FileNotFoundException(rbhFileName);
 
             // check if SVG template file exists
             svgFile = new File(svgFileName);
@@ -205,90 +205,92 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
-    public void invoke() throws OrthoMCLException {
-        try {
-            PreparedStatement psSimilarity = connection.prepareStatement("SELECT "
-                    + "  s.pvalue_mant, s.pvalue_exp "
-                    + " FROM dots.Similarity s "
-                    + " WHERE (query_id = ? AND subject_id = ?) "
-                    + "  OR (query_id = ? AND subject_id = ?) ");
-            PreparedStatement psSequence = connection.prepareStatement("SELECT"
-                    + "      ogs.aa_sequence_id, eas.source_id, eas.taxon_id, "
-                    + "      eas.description "
-                    + " FROM apidb.OrthologGroupAaSequence ogs, "
-                    + "      dots.ExternalAaSequence eas "
-                    + " WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
-                    + "   AND ogs.ortholog_group_id = ?");
-            PreparedStatement psUpdateImage = connection.prepareStatement("UPDATE "
-                    + "  apidb.OrthologGroup "
-                    + " SET biolayout_image = ?, svg_content = ? "
-                    + " WHERE ortholog_group_id = ?");
+    public void invoke() throws Exception {
+        // prepare sqls
+        prepareQueries();
 
-            // read SVG template
-            logger.debug("Loading SVG template...");
-            String[] svgTemplate = loadSVGTemplate(svgFile);
+        // read SVG template
+        logger.debug("Loading SVG template...");
+        String[] svgTemplate = loadSVGTemplate(svgFile);
 
-            // read RBH file
-            logger.debug("Loading RBH file...");
-            Map<OrthomclEdge, OrthomclEdge> rbhEdges = loadRBHFile(rbhFile);
+        // load taxons
+        logger.debug("Loading taxon info...");
+        Map<Integer, Taxon> taxons = loadTaxons();
 
-            // load taxons
-            logger.debug("Loading taxon info...");
-            Map<Integer, Taxon> taxons = loadTaxons();
+        logger.debug("Getting unfinished groups...");
+        Statement stGroup = connection.createStatement();
+        ResultSet rsGroup = stGroup.executeQuery("SELECT og.name, "
+                + "      og.ortholog_group_id, og.number_of_members "
+                + " FROM apidb.OrthologGroup og "
+                + " WHERE biolayout_image IS NULL "
+                + "   AND number_of_members <= " + MAX_GROUP_SZIE
+                + "   AND number_of_members > 1 "
+                + " ORDER BY number_of_members ASC");
+        int groupCount = 0;
+        int sequenceCount = 0;
+        boolean hasMore = false;
+        while (rsGroup.next()) {
+            int groupId = rsGroup.getInt("ortholog_group_id");
+            String groupName = rsGroup.getString("name");
+            sequenceCount += rsGroup.getInt("number_of_members");
 
-            logger.debug("Getting unfinished groups...");
-            Statement stGroup = connection.createStatement();
-            ResultSet rsGroup = stGroup.executeQuery("SELECT og.name, "
-                    + "      og.ortholog_group_id, og.number_of_members "
-                    + " FROM apidb.OrthologGroup og "
-                    + " WHERE biolayout_image IS NULL "
-                    + "   AND number_of_members <= 500 "
-                    + " ORDER BY number_of_members ASC");
-            int groupCount = 0;
-            int sequenceCount = 0;
-            boolean hasMore = false;
-            while (rsGroup.next()) {
-                int groupId = rsGroup.getInt("ortholog_group_id");
-                String groupName = rsGroup.getString("name");
-                sequenceCount += rsGroup.getInt("number_of_members");
+            createLayout(groupId, groupName, taxons, svgTemplate);
 
-                createLayout(groupId, groupName, taxons, rbhEdges, svgTemplate,
-                        psSequence, psSimilarity, psUpdateImage);
-
-                groupCount++;
-                if (groupCount % 10 == 0) {
-                    // psUpdateImage.executeBatch();
-                    logger.debug(groupCount + " groups created...");
-                }
-
-                // only run 10000 seqs for each run
-                if (sequenceCount >= 10000) {
-                    hasMore = true;
-                    break;
-                }
+            groupCount++;
+            if (groupCount % 10 == 0) {
+                logger.debug(groupCount + " groups created...");
             }
-            // if (groupCount % 10 != 100) psUpdateImage.executeBatch();
 
-            logger.info("Total " + groupCount + " groups created.");
-            rsGroup.close();
-            stGroup.close();
-            psSimilarity.close();
-
-            // create signal id finished
-            if (!hasMore) signalFile.createNewFile();
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (IllegalArgumentException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (IllegalAccessException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (InvocationTargetException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (IOException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (SecurityException ex) {
-            throw new OrthoMCLException(ex);
+            // only run 10000 seqs for each run
+            if (sequenceCount >= 10000) {
+                hasMore = true;
+                break;
+            }
         }
+        logger.info("Total " + groupCount + " groups created.");
+        rsGroup.close();
+        stGroup.close();
+
+        psBlast.close();
+        psSequence.close();
+        psEdge.close();
+        psUpdateImage.close();
+
+        // create signal id finished
+        if (!hasMore) signalFile.createNewFile();
+    }
+
+    private void prepareQueries() throws SQLException {
+        psBlast = connection.prepareStatement("SELECT "
+                + "  s.evalue_mant, s.evalue_exp "
+                + " FROM apidb.SimilarSequences s "
+                + " WHERE (query_id = ? AND subject_id = ?) "
+                + "  OR (query_id = ? AND subject_id = ?) ");
+        psSequence = connection.prepareStatement("SELECT"
+                + "      ogs.aa_sequence_id, eas.source_id, eas.taxon_id, "
+                + "      eas.description "
+                + " FROM apidb.OrthologGroupAaSequence ogs, "
+                + "      dots.ExternalAaSequence eas "
+                + " WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
+                + "   AND ogs.ortholog_group_id = ?");
+        psUpdateImage = connection.prepareStatement("UPDATE "
+                + "  apidb.OrthologGroup "
+                + " SET biolayout_image = ?, svg_content = ? "
+                + " WHERE ortholog_group_id = ?");
+
+        String sqlPiece1 = " AS type, e.sequence_id_a AS query_id, "
+                + "  e.sequence_id_b AS subject_id FROM ";
+        String sqlPiece2 = " e, apidb.orthologgroupaasequence ogs_a, "
+                + " apidb.orthologgroupaasequence ogs_b "
+                + " WHERE ogs_a.aa_sequence_id = e.sequence_id_a "
+                + "   AND ogs_b.aa_sequence_id = e.sequence_id_b "
+                + "   AND ogs_a.ortholog_group_id = ? "
+                + "   AND ogs_b.ortholog_group_id = ? ";
+        psEdge = connection.prepareStatement("SELECT 'O'" + sqlPiece1
+                + "apidb.Ortholog" + sqlPiece2 + " UNION SELECT 'C'"
+                + sqlPiece1 + "apidb.Coortholog" + sqlPiece2
+                + " UNION SELECT 'P'" + sqlPiece1 + "apidb.Inparalog"
+                + sqlPiece2);
     }
 
     private String[] loadSVGTemplate(File svgFile) throws IOException {
@@ -326,38 +328,53 @@ public class GenerateBioLayoutPlugin implements Plugin {
         return template;
     }
 
-    private Map<OrthomclEdge, OrthomclEdge> loadRBHFile(File rbhFile)
-            throws IOException {
+    private Map<OrthomclEdge, OrthomclEdge> getEdges(int groupId,
+            Map<Integer, Sequence> sequences) throws IOException, SQLException {
+        int edgeIndex = 0;
         Map<OrthomclEdge, OrthomclEdge> edges = new HashMap<OrthomclEdge, OrthomclEdge>();
-        BufferedReader reader = new BufferedReader(new FileReader(rbhFile));
 
-        String line;
-        while ((line = reader.readLine()) != null) {
-            line = line.trim().toLowerCase();
-            if (line.length() == 0 || line.charAt(0) == '#') continue;
-
-            String[] parts = line.split("\\s+");
-            int queryId = Integer.parseInt(parts[0]);
-            int subjectId = Integer.parseInt(parts[1]);
+        // load ortholog, coortholog and inparalog edges
+        psEdge.setInt(1, groupId);
+        psEdge.setInt(2, groupId);
+        psEdge.setInt(3, groupId);
+        psEdge.setInt(4, groupId);
+        psEdge.setInt(5, groupId);
+        psEdge.setInt(6, groupId);
+        ResultSet rsEdge = psEdge.executeQuery();
+        while (rsEdge.next()) {
+            int queryId = rsEdge.getInt("query_id");
+            int subjectId = rsEdge.getInt("subject_id");
             OrthomclEdge edge = new OrthomclEdge(queryId, subjectId);
+            if (!edges.containsKey(edge)) {
+                String type = rsEdge.getString("type");
+                if (type.equals("O")) edge.Type = EdgeType.Ortholog;
+                else if (type.equals("C")) edge.Type = EdgeType.Coortholog;
+                else if (type.equals("P")) edge.Type = EdgeType.Inparalog;
 
-            int pos = parts[3].toLowerCase().indexOf('e');
-            if (pos >= 0) {
-                edge.PValueMant = Double.parseDouble(parts[3].substring(0, pos));
-                edge.PValueExp = Integer.parseInt(parts[3].substring(pos + 1));
-            } else {
-                edge.PValueMant = Double.parseDouble(parts[3]);
-                edge.PValueExp = 0;
+                edge.EdgeId = ++edgeIndex;
+                fillBlastScore(edge);
+                edges.put(edge, edge);
             }
-
-            if (parts[2].equalsIgnoreCase("o")) {
-                edge.Type = EdgeType.BestHit;
-            } else if (parts[2].equalsIgnoreCase("i")) {
-                edge.Type = EdgeType.BetterHit;
-            }
-            if (!edges.containsKey(edge)) edges.put(edge, edge);
         }
-        reader.close();
+        rsEdge.close();
+
+        // load general edges
+        Integer[] sequenceIds = new Integer[sequences.size()];
+        sequences.keySet().toArray(sequenceIds);
+        for (int i = 0; i < sequenceIds.length - 1; i++) {
+            for (int j = i + 1; j < sequenceIds.length; j++) {
+                int queryId = sequenceIds[i];
+                int subjectId = sequenceIds[j];
+                OrthomclEdge edge = new OrthomclEdge(queryId, subjectId);
+
+                if (!edges.containsKey(edge)) {
+                    edge.Type = EdgeType.General;
+                    edge.EdgeId = ++edgeIndex;
+                    fillBlastScore(edge);
+                    edges.put(edge, edge);
+                }
+            }
+        }
         return edges;
     }
 
@@ -379,40 +396,13 @@ public class GenerateBioLayoutPlugin implements Plugin {
     }
 
     private void createLayout(int groupId, String groupName,
-            Map<Integer, Taxon> taxons,
-            Map<OrthomclEdge, OrthomclEdge> rbhEdges, String[] svgTemplate,
-            PreparedStatement psSequence, PreparedStatement psSimilarity,
-            PreparedStatement psUpdateImage) throws IllegalArgumentException,
-            IllegalAccessException, InvocationTargetException, SQLException,
-            IOException {
-        // get a sequence-taxon map
-        Map<Integer, Sequence> sequenceMap = getSequences(groupId, psSequence);
-        int[] sequences = new int[sequenceMap.size()];
-        int index = 0;
-        for (int sequence : sequenceMap.keySet())
-            sequences[index++] = sequence;
+            Map<Integer, Taxon> taxons, String[] svgTemplate)
+            throws IllegalArgumentException, IllegalAccessException,
+            InvocationTargetException, SQLException, IOException {
+        // get a sequence map
+        Map<Integer, Sequence> sequenceMap = getSequences(groupId);
+        Map<OrthomclEdge, OrthomclEdge> edges = getEdges(groupId, sequenceMap);
 
-        // enumerate all pairs
-        Map<OrthomclEdge, OrthomclEdge> edges = new HashMap<OrthomclEdge, OrthomclEdge>();
-        int edgeIndex = 0;
-        for (int i = 0; i < sequences.length - 1; i++) {
-            for (int j = i + 1; j < sequences.length; j++) {
-                int queryId = sequences[i];
-                int subjectId = sequences[j];
-
-                OrthomclEdge edge = rbhEdges.get(new OrthomclEdge(queryId,
-                        subjectId));
-
-                // try to extract general edge if it's not in RBH
-                if (edge == null)
-                    edge = extractEdge(queryId, subjectId, psSimilarity);
-
-                if (edge != null) {
-                    edge.EdgeId = edgeIndex++;
-                    edges.put(edge, edge);
-                }
-            }
-        }
         // normalize the weights to be in [0..1]
         normalizeWeights(edges);
 
@@ -446,8 +436,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
         psUpdateImage.execute();
     }
 
-    private Map<Integer, Sequence> getSequences(int groupId,
-            PreparedStatement psSequence) throws SQLException {
+    private Map<Integer, Sequence> getSequences(int groupId)
+            throws SQLException {
         psSequence.setInt(1, groupId);
         ResultSet rsSequence = psSequence.executeQuery();
         Map<Integer, Sequence> sequenceMap = new HashMap<Integer, Sequence>();
@@ -463,35 +453,32 @@ public class GenerateBioLayoutPlugin implements Plugin {
         return sequenceMap;
     }
 
-    private OrthomclEdge extractEdge(int queryId, int subjectId,
-            PreparedStatement psSimilarity) throws SQLException {
+    private void fillBlastScore(OrthomclEdge edge) throws SQLException {
         // get all pairs
-        psSimilarity.setInt(1, queryId);
-        psSimilarity.setInt(2, subjectId);
-        psSimilarity.setInt(3, subjectId);
-        psSimilarity.setInt(4, queryId);
-        ResultSet rsSimilarity = psSimilarity.executeQuery();
+        psBlast.setInt(1, edge.QueryId);
+        psBlast.setInt(2, edge.SubjectId);
+        psBlast.setInt(3, edge.SubjectId);
+        psBlast.setInt(4, edge.QueryId);
+        ResultSet rsBlast = psBlast.executeQuery();
         int count = 0;
         double mantMax = 0;
         int expMax = Integer.MIN_VALUE;
-        while (rsSimilarity.next()) {
-            int pValueExp = rsSimilarity.getInt("pvalue_exp");
-            if (expMax < pValueExp) {
-                mantMax = rsSimilarity.getDouble("pvalue_mant");
+        while (rsBlast.next()) {
+            int pValueExp = rsBlast.getInt("evalue_exp");
+            double pValueMant = rsBlast.getDouble("evalue_mant");
+            if (expMax < pValueExp
+                    || (expMax == pValueExp && mantMax < pValueMant)) {
+                mantMax = pValueMant;
                 expMax = pValueExp;
             }
             count++;
         }
-        rsSimilarity.close();
+        rsBlast.close();
 
         // only output 2-way matches
-        if (count != 2) return null;
-        else {
-            OrthomclEdge edge = new OrthomclEdge(queryId, subjectId);
-            edge.PValueMant = mantMax;
-            edge.PValueExp = expMax;
-            return edge;
-        }
+        edge.TwoWay = (count == 2);
+        edge.PValueMant = mantMax;
+        edge.PValueExp = expMax;
     }
 
     private void normalizeWeights(Map<OrthomclEdge, OrthomclEdge> edges) {

@@ -9,7 +9,7 @@ package org.apidb.orthomcl.load.plugin;
  */
 public interface Plugin {
 
-    public void setArgs(String[] args) throws OrthoMCLException;
+    public void setArgs(String[] args) throws Exception;
     
-    public void invoke() throws OrthoMCLException;
+    public void invoke() throws Exception;
 }

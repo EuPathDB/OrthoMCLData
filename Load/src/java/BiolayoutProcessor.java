@@ -275,9 +275,9 @@ public class BiolayoutProcessor {
             int subjectId = Integer.parseInt(secondNode.getNodeName());
             OrthomclEdge oEdge = edges.get(new OrthomclEdge(queryId, subjectId));
 
-            if (oEdge.Type == EdgeType.BestHit) {
+            if (oEdge.Type == EdgeType.Ortholog || oEdge.Type == EdgeType.Coortholog) {
                 writer.print("edgeRbesthArray.push(");
-            } else if (oEdge.Type == EdgeType.BetterHit) {
+            } else if (oEdge.Type == EdgeType.Inparalog) {
                 writer.print("edgeRbetterhArray.push(");
             } else {
                 writer.print("edgeGeneralArray.push(");

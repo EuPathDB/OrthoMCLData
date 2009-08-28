@@ -20,8 +20,7 @@ public class PluginLoader {
      * @throws InstantiationException
      * @throws OrthoMCLException
      */
-    public static void main(String[] args) throws ClassNotFoundException,
-            InstantiationException, IllegalAccessException, OrthoMCLException {
+    public static void main(String[] args) throws Exception {
         // validate the input
         if (args.length < 1) {
             System.err.println("usage: javaPlugin <plugin_class> [<plugin_args>...]");
@@ -45,8 +44,7 @@ public class PluginLoader {
      * @throws OrthoMCLException
      */
     public static void invokePlugin(String pluginClassName, String[] pluginArgs)
-            throws ClassNotFoundException, InstantiationException,
-            IllegalAccessException, OrthoMCLException {
+            throws Exception {
         logger.info("Invoking plugin " + pluginClassName + "...");
         
         // create an instance of the plugin
@@ -58,7 +56,7 @@ public class PluginLoader {
         try {
             plugin.setArgs(pluginArgs);
             plugin.invoke();
-        } catch (OrthoMCLException ex) {
+        } catch (Exception ex) {
             throw ex;
         } finally {
             long end = System.currentTimeMillis();
