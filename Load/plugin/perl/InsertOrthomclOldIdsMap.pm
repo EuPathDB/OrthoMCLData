@@ -11,7 +11,7 @@ use FileHandle;
 my $argsDeclaration =
 [
     fileArg({name           => 'oldIdsFastaFile',
-            descr          => 'fasta file for old IDs.  defline has old ID with taxon prefix',
+            descr          => 'fasta file for old IDs.  defline has old ID with taxon prefix.  gzipped file is allowed',
             reqd           => 1,
             mustExist      => 1,
 	    format         => '>pfa|123445',
@@ -88,32 +88,40 @@ sub run {
     my $taxonMapFile = $self->getArg('taxonMapFile');
     my $oldIdsFastaFile = $self->getArg('oldIdsFastaFile');
 
-    my $taxonMap = getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
-    my $oldIDsHash = getOldIds($oldIdsFastaFile); #taxon->oldId->1
+    my $taxonMap = $self->getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
+    my $oldIDsHash = $self->getOldIds($oldIdsFastaFile); #taxon->oldId->1
 
     # process one taxon at a time
-    foreach my $oldTaxon (keys(%$taxonMap)) {
+    my @sortedOldTaxons = sort(keys(%$taxonMap));
+    foreach my $oldTaxon (@sortedOldTaxons) {
+        $self->log("processing old taxon: '$oldTaxon'");
 
+        $self->log("   number of old IDs: " . scalar(keys(%{$oldIDsHash->{$oldTaxon}})));
         my $newTaxon = $taxonMap->{$oldTaxon};
 	my $newIDsHash = $self->getNewIds($newTaxon); # from db
 
-	my $missingIDsHash = subtract($newTaxon, $newIDsHash);
-	my $candidateIDsHash = subtract($newIDsHash, $oldIDsHash->{$oldTaxon});
+	my $missingIDsHash = $self->subtract($oldIDsHash->{$oldTaxon}, $newIDsHash);
+	my $candidateIDsHash = $self->subtract($newIDsHash, $oldIDsHash->{$oldTaxon});
 
-	my $missingSeqHash = getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIdsFastaFile);
+	my $missingSeqHash = $self->getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIdsFastaFile);
 	my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
 
+	my $mappedCount;
 	foreach my $missingSeq (keys(%$missingSeqHash)) {
 	    my $foundId = $candidateSeqHash->{$missingSeq};
 	    if ($foundId) {
 		$self->insertMatch($missingSeqHash->{$missingSeq}, $foundId);
+		$mappedCount++;
 	    }
 	}
+	$self->log("   mapped $mappedCount");
+
     }
 }
 
 sub getTaxonMap {
-    my ($taxonMapFile) = @_;
+    my ($self, $taxonMapFile) = @_;
+    $self->log("Reading taxon map file") or die $!;
     open(F, $taxonMapFile);
     my $taxonMap;
     while (<F>) {
@@ -125,54 +133,79 @@ sub getTaxonMap {
 }
 
 sub getOldIds {
-    my ($oldIdsFastaFile) = @_;
-    open(F, $oldIdsFastaFile);
-    my $oldSeqMap;
+    my ($self, $oldIdsFastaFile) = @_;
+    $self->log("Getting old IDs from $oldIdsFastaFile");
+    if ($oldIdsFastaFile =~ /\.gz$/) {
+      open(F, "zcat $oldIdsFastaFile|") or die $!;
+    } else {
+      open(F, $oldIdsFastaFile) or die $!;
+    }
+    my $oldIdsMap;
+    my $count;
     while (<F>) {
 	chomp;
 	# >pfa|PF11_0233
 	if (/\>(\w+)\|(\S+)/) {
-	    $oldSeqMap->{$1}->{$2} = 1;
-	} 
+	    $oldIdsMap->{$1} = {} unless $oldIdsMap->{$1};
+	    $oldIdsMap->{$1}->{$2} = 1;
+	    $count++;
+	}
     }
+    $self->log("Total number of old Taxa: " . scalar(keys(%$oldIdsMap)));
+    $self->log("Total number of old IDs: $count");
+    close(F);
+    return $oldIdsMap;
 }
 
 sub getNewIds {
     my ($self, $taxonAbbrev) = @_;
+    $self->log("   getting new IDs from db for taxon '$taxonAbbrev' ");
     my $sql = "
 select source_id
 from apidb.OrthomclTaxon ot, dots.ExternalAaSequence s
-where ot.three_letter_abbrev = '$taxonAbbrev';
+where ot.three_letter_abbrev = '$taxonAbbrev'
 and ot.taxon_id = s.taxon_id
 ";
 
     my $newIds;
+    my $count;
     my $stmt = $self->prepareAndExecute($sql);
     while (my ($sourceId) = $stmt->fetchrow_array()) {
       $newIds->{$sourceId} = 1;
+      $count++;
     }
+    $self->log("   number of new IDs: $count");
+    $self->error("Did not find any new IDs for taxon $taxonAbbrev") unless $count;
     return $newIds;
 }
 
 sub subtract {
-    my ($idHash1, $idHash2) = @_;
+    my ($self, $idHash1, $idHash2) = @_;
 
     my $answer;
+    my @idArray1 = keys(%$idHash1);
+    my @idArray2 = keys(%$idHash2);
 
     # $idHash1 - $idHash2
-    foreach my $id2 (keys (%$idHash2)) {
-	$idHash1->{$id2} = undef;
+    foreach my $id1 (@idArray1) {
+	$answer->{$id1} = 1 unless $idHash2->{$id1};
     }
+    $self->log("   subtracting sets: " . scalar(@idArray1) . " minus " . scalar(@idArray2) . " = " . scalar(keys(%$answer)));
     return $answer;
 }
 
 sub getMissingSeqHash {
-    my ($oldTaxon, $missingIdsHash, $oldIdsFastaFile) = @_;
+    my ($self, $oldTaxon, $missingIdsHash, $oldIdsFastaFile) = @_;
     my $currentSeq;
     my $currentTaxon;
     my $currentId;
     my $missingSeqHash;
-    open(F, $oldIdsFastaFile);
+    $self->log("   getting missing seqs hash");
+    if ($oldIdsFastaFile =~ /\.gz$/) {
+      open(F, "zcat $oldIdsFastaFile|") or die $!;
+    } else {
+      open(F, $oldIdsFastaFile) or die $!;
+    }
     while (<F>) {
 	chomp;
 	if (/\>(\w+)\|(\S+)/) {
@@ -185,7 +218,7 @@ sub getMissingSeqHash {
 	    $currentTaxon = $1;
 	    $currentId = $2;
 	} else {
-	    $currentSeq .= "$_\n";
+	    $currentSeq .= "$_";
 	}
     }
     if ($currentSeq) {
@@ -193,17 +226,19 @@ sub getMissingSeqHash {
 	    $missingSeqHash->{$currentSeq} = $currentId;
 	}
     }
+    $self->log("   found " . keys(%$missingSeqHash) . " missing seqs");
     return $missingSeqHash;
 }
 
 sub getCandSeqHash {
     my ($self, $taxonAbbrev, $candidateIDsHash) = @_;
+    $self->log("   getting candidate seqs hash");
     my $sql = "select sequence
 from apidb.OrthomclTaxon ot, dots.ExternalAaSequence s
-where ot.three_letter_abbrev = '$taxonAbbrev';
+where ot.three_letter_abbrev = '$taxonAbbrev'
 and ot.taxon_id = s.taxon_id
 and s.source_id = ?";
-    my $stmt = $self->prepare($sql);
+    my $stmt = $self->getQueryHandle()->prepare($sql);
 
     my $candSeqHash;
     foreach my $candId (keys(%$candidateIDsHash)) {
@@ -211,10 +246,13 @@ and s.source_id = ?";
 	my ($seq) = $stmt->fetchrow_array();
 	$candSeqHash->{$seq} = $candId;
     }
+	$self->log("   found " . keys(%$candSeqHash) . " candidate seqs");
+    return $candSeqHash;
 }
 
 sub insertMatch {
     my ($self, $oldId, $newId) = @_;
+
 }
 
 
