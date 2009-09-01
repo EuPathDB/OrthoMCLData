@@ -205,6 +205,7 @@ sub getMissingSeqHash {
     my $currentTaxon;
     my $currentId;
     my $missingSeqHash;
+    my $duplicateSeqs;
     $self->log("   getting missing seqs hash");
     if ($oldIdsFastaFile =~ /\.gz$/) {
       open(F, "zcat $oldIdsFastaFile|") or die $!;
@@ -217,7 +218,7 @@ sub getMissingSeqHash {
 	    if ($currentSeq) {
 		if ($currentTaxon eq $oldTaxon && $missingIdsHash->{$currentId}) {
 		  if ($missingSeqHash->{$currentSeq}) {
-		    print STDERR "duplicate seq $currentTaxon $currentId\n";
+		      $duplicateSeqs++
 		  } else {
 		    $missingSeqHash->{$currentSeq} = $currentId;
 		  }
@@ -235,7 +236,7 @@ sub getMissingSeqHash {
 	    $missingSeqHash->{$currentSeq} = $currentId;
 	}
     }
-    $self->log("   found " . keys(%$missingSeqHash) . " missing seqs");
+    $self->log("   found " . keys(%$missingSeqHash) . " missing seqs (and $duplicateSeqs duplicate seqs)");
     return $missingSeqHash;
 }
 
@@ -250,12 +251,17 @@ and s.source_id = ?";
     my $stmt = $self->getQueryHandle()->prepare($sql);
 
     my $candSeqHash;
+    my $duplicateSeqs;
     foreach my $candId (keys(%$candidateIDsHash)) {
 	$stmt->execute($candId);
 	my ($seq) = $stmt->fetchrow_array();
-	$candSeqHash->{$seq} = $candId;
+	if ($candSeqHash->{$seq}) {
+	    $duplicateSeqs++;
+	} else {
+	    $candSeqHash->{$seq} = $candId;
+        }
     }
-	$self->log("   found " . keys(%$candSeqHash) . " candidate seqs");
+    $self->log("   found " . keys(%$candSeqHash) . " candidate seqs (and $duplicateSeqs duplicate seqs)");
     return $candSeqHash;
 }
 
