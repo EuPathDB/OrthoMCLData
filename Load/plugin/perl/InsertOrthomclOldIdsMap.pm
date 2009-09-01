@@ -91,6 +91,7 @@ sub run {
     my $taxonMap = $self->getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
     my $oldIDsHash = $self->getOldIds($oldIdsFastaFile); #taxon->oldId->1
 
+    my $totalMappedCount;
     # process one taxon at a time
     my @sortedOldTaxons = sort(keys(%$taxonMap));
     foreach my $oldTaxon (@sortedOldTaxons) {
@@ -100,10 +101,11 @@ sub run {
         my $newTaxon = $taxonMap->{$oldTaxon};
 	my $newIDsHash = $self->getNewIds($newTaxon); # from db
 
-	my $missingIDsHash = $self->subtract($oldIDsHash->{$oldTaxon}, $newIDsHash);
-	my $candidateIDsHash = $self->subtract($newIDsHash, $oldIDsHash->{$oldTaxon});
+	my $missingIDsHash = $self->subtract("old IDs from new IDs", $oldIDsHash->{$oldTaxon}, $newIDsHash);
 
 	my $missingSeqHash = $self->getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIdsFastaFile);
+
+	my $candidateIDsHash = $self->subtract("new IDs from old IDs", $newIDsHash, $oldIDsHash->{$oldTaxon});
 	my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
 
 	my $mappedCount;
@@ -112,11 +114,13 @@ sub run {
 	    if ($foundId) {
 		$self->insertMatch($missingSeqHash->{$missingSeq}, $foundId);
 		$mappedCount++;
+		$totalMappedCount++;
 	    }
 	}
 	$self->log("   mapped $mappedCount");
 
     }
+    return "mapped a total of $totalMappedCount proteins";
 }
 
 sub getTaxonMap {
@@ -147,6 +151,7 @@ sub getOldIds {
 	# >pfa|PF11_0233
 	if (/\>(\w+)\|(\S+)/) {
 	    $oldIdsMap->{$1} = {} unless $oldIdsMap->{$1};
+	    print STDERR "duplicate ID $1 $2\n" if $oldIdsMap->{$1}->{$2};
 	    $oldIdsMap->{$1}->{$2} = 1;
 	    $count++;
 	}
@@ -180,7 +185,7 @@ and ot.taxon_id = s.taxon_id
 }
 
 sub subtract {
-    my ($self, $idHash1, $idHash2) = @_;
+    my ($self, $msg, $idHash1, $idHash2) = @_;
 
     my $answer;
     my @idArray1 = keys(%$idHash1);
@@ -190,7 +195,7 @@ sub subtract {
     foreach my $id1 (@idArray1) {
 	$answer->{$id1} = 1 unless $idHash2->{$id1};
     }
-    $self->log("   subtracting sets: " . scalar(@idArray1) . " minus " . scalar(@idArray2) . " = " . scalar(keys(%$answer)));
+    $self->log("   subtracting $msg = " . scalar(keys(%$answer)));
     return $answer;
 }
 
@@ -211,7 +216,11 @@ sub getMissingSeqHash {
 	if (/\>(\w+)\|(\S+)/) {
 	    if ($currentSeq) {
 		if ($currentTaxon eq $oldTaxon && $missingIdsHash->{$currentId}) {
+		  if ($missingSeqHash->{$currentSeq}) {
+		    print STDERR "duplicate seq $currentTaxon $currentId\n";
+		  } else {
 		    $missingSeqHash->{$currentSeq} = $currentId;
+		  }
 		}
 		$currentSeq = "";
 	    }
