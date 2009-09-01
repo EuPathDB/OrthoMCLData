@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use strict;
+
+# find duplicate sequences in a fasta file
+my $currentSeq;
+my $currentId;
+my $seqHash;
+
+while (<STDIN>) {
+  chomp;
+  if (/\>(\S+)/) {
+    if ($currentSeq) {
+      $seqHash->{$currentSeq} = [] unless $seqHash->{$currentSeq};
+      push(@{$seqHash->{$currentSeq}}, $currentId);
+      $currentSeq = "";
+    }
+    $currentId = $1;
+  } else {
+    $currentSeq .= "$_";
+  }
+}
+if ($currentSeq) {
+  $seqHash->{$currentSeq} = [] unless $seqHash->{$currentSeq};
+  push(@{$seqHash->{$currentSeq}}, $currentId);
+
+}
+
+foreach my $ids (values (%$seqHash)) {
+  print join(", ", @$ids) . "\n" if scalar(@$ids) > 1;
+}
