@@ -35,19 +35,12 @@ PURPOSE_BRIEF
 
 my $notes = <<NOTES;
 The speciesFile is the proteome file with the following tab delimited columns:
-  clade
+  organism name
   3 letter species abrev
-  species
-  strain
-  version
-  files
-  URL to get file
-  data source
   ncbi tax id
-  Url for linkout
-  organism group
-  defline example
-  source_id example
+  data source
+  URL to get file
+  description
 
 NOTES
 
@@ -57,7 +50,6 @@ TABLES_AFFECTED
 
 my $tablesDependedOn = <<TABLES_DEPENDED_ON;
 ApiDB.OrthomclTaxon,
-
 TABLES_DEPENDED_ON
 
 my $howToRestart = <<RESTART;
@@ -65,7 +57,6 @@ Use the Undo plugin first.
 RESTART
 
 my $failureCases = <<FAIL_CASES;
-
 FAIL_CASES
 
 my $documentation = { purpose          => $purpose,
@@ -97,48 +88,47 @@ sub new {
 sub run {
     my ($self) = @_;
 
+    my $total;
+
     my $resourceFile = $self->getArgs()->{resourceFile};
 
     open(FILE, $resourceFile) || $self->userError("can't open resource file '$resourceFile'");
 
     while(<FILE>) {
-      next if ($_ =~ /CLADE/ || $_ =~ /^$/);
+      next if ($_ =~ /NAME/ || $_ =~ /^$/);
       chomp;
-      my $resource = $self->parseResourceLine($_);
-      if ($resource) {
-	$resource->submit();
-      }
+      my $total += $self->parseResourceLine($_);
     }
 
-    return "Done adding resources.";
+    return "Done adding resources. Loaded $total rows.";
 }
 
 sub parseResourceLine {
     my ($self, $line) = @_;
-    
-    my $resource;
+
+    my $num;
+
     my @resData = split('\t',$line);
-    
+
     my $dbh = $self->getQueryHandle();
     my $sql = "SELECT orthomcl_taxon_id
                FROM ApiDB.OrthomclTaxon
                WHERE three_letter_abbrev = ?";
-    
+
     my $stmt = $dbh->prepare($sql);
-    
-    if (scalar @resData >= 11 && length($resData[1]) == 3) {
-	    $resource = GUS::Model::ApiDB::OrthomclResource->new();
-	    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
-	    $resource->setOrthomclTaxonId($taxonId);
-	    $resource->setResourceName($resData[7]);
-	    $resource->setResourceUrl($resData[6]);
-	    $resource->setResourceVersion($resData[4]);
-	    $resource->setStrain($resData[3]);
-	    $resource->setDescription($resData[10]);
-	    $resource->setLinkoutUrl($resData[9]) if $resData[9];
+
+    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
+
+    my $resource = GUS::Model::ApiDB::OrthomclResource->new({'orthomcl_taxon_id'=>$taxonId,
+                                                          'resource_name'=>$resData[3],
+                                                          'resource_url'=>$resData[4],
+                                                          'description'=>$resData[5]});
+    unless ($resource->retrieveFromDB()) {
+      $num = $resource->submit();
+      $resource->undefPointerCache();
     }
-    
-    return $resource;
+
+    return $num;
 }
 
 sub getTaxonId {
@@ -154,7 +144,7 @@ sub getTaxonId {
 
 sub undoTables {
     my ($self) = @_;
-    
+
     return ('ApiDB.OrthomclResource',
 	    );
 }
