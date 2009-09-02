@@ -83,44 +83,54 @@ sub new {
 # ======================================================================
 
 sub run {
-    my ($self) = @_;
+  my ($self) = @_;
 
-    my $taxonMapFile = $self->getArg('taxonMapFile');
-    my $oldIdsFastaFile = $self->getArg('oldIdsFastaFile');
+  my $taxonMapFile = $self->getArg('taxonMapFile');
+  my $oldIDsFastaFile = $self->getArg('oldIdsFastaFile');
 
-    my $taxonMap = $self->getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
-    my $oldIDsHash = $self->getOldIds($oldIdsFastaFile); #taxon->oldId->1
+  my $taxonMap = $self->getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
+  my $oldIDsHash = $self->getOldIDs($oldIDsFastaFile); #taxon->oldID->1
 
-    my $totalMappedCount;
-    # process one taxon at a time
-    my @sortedOldTaxons = sort(keys(%$taxonMap));
-    foreach my $oldTaxon (@sortedOldTaxons) {
-        $self->log("processing old taxon: '$oldTaxon'");
+  my $totalMappedCount;
+  # process one taxon at a time
+  my @sortedOldTaxons = sort(keys(%$taxonMap));
+  foreach my $oldTaxon (@sortedOldTaxons) {
+    $self->log("processing old taxon: '$oldTaxon'");
 
-        $self->log("   number of old IDs: " . scalar(keys(%{$oldIDsHash->{$oldTaxon}})));
-        my $newTaxon = $taxonMap->{$oldTaxon};
-	my $newIDsHash = $self->getNewIds($newTaxon); # from db
+    $self->log("   number of old IDs: " . scalar(keys(%{$oldIDsHash->{$oldTaxon}})));
+    my $oldIDs = $oldIDsHash->{$oldTaxon};
+    my $newTaxon = $taxonMap->{$oldTaxon};
+    my $newIDsHash = $self->getNewIDs($newTaxon); # from db
 
-	my $missingIDsHash = $self->subtract("old IDs from new IDs", $oldIDsHash->{$oldTaxon}, $newIDsHash);
+    my $missingIDsHash = $self->subtract("old IDs from new IDs", $oldIDs, $newIDsHash);
 
-	my $missingSeqHash = $self->getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIdsFastaFile);
+    my $missingSeqHash = $self->getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIDsFastaFile);
 
-	my $candidateIDsHash = $self->subtract("new IDs from old IDs", $newIDsHash, $oldIDsHash->{$oldTaxon});
-	my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
+    my $candidateIDsHash = $self->subtract("new IDs from old IDs", $newIDsHash, $oldIDs);
+    my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
 
-	my $mappedCount;
-	foreach my $missingSeq (keys(%$missingSeqHash)) {
-	    my $foundId = $candidateSeqHash->{$missingSeq};
-	    if ($foundId) {
-		$self->insertMatch($missingSeqHash->{$missingSeq}, $foundId);
-		$mappedCount++;
-		$totalMappedCount++;
-	    }
+    my $idMappedCount = 0;
+    my $seqMappedCount = 0;
+    my $mappedToCount = 0;
+    foreach my $oldID (keys(%$oldIDs)) {
+      if ($newIDsHash->{$oldID}) {
+	$self->insertMatch($oldID, $oldID);
+	$idMappedCount++;
+      } else {
+	my $foundIDs = $candidateSeqHash->{$missingSeqHash->{$oldID}};
+	if ($foundIDs) {
+	  $seqMappedCount++;
+	  foreach my $foundID (@$foundIDs) {
+	    $mappedToCount++;
+	    $self->insertMatch($oldID, $foundID);
+	  }
 	}
-	$self->log("   mapped $mappedCount");
-
+      }
+      $totalMappedCount++;
     }
-    return "mapped a total of $totalMappedCount proteins";
+    $self->log("   mapped $idMappedCount by ID; $seqMappedCount by seq (mapped to $mappedToCount new IDs)");
+  }
+  return "mapped a total of $totalMappedCount proteins";
 }
 
 sub getTaxonMap {
@@ -136,33 +146,33 @@ sub getTaxonMap {
     return $taxonMap;
 }
 
-sub getOldIds {
-    my ($self, $oldIdsFastaFile) = @_;
-    $self->log("Getting old IDs from $oldIdsFastaFile");
-    if ($oldIdsFastaFile =~ /\.gz$/) {
-      open(F, "zcat $oldIdsFastaFile|") or die $!;
+sub getOldIDs {
+    my ($self, $oldIDsFastaFile) = @_;
+    $self->log("Getting old IDs from $oldIDsFastaFile");
+    if ($oldIDsFastaFile =~ /\.gz$/) {
+      open(F, "zcat $oldIDsFastaFile|") or die $!;
     } else {
-      open(F, $oldIdsFastaFile) or die $!;
+      open(F, $oldIDsFastaFile) or die $!;
     }
-    my $oldIdsMap;
+    my $oldIDsMap;
     my $count;
     while (<F>) {
 	chomp;
 	# >pfa|PF11_0233
 	if (/\>(\w+)\|(\S+)/) {
-	    $oldIdsMap->{$1} = {} unless $oldIdsMap->{$1};
-	    print STDERR "duplicate ID $1 $2\n" if $oldIdsMap->{$1}->{$2};
-	    $oldIdsMap->{$1}->{$2} = 1;
+	    $oldIDsMap->{$1} = {} unless $oldIDsMap->{$1};
+	    print STDERR "duplicate ID $1 $2\n" if $oldIDsMap->{$1}->{$2};
+	    $oldIDsMap->{$1}->{$2} = 1;
 	    $count++;
 	}
     }
-    $self->log("Total number of old Taxa: " . scalar(keys(%$oldIdsMap)));
+    $self->log("Total number of old Taxa: " . scalar(keys(%$oldIDsMap)));
     $self->log("Total number of old IDs: $count");
     close(F);
-    return $oldIdsMap;
+    return $oldIDsMap;
 }
 
-sub getNewIds {
+sub getNewIDs {
     my ($self, $taxonAbbrev) = @_;
     $self->log("   getting new IDs from db for taxon '$taxonAbbrev' ");
     my $sql = "
@@ -172,16 +182,16 @@ where ot.three_letter_abbrev = '$taxonAbbrev'
 and ot.taxon_id = s.taxon_id
 ";
 
-    my $newIds;
+    my $newIDs;
     my $count;
     my $stmt = $self->prepareAndExecute($sql);
-    while (my ($sourceId) = $stmt->fetchrow_array()) {
-      $newIds->{$sourceId} = 1;
+    while (my ($sourceID) = $stmt->fetchrow_array()) {
+      $newIDs->{$sourceID} = 1;
       $count++;
     }
     $self->log("   number of new IDs: $count");
     $self->error("Did not find any new IDs for taxon $taxonAbbrev") unless $count;
-    return $newIds;
+    return $newIDs;
 }
 
 sub subtract {
@@ -200,43 +210,39 @@ sub subtract {
 }
 
 sub getMissingSeqHash {
-    my ($self, $oldTaxon, $missingIdsHash, $oldIdsFastaFile) = @_;
+    my ($self, $oldTaxon, $missingIDsHash, $oldIDsFastaFile) = @_;
     my $currentSeq;
     my $currentTaxon;
-    my $currentId;
+    my $currentID;
     my $missingSeqHash;
     my $duplicateSeqs;
     $self->log("   getting missing seqs hash");
-    if ($oldIdsFastaFile =~ /\.gz$/) {
-      open(F, "zcat $oldIdsFastaFile|") or die $!;
+    if ($oldIDsFastaFile =~ /\.gz$/) {
+      open(F, "zcat $oldIDsFastaFile|") or die $!;
     } else {
-      open(F, $oldIdsFastaFile) or die $!;
+      open(F, $oldIDsFastaFile) or die $!;
     }
     while (<F>) {
 	chomp;
 	if (/\>(\w+)\|(\S+)/) {
 	    if ($currentSeq) {
-		if ($currentTaxon eq $oldTaxon && $missingIdsHash->{$currentId}) {
-		  if ($missingSeqHash->{$currentSeq}) {
-		      $duplicateSeqs++
-		  } else {
-		    $missingSeqHash->{$currentSeq} = $currentId;
-		  }
+		if ($currentTaxon eq $oldTaxon && $missingIDsHash->{$currentID}) {
+		  $missingSeqHash->{$currentID} = $currentSeq;
 		}
 		$currentSeq = "";
 	    }
 	    $currentTaxon = $1;
-	    $currentId = $2;
+	    $currentID = $2;
 	} else {
 	    $currentSeq .= "$_";
 	}
     }
     if ($currentSeq) {
-	if ($currentTaxon eq $oldTaxon && $missingIdsHash->{$currentId}) {
-	    $missingSeqHash->{$currentSeq} = $currentId;
+	if ($currentTaxon eq $oldTaxon && $missingIDsHash->{$currentID}) {
+	    $missingSeqHash->{$currentID} = $currentSeq;
 	}
     }
-    $self->log("   found " . keys(%$missingSeqHash) . " missing seqs (and $duplicateSeqs duplicate seqs)");
+    $self->log("   found " . keys(%$missingSeqHash) . " missing seqs");
     return $missingSeqHash;
 }
 
@@ -252,21 +258,18 @@ and s.source_id = ?";
 
     my $candSeqHash;
     my $duplicateSeqs;
-    foreach my $candId (keys(%$candidateIDsHash)) {
-	$stmt->execute($candId);
+    foreach my $candID (keys(%$candidateIDsHash)) {
+	$stmt->execute($candID);
 	my ($seq) = $stmt->fetchrow_array();
-	if ($candSeqHash->{$seq}) {
-	    $duplicateSeqs++;
-	} else {
-	    $candSeqHash->{$seq} = $candId;
-        }
+	$candSeqHash->{$seq} = [] unless $candSeqHash->{$seq};
+	push(@{$candSeqHash->{$seq}}, $candID);
     }
-    $self->log("   found " . keys(%$candSeqHash) . " candidate seqs (and $duplicateSeqs duplicate seqs)");
+    $self->log("   found " . keys(%$candSeqHash) . " candidate seqs");
     return $candSeqHash;
 }
 
 sub insertMatch {
-    my ($self, $oldId, $newId) = @_;
+    my ($self, $oldID, $newID) = @_;
 
 }
 
