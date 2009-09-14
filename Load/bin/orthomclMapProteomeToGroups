@@ -24,7 +24,6 @@ else {
 my $proteinGroupHash;
 print STDERR "\nScanning groups file $groupsFile to build hash\n";
 my $count;
-open(T, ">pfalgroups");
 while(<G>) {
   print STDERR "." if ($count++ % 10000) == 0;
     my @line = split(/\s/);
@@ -32,7 +31,6 @@ while(<G>) {
     $group =~ s/\://;
     foreach my $protein (@line) {
 	$proteinGroupHash->{$protein} = $group;
-	print T "$protein\t$group\n" if $protein =~ /^pfal/;
     }
 }
 close(G);

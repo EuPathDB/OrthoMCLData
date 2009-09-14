@@ -76,6 +76,7 @@ my $configFile = $ARGV[0];
 
 my $controlDir;
 my $clusterServerDir;
+my $dbSize;
 
 my $mgr = OrthoMCLData::Load::ProteomeJobMgr->new($configFile);
 
@@ -93,7 +94,7 @@ eval {
     handleNewJobs("$controlDir/newJobs",
 		  "$controlDir/phase1/runningJobs",
 		  "$clusterServerDir/phase1/runningJobs",
-		  'phase1');
+		  'phase1', $dbSize);
 
     # phase 2 (blast of user proteome against orthomcl proteins)
 
@@ -106,13 +107,29 @@ eval {
     handleNewJobs("$controlDir/phase1/doneJobs",
 		  "$controlDir/phase2/runningJobs",
 		  "$clusterServerDir/phase2/runningJobs",
-		  'phase2');
+		  'phase2', $dbSize);
 
 
 };
 
 $mgr->error("error: '$@'") if $@;
 
+
+sub findDbSize {
+    my ($localRunningDir, $clusterRunningDir) = @_;
+
+    my $clusterUserName = $mgr->getConfig('clusterUserName');
+    my $clusterServer = $mgr->getConfig('clusterServer');
+    my $dbFilePath = $mgr->getConfig('dbFilePath');
+
+    $mgr->log("Counting proteins in $dbFilePath");
+
+    # discover size of blast db (ie, count of orthomcl proteins)
+    my $dbSizeOut = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"grep \\> $dbFilePath |wc -l\"'");
+    my @a = split(/\s/, $dbSizeOut);  # ignore output from login
+    my $dbSize = $a[$#a];
+    return $dbSize;
+}
 
 ##################################################
 # handle running jobs
@@ -216,12 +233,12 @@ sub deliverResult {
 
     # map to groups
     $mgr->log("  mapping to groups");
-    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out $donePhase2JobDir/phase2BlastSimilarity.out $groupsFile >> $donePhase2JobDir/result");
+    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out.gz $donePhase2JobDir/phase2BlastSimilarity.out.gz $groupsFile >> $donePhase2JobDir/result");
 
     # zip result
     $mgr->log("  zipping");
     $mgr->runCmd(0, "zip $donePhase2JobDir/result.zip $donePhase2JobDir/result");
-    $mgr->runCmd(0, "rm $donePhase2JobDir/result");
+#    $mgr->runCmd(0, "rm $donePhase2JobDir/result");
 
     # email result
 }
@@ -240,7 +257,10 @@ sub handleNewJobs {
 
     foreach my $newJob (@newJobs) {
 	next if $newJob =~ /^\./;
-	$mgr->log("New job: $newJob");
+	$mgr->log("New $phase job: $newJob");
+
+	# discover size of orthomcl blast database
+	$dbSize = findDbSize() unless $dbSize;
 
 	my $clusterUserName = $mgr->getConfig('clusterUserName');
 	my $clusterServer = $mgr->getConfig('clusterServer');
@@ -268,7 +288,7 @@ sub handleNewJobs {
 	    $mgr->getConfig('dbFilePath');
 
 	# build input/ dir
-	makeTaskFile($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath);
+	makeTaskFile($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath, $dbSize);
 	makeControllerFile($localInputDir, $clusterInputDir);
 
 	# mirror job to cluster
@@ -294,7 +314,7 @@ sub validateProteomeFile {
 }
 
 sub makeTaskFile {
-    my ($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath) = @_;
+    my ($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath, $dbSize) = @_;
       open(F, ">$localInputDir/task.prop") || die "Can't open task prop file '$localInputDir/task.prop' for writing";
 
     my $blastBinDir = $mgr->getConfig('blastBinDir');
@@ -310,14 +330,9 @@ regex='(\\S+)'
 blastProgram=blastp
 blastParamsFile=blastParams
 blastVendor=ncbi
-printSimSeqsFile=no
+printSimSeqsFile=yes
 ";
     close(F);
-
-    # discover size of blast db (ie, count of orthomcl proteins)
-    my $dbSizeOut = $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"grep \\> $dbFilePath |wc -l\"'");
-    my @a = split(/\s/, $dbSizeOut);  # ignore output from login
-    my $dbSize = $a[$#a];
 
     # make blastParams file
     my $blastArgs = $mgr->getConfig('blastArgs');
