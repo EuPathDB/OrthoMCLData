@@ -7,6 +7,8 @@ package OrthoMCLData::Load::Plugin::InsertOrthomclOldIdsMap;
 use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
+use GUS::Model::SRes::DbRef;
+use GUS::Model::DoTS::AASequenceDbRef;
 
 my $argsDeclaration =
 [
@@ -17,7 +19,6 @@ my $argsDeclaration =
 	    format         => '>pfa|123445',
             constraintFunc => undef,
             isList         => 0, }),
-
     fileArg({name           => 'taxonMapFile',
             descr          => 'mapping from old taxon abbreviations to new',
             reqd           => 1,
@@ -25,8 +26,16 @@ my $argsDeclaration =
 	    format         => 'pfa pfal',
             constraintFunc => undef,
             isList         => 0, }),
-
-
+    stringArg({name           => 'dbName',
+            descr          => 'name of old OrthoMCL for externaldatbase row',
+            reqd           => 0,
+            constraintFunc => undef,
+            isList         => 0, }),
+    stringArg({name           => 'dbVersion',
+            descr          => 'version of old OrthoMCL for externaldatbaserelease row',
+            reqd           => 1,
+            constraintFunc => undef,
+            isList         => 0, })
 ];
 
 my $purpose = <<PURPOSE;
@@ -92,6 +101,11 @@ sub run {
   my $oldIDsHash = $self->getOldIDs($oldIDsFastaFile); #taxon->oldID->1
 
   my $totalMappedCount;
+
+  my $abbrevTaxonHsh = $self->getAbbrevTaxonHash;
+
+  my $dbRlsId = $self->getExternalDatabaseRelease;
+
   # process one taxon at a time
   my @sortedOldTaxons = sort(keys(%$taxonMap));
   foreach my $oldTaxon (@sortedOldTaxons) {
@@ -114,7 +128,7 @@ sub run {
     my $mappedToCount = 0;
     foreach my $oldID (keys(%$oldIDs)) {
       if ($newIDsHash->{$oldID}) {
-	$self->insertMatch($oldID, $oldID);
+	$self->insertMatch($oldID, $oldID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
 	$idMappedCount++;
       } else {
 	my $foundIDs = $candidateSeqHash->{$missingSeqHash->{$oldID}};
@@ -122,7 +136,7 @@ sub run {
 	  $seqMappedCount++;
 	  foreach my $foundID (@$foundIDs) {
 	    $mappedToCount++;
-	    $self->insertMatch($oldID, $foundID);
+	    $self->insertMatch($oldID, $foundID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
 	  }
 	}
       }
@@ -268,8 +282,90 @@ and s.source_id = ?";
     return $candSeqHash;
 }
 
+sub getAbbrevTaxonHash {
+  my ($self) = @_;
+
+  my $sql = "select three_letter_abbrev, taxon_id from apidb.OrthomclTaxon";
+
+  my $stmt = $self->prepareAndExecute($sql);
+
+  my %abbrevTaxonHsh;
+
+  while (my ($abbrev, $taxonId) = $stmt->fetchrow_array()) {
+    $abbrevTaxonHsh->{$abbrev} = $taxonId;
+  }
+
+  $stmt->finish();
+
+  return \%abbrevTaxonHsh;
+
+}
+
+
 sub insertMatch {
-    my ($self, $oldID, $newID) = @_;
+    my ($self, $oldId, $newId, $newTaxon, $abbrevTaxonHsh, $dbRlsId) = @_;
+
+    my $lowercasePrimaryId = lc($oldId);
+
+    my $dbRef = GUS::Model::SRes::DbRef -> new ({'lowercase_primary_identifier'=>$lowercasePrimaryId, 'external_database_release_id'=>$dbRlsId});
+    $dbRef->retrieveFromDB();
+
+    if (! $dbRef->getPrimaryIdentifier() || ($dbRef->getPrimaryIdentifier() && $dbRef->getPrimaryIdentifier() ne $oldId)) {
+      $dbRef->setPrimaryIdentifier($oldId);
+    }
+
+    my $taxonId = $abbrevTaxonHsh->{$newTaxon};
+
+    my $sql = "select aa_sequence_id
+from dots.ExternalAaSequence 
+where taxon_id = $taxonId
+and s.source_id = $newId";
+
+    my $stmt = $self->getQueryHandle()->prepareAndExecute($sql);
+
+    my ($aaSeqId) = $stmt->fetchrow_array();
+
+    $stmt->finish();
+
+    my $dbRefAASeq = GUS::Model::DoTS::DbRefNASequence->new ({'aa_sequence_id'=>$aaSeqId});
+
+    $dbRef->addChild($dbRefAASeq);
+
+    my $rows += $dbRef->submit();
+
+    $self->undefPointerCache();
+
+    return $rows;
+
+}
+
+sub getExternalDatabaseRelease{
+
+  my ($self) = @_;
+  my $name = $self->getArg("dbName");
+  if (! $name) {
+    $name = 'orthoMCL';
+  }
+
+  my $externalDatabase = GUS::Model::SRes::ExternalDatabase->new({"name" => $name});
+  $externalDatabase->retrieveFromDB();
+
+  if (! $externalDatabase->getExternalDatabaseId()) {
+    $externalDatabase->submit();
+  }
+  my $external_db_id = $externalDatabase->getExternalDatabaseId();
+
+  my $version = $self->getArg('dbVersion');
+
+  my $externalDatabaseRel = GUS::Model::SRes::ExternalDatabaseRelease->new ({'external_database_id'=>$external_db_id,'version'=>$version});
+
+  $externalDatabaseRel->retrieveFromDB();
+
+  if (! $externalDatabaseRel->getExternalDatabaseReleaseId()) {
+    $externalDatabaseRel->submit();
+  }
+  my $extDbRlsId = $externalDatabaseRel->getExternalDatabaseReleaseId();
+  return $extDbRlsId;
 
 }
 
