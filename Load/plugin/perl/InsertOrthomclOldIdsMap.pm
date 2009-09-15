@@ -79,7 +79,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 9 $',
+                      cvsRevision       => '$Revision: 31181 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -146,7 +146,6 @@ sub run {
   }
   return "mapped a total of $totalMappedCount proteins";
 }
-
 
 
 sub getTaxonMap {
