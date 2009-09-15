@@ -43,7 +43,7 @@ Insert a mapping from old orthomcl sequence IDs to new ones.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
-Insert a mapping from old orthomcl sequence IDs to new ones.  
+gaInsert a mapping from old orthomcl sequence IDs to new ones.  
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
@@ -292,7 +292,7 @@ sub getAbbrevTaxonHash {
   my %abbrevTaxonHsh;
 
   while (my ($abbrev, $taxonId) = $stmt->fetchrow_array()) {
-    $abbrevTaxonHsh->{$abbrev} = $taxonId;
+    $abbrevTaxonHsh{$abbrev} = $taxonId;
   }
 
   $stmt->finish();
