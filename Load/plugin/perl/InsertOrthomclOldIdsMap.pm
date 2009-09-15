@@ -147,6 +147,8 @@ sub run {
   return "mapped a total of $totalMappedCount proteins";
 }
 
+
+
 sub getTaxonMap {
     my ($self, $taxonMapFile) = @_;
     $self->log("Reading taxon map file") or die $!;
