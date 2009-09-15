@@ -9,6 +9,8 @@ use GUS::PluginMgr::Plugin;
 use FileHandle;
 use GUS::Model::SRes::DbRef;
 use GUS::Model::DoTS::AASequenceDbRef;
+use GUS::Model::SRes::ExternalDatabase;
+use GUS::Model::SRes::ExternalDatabaseRelease;
 
 my $argsDeclaration =
 [
