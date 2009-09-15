@@ -77,6 +77,7 @@ my $configFile = $ARGV[0];
 my $controlDir;
 my $clusterServerDir;
 my $dbSize;
+my $fakeTaxonAbbrev = 'xxxx';
 
 my $mgr = OrthoMCLData::Load::ProteomeJobMgr->new($configFile);
 
@@ -233,7 +234,7 @@ sub deliverResult {
 
     # map to groups
     $mgr->log("  mapping to groups");
-    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out.gz $donePhase2JobDir/phase2BlastSimilarity.out.gz $groupsFile >> $donePhase2JobDir/result");
+    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out.gz $donePhase2JobDir/phase2BlastSimilarity.out.gz $fakeTaxonAbbrev $groupsFile $donePhase2JobDir");
 
     # zip result
     $mgr->log("  zipping");
@@ -270,6 +271,8 @@ sub handleNewJobs {
 	my $masterDir = "$runningJobDir/master";
 	my $clusterRunningJobDir = "$clusterRunningDir/$newJob";
 	my $clusterInputDir = "$clusterRunningJobDir/input";
+
+	correctProteomeFile("$newJobDir/orig_proteome.fasta", "$newJobDir/proteome.fasta");
 
 	if ($phase eq 'phase1') {
 	    validateProteomeFile("$newJobDir/proteome.fasta");
@@ -311,6 +314,19 @@ sub handleNewJobs {
 
 sub validateProteomeFile {
     my ($proteomeFile) = @_;
+}
+
+sub correctProteomeFile {
+    my ($orig_proteomeFile, $proteomeFile) = @_;
+
+    open(O, $orig_proteomeFile) || die "can't open file $orig_proteomeFile";
+    open(N, ">$proteomeFile") || die "can't open file $proteomeFile for writing";
+    while (<P>) {
+	s/\>/\>$fakeTaxonAbbrev\|/ if (/\>/);
+	print N $_;
+    }
+    close(O);
+    close(N);
 }
 
 sub makeTaskFile {
