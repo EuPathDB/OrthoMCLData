@@ -320,7 +320,7 @@ sub insertMatch {
     my $sql = "select aa_sequence_id
 from dots.ExternalAaSequence 
 where taxon_id = $taxonId
-and s.source_id = $newId";
+and source_id = '$newId'";
 
     my $stmt = $self->getQueryHandle()->prepareAndExecute($sql);
 
@@ -328,7 +328,7 @@ and s.source_id = $newId";
 
     $stmt->finish();
 
-    my $dbRefAASeq = GUS::Model::DoTS::DbRefNASequence->new ({'aa_sequence_id'=>$aaSeqId});
+    my $dbRefAASeq = GUS::Model::DoTS::AASequenceDbRef->new ({'aa_sequence_id'=>$aaSeqId});
 
     $dbRef->addChild($dbRefAASeq);
 
