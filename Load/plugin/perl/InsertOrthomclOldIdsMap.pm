@@ -28,11 +28,6 @@ my $argsDeclaration =
 	    format         => 'pfa pfal',
             constraintFunc => undef,
             isList         => 0, }),
-    stringArg({name           => 'dbName',
-            descr          => 'name of old OrthoMCL for externaldatbase row',
-            reqd           => 0,
-            constraintFunc => undef,
-            isList         => 0, }),
     stringArg({name           => 'dbVersion',
             descr          => 'version of old OrthoMCL for externaldatbaserelease row',
             reqd           => 1,
@@ -343,10 +338,7 @@ and source_id = '$newId'";
 sub getExternalDatabaseRelease{
 
   my ($self) = @_;
-  my $name = $self->getArg("dbName");
-  if (! $name) {
-    $name = 'orthoMCL';
-  }
+  $name = 'OrthoMCL Old Seqs';
 
   my $externalDatabase = GUS::Model::SRes::ExternalDatabase->new({"name" => $name});
   $externalDatabase->retrieveFromDB();
