@@ -7,6 +7,10 @@ package OrthoMCLData::Load::Plugin::InsertOrthomclOldGroupsMap;
 use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
+use GUS::Model::SRes::ExternalDatabase;
+use GUS::Model::SRes::ExternalDatabaseRelease;
+use GUS::Model::SRes::DbRef;
+use GUS::Model::DoTS::AASequenceDbRef;
 
 my $argsDeclaration =
 [
@@ -100,10 +104,10 @@ sub run {
     my $sql = "
 select s.taxon_id,s.aa_sequence_id, r.primary_identifier
 from DoTS.AASequence s, DoTS.AASequenceDbRef sr, 
-     SRes.DBref r, sres.externaldatbase db, sres.externaldatbaserelease dbr
+     SRes.DBref r, sres.externaldatabase db, sres.externaldatabaserelease dbr
 where s.aa_sequence_id = sr.aa_sequence_id
   and r.db_ref_id = sr.db_ref_id and r.external_database_release_id = dbr.external_database_release_id
-  and dbr.version = $version and dbr.external_datbase_id = db.external_datbase_id
+  and dbr.version = $version and dbr.external_database_id = db.external_database_id
   and db.name = 'OrthoMCL Old Seqs'";
 
     my $stmt = $self->prepareAndExecute($sql);
@@ -135,7 +139,9 @@ sub getOldAbbrev2TaxonHsh {
     my ($oldAbbrev, $newAbbrev) = split(/\s/);
     $oldAbbrev2Taxon{$oldAbbrev} = $newAbbrev2Taxon->{$newAbbrev};
   }
+  my $num = scalar (keys %oldAbbrev2Taxon);
 
+  $self->log ("$num old abbreviations mapped to taxons\n");
   return \%oldAbbrev2Taxon;
 }
 
@@ -170,18 +176,23 @@ sub getOldId2Group {
     } else {
       open(F, $oldGroupsFile) or die $!;
     }
-    my $hash;
+    my %hash;
     while (<F>) {
 	chomp;
 	my @a = split(/\s/);
 	my $g = shift @a;
 	$g =~ s/\://;
 	foreach my $id (@a) {
-	  my ($abbrev,$sourceId) = split(/\t/,$id);
-	  $hash->{"$oldAbbrev2Taxon->{$abbrev}|$sourceId"} = $g;
+	  my ($abbrev,$sourceId) = split(/\|/,$id);
+	  $hash{"$oldAbbrev2Taxon->{$abbrev}|$sourceId"} = $g;
 	}
     }
-    return $hash;
+
+    my $num = scalar (keys %hash);
+
+    $self->log ("$num old source to old groups map\n");
+
+    return \%hash;
 }
 
 sub insertMatch {
@@ -242,8 +253,8 @@ sub getExternalDatabaseRelease{
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.DbRef',
-          'ApiDB.AASequenceDbRef',
+  return ('SRes.DbRef',
+          'DoTs.AASequenceDbRef',
 	 );
 }
 
