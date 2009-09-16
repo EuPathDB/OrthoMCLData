@@ -66,13 +66,14 @@ my $documentation = { purpose          => $purpose,
 
 # ----------------------------------------------------------------------
 
+
 sub new {
   my ($class) = @_;
   my $self = {};
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.5,
-                      cvsRevision       => '$Revision: 9 $',
+                      cvsRevision       => '$Revision$',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
