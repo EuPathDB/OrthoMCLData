@@ -463,6 +463,7 @@ sub mailResult {
   open(I, $infoFile) || die "Can't open info file '$infoFile'";
   my $info;
   while (<I>) {
+    chomp;
     my($key, $value) = split(/\=/);
     $info->{$key} = $value;
   }
