@@ -338,7 +338,7 @@ and source_id = '$newId'";
 sub getExternalDatabaseRelease{
 
   my ($self) = @_;
-  $name = 'OrthoMCL Old Seqs';
+  my $name = 'OrthoMCL Old Seqs';
 
   my $externalDatabase = GUS::Model::SRes::ExternalDatabase->new({"name" => $name});
   $externalDatabase->retrieveFromDB();
