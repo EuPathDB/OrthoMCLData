@@ -1,0 +1,86 @@
+#! /usr/bin/perl
+
+##########################################################################
+### add source_id to groups from file with source_id, group pairs      ###
+##########################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+use CBIL::Bio::SequenceUtils;
+
+my ($sourceIdFile,$inputGroupsFile,$outputGroupsFile, $taxonAbbrev, $log, $verbose);
+&GetOptions("sourceIdFile=s" => \$sourceIdFile,
+            "inputGroupsFile=s" => \$inputGroupsFile,
+            "outputGroupsFile=s" => \$outputGroupsFile,
+	    "taxonAbbrev=s" => \$taxonAbbrev,
+	    "log=s" => \$log,
+            "verbose!" => \$verbose);
+
+print STDERR "addSourceidsToGroups --sourceIdFile --inputGroupsfile --outputGroupsFile --$taxonAbbrev --log --verbose\n" unless ($sourceIdFile && $inputGroupsFile && $outputGroupsFile && $log);
+
+my $f  = ($sourceIdFile =~ /\.gz$|\.Z$/) ? "zcat $sourceIdFile|" : '<'. $sourceIdFile;
+my $sourceIdFh = FileHandle->new($f);
+die "Can't open file $sourceIdFile\n" unless $sourceIdFh;
+
+my $g  = ($inputGroupsFile =~ /\.gz$|\.Z$/) ? "zcat $inputGroupsFile|" : '<'. $inputGroupsFile;
+my $inputGroupsFh = FileHandle->new($g);
+die "Can't open file $inputGroupsFile\n" unless $inputGroupsFh;
+
+my $outputGroupsFh = FileHandle->new(">$outputGroupsFile");
+die "Can't open file $outputGroupsFile for writing\n" unless $outputGroupsFh;
+
+my $logFh = FileHandle->new(">$log");
+die "Can't open log file $log for writing\n" unless $logFh;
+
+my %idToGroupHsh;
+
+my $idNum;
+
+while (<$sourceIdFh>){
+  chomp;
+  if ($_ =~ /^$/) {
+    next;
+  }
+
+  my @arr = split(/\t/, $_);
+
+  $arr[0] =~ s/^\w+\|//;
+
+  push(@{$idToGroupHsh{$arr[1]}},$arr[0]);
+
+  $idNum++;
+
+  print $logFh "$idNum source_ids put in hash\n" if ($idNum % 1000 == 0);
+
+}
+
+print $logFh "$idNum source_ids put in hash\n";
+
+my $totalGroups = scalar (keys %idToGroupHsh);
+
+print $logFh "$totalGroups groups will have source_ids added to them\n"; 
+
+my $fixedGroups;
+
+while(<$inputGroupsFh>){
+  chomp;
+  my $line = $_;
+  if ($line =~ /^(OG\d+_\d+)\:/){
+
+    if (defined $idToGroupHsh{$1}) {
+      foreach my $id (@{$idToGroupHsh{$1}}){
+	$line .= " $taxonAbbrev|$id";
+      }
+      $fixedGroups++;
+
+      print $logFh "$fixedGroups groups have had source_ids added\n" if ($fixedGroups % 1000 == 0);
+    }
+  }
+
+  print $outputGroupsFh "$line\n";
+}
+
+print $logFh "$fixedGroups groups have had source_ids added\n";
