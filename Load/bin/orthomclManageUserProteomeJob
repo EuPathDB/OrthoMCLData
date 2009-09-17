@@ -305,6 +305,7 @@ sub handleNewJobs {
 
 	if ($phase eq 'phase1') {
 	    validateProteomeFile("$newJobDir/proteome.fasta");
+	    mailSubmit("$newJobDir/info.txt", $newJob);
 	}
 
         # move new job dir to running/
@@ -457,8 +458,31 @@ sub handleFailedJobs {
     }
 }
 
+sub mailSubmit {
+  my ($infoFile, $jobName) = @_;
+
+  my $msg = "
+Has been submitted.
+
+You will get a mail when it is done (6 to 24 hours).
+";
+  mailJob($infoFile, $jobName, "OrthoMCL Job - submitted", $msg);
+}
+
 sub mailResult {
-  my ($infoFile, $key) = @_;
+  my ($infoFile, $jobName) = @_;
+
+  my $msg = "
+Is now available at:
+  $link
+
+It will be available for 48 hours.
+";
+  mailJob($infoFile, $jobName, "OrthoMCL Job - done", $msg);
+}
+
+sub mailJob {
+  my ($infoFile, $jobName, $subject, $message) = @_;
 
   open(I, $infoFile) || die "Can't open info file '$infoFile'";
   my $info;
@@ -471,19 +495,16 @@ sub mailResult {
 
   my $link = $mgr->getConfig('resultBaseUrl');
   $link = "$link/$key";
-  open(MAIL, "|mail -s 'OrthoMCL Result' $info->{email}");
+  open(MAIL, "|mail -s '$subject' $info->{email}");
   print MAIL "
 Hello-
 
-Your OrthoMCL result for:
+Your OrthoMCL job:
+  ID:         $jobName
   Job:        $info->{jobName}
   Fasta file: $info->{fastaFileName}
   Submitted:  $info->{submitted}
-
-Is now available at:
-  $link
-
-It will be available for 48 hours.
+$message
 
 Please write to help\@orthomcl.org, referencing the above link, if you have any questions or problems.
 
