@@ -1,33 +1,37 @@
 #!/usr/bin/perl
 use strict;
 
-&usage() unless scalar(@ARGV) == 3;
+&usage() unless scalar(@ARGV) == 7;
 my $selfSimilarityFile = $ARGV[0];
 my $similarityFile = $ARGV[1];
 my $groupsFile = $ARGV[2];
-my $taxonAbbrev = $ARGV[3]
+my $taxonAbbrev = $ARGV[3];
 my $outputDir = $ARGV[4];
+my $mclBin = $ARGV[5];
+my $log = $ARGV[6];
 
 my $threshold = -5;
 my $minPercentMatch = 50;
 
 # correct for 0 exponent (do this upstream)
 
+open(LOG, ">$log") || die "could not open log file '$log'";
+
 ###########################################
 # make hash of orthomcl proteins to groups
 ###########################################
 if ($groupsFile =~ m/\.gz$/) {
-  open(G, "gunzip -c $groupsFile |") or die $!;
+  open(G, "gunzip -c $groupsFile |") or die "can't open groups file '$groupsFile'\n";
 }
 else {
-  open(G, "<$groupsFile") or die $!;
+  open(G, $groupsFile) or die "can't open groups file '$groupsFile'\n";
 }
 
 my $proteinGroupHash;
-print STDERR "\nScanning groups file $groupsFile to build hash\n";
+print LOG "\nScanning groups file $groupsFile to build hash\n";
 my $count;
 while(<G>) {
-  print STDERR "." if ($count++ % 10000) == 0;
+  print LOG "." if ($count++ % 10000) == 0;
     my @line = split(/\s/);
     my $group = shift(@line);
     $group =~ s/\://;
@@ -56,9 +60,9 @@ else {
   open(S, "<$similarityFile") or die $!;
 }
 
-print STDERR "\nScanning similarity file $similarityFile\n";
+print LOG "\nScanning similarity file $similarityFile\n";
 while(<S>) {
-  print STDERR ":" if ($count++ % 100000) == 0;
+  print LOG ":" if ($count++ % 100000) == 0;
     my ($q_id, $s_id, $q_taxon, $s_taxon, $evalue_mant, $evalue_exp, $pctIdent, $pctMatch) = split(/\s/);
 
     next if $q_id eq $s_id;
@@ -98,10 +102,10 @@ else {
   open(SS, "<$selfSimilarityFile") or die $!;
 }
 
-print STDERR "\nScanning self similarity file $selfSimilarityFile\n";
+print LOG "\nScanning self similarity file $selfSimilarityFile\n";
 $count = 0;
 while(<SS>) {
-  print STDERR "|" if ($count++ % 100000) == 0;
+  print LOG "|" if ($count++ % 100000) == 0;
     my ($q_id, $s_id, $q_taxon, $s_taxon, $evalue_mant, $evalue_exp, $pctIdent, $pctMatch) = split(/\s/);
 
 
@@ -116,13 +120,17 @@ while(<SS>) {
       handleParalogSim($q_id, $s_id, $evalue_mant, $evalue_exp);
     }
 }
-print STDERR "\n";
+print LOG "\n";
 close(PARA);
 
 ####################################################################
 # call mcl
 ####################################################################
-system("");
+my $mclCmd = "$mclBin $outputDir/paralogPairs --abc -I 1.5 -o $outputDir/paralogGroups";
+print LOG "\ncalling mcl: $mclCmd\n";
+system($mclCmd);
+my $status = $? >> 8;
+die "Failed with status $status running mcl" if ($status);
 
 
 #####################################################################
@@ -171,7 +179,7 @@ sub usage {
     print STDERR "
 Map an input proteome to OrthoMCL groups.
 
-usage:  orthomclMapProteomeToGroups similarity_file self_similarity_file groups_file output_dir
+usage:  orthomclMapProteomeToGroups similarity_file self_similarity_file groups_file taxon_abbrev output_dir mcl_bin
 
 where:
   similarity_file:         concise (orthomcl-style) similarity output for input
@@ -181,7 +189,9 @@ where:
                            proteome v. input proteins, sorted by query_id,
                            evalue (gzipped file supported).
   groups_file              standard orthomcl groups file
+  taxon_abbrev             taxon abbreviation that has been prepended to protein IDs
   output_dir:              where to write output files
+  mcl_bin:                 location of mcl binary
 
 note: simseqs format output by blastSimilarity is sorted by query_id, evalue
 

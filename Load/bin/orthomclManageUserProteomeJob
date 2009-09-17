@@ -5,6 +5,8 @@ use File::Path;
 use File::Copy;
 use GUS::Workflow::SshCluster;
 use OrthoMCLData::Load::ProteomeJobMgr;
+use Digest::MD5 qw(md5_hex);
+
 use strict;
 
 =pod 
@@ -66,7 +68,8 @@ orthomclUserProteomeJobs/
 ** info.txt file **
 email=
 fastaFileName=
-submitTime=
+submitted=
+jobName=
 
 =cut
 
@@ -110,7 +113,9 @@ eval {
 		  "$clusterServerDir/phase2/runningJobs",
 		  'phase2', $dbSize);
 
-
+    # deliver results (process blast results, and deliver results to user)
+    # for each phase 2 done job, process it, and delete when done
+    deliverResults();
 };
 
 $mgr->error("error: '$@'") if $@;
@@ -121,7 +126,7 @@ sub findDbSize {
 
     my $clusterUserName = $mgr->getConfig('clusterUserName');
     my $clusterServer = $mgr->getConfig('clusterServer');
-    my $dbFilePath = $mgr->getConfig('dbFilePath');
+    my $dbFilePath = $mgr->getConfig('blastDbFilePath');
 
     $mgr->log("Counting proteins in $dbFilePath");
 
@@ -152,7 +157,6 @@ sub checkRunningJobs {
     my $failedJobs;
     foreach my $runningJob (@runningJobs) {
 	next if $runningJob =~ /^\./;
-	print STDERR "checking for done: $runningJob\n";
 	my $clusterRunningJobDir = "$clusterServerDir/$phase/runningJobs/$runningJob";
 	if (!clusterTaskRunning($clusterRunningJobDir, $clusterUserName, $clusterServer)) {
 	  $mgr->log("Found $phase job that has finished running: $runningJob");
@@ -199,7 +203,7 @@ sub handleDoneJobs {
 
     foreach my $doneJob (@$doneJobs) {
 
-      $mgr->log("Handling done $phase job: $doneJob");
+      $mgr->log("Handling done $phase cluster job: $doneJob");
       mkpath($localDoneDir);
       move("$localRunningDir/$doneJob", "$localDoneDir/$doneJob");
 
@@ -218,30 +222,55 @@ sub handleDoneJobs {
       $mgr->log("  cleaning up cluster job dir");
       $mgr->runCmd(0, "ssh -2 $clusterUserName\@$clusterServer '/bin/bash -login -c \"rm -rf $clusterRunningJobDir\"'");
 
-      if ($phase eq 'phase2') { 
-	  deliverResult("$localDoneDir/$doneJob");
+    }
+}
 
-	  $mgr->log("  cleaning up local phase2 job dir");
-	  #remove("$localRunningDir/$doneJob");
-      }
+sub deliverResults {
+
+    my $phase2DoneDir = "$controlDir/phase2/doneJobs";
+    opendir(DIR, $phase2DoneDir) || die "Can't open phase2 doneJobs/ directory '$phase2DoneDir'\n";
+    my @donePhase2Jobs = readdir(DIR);
+    closedir(DIR);
+
+    foreach my $phase2DoneJob (@donePhase2Jobs) {
+      next if $phase2DoneJob =~ /^\./;
+      $mgr->log("Final processing for $phase2DoneJob");
+      deliverResult("$controlDir/phase2/doneJobs/$phase2DoneJob", $phase2DoneJob);
+      $mgr->log("  cleaning up local phase2 job dir");
+      copy("$controlDir/phase2/doneJobs/$phase2DoneJob", "/home/sfischer");
+      rmtree("$controlDir/phase2/doneJobs/$phase2DoneJob");
     }
 }
 
 sub deliverResult {
-    my ($donePhase2JobDir) = @_;
+    my ($donePhase2JobDir, $jobDir) = @_;
 
     my $groupsFile = $mgr->getConfig('groupsFile');
+    my $mclBin = $mgr->getConfig('mclBin');
+    my $resultDir = $mgr->getConfig('resultDir');
 
     # map to groups
     $mgr->log("  mapping to groups");
-    $mgr->runCmd(0, "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out.gz $donePhase2JobDir/phase2BlastSimilarity.out.gz $fakeTaxonAbbrev $groupsFile $donePhase2JobDir");
+    mkpath("$donePhase2JobDir/orthomclResult");
+    my $cmd = "orthomclMapProteomeToGroups $donePhase2JobDir/phase1BlastSimilarity.out.gz $donePhase2JobDir/phase2BlastSimilarity.out.gz $groupsFile $fakeTaxonAbbrev $donePhase2JobDir/orthomclResult $mclBin $donePhase2JobDir/log";
+    $mgr->log("  $cmd");
+    $mgr->runCmd(0, $cmd);
+    open(L, "$donePhase2JobDir/log");
+    while(<L>) {print STDERR $_;}
+    close(L);
 
     # zip result
+    copy("$donePhase2JobDir/info.txt", "$donePhase2JobDir/orthomclResult");
     $mgr->log("  zipping");
-    $mgr->runCmd(0, "zip $donePhase2JobDir/result.zip $donePhase2JobDir/result");
-#    $mgr->runCmd(0, "rm $donePhase2JobDir/result");
+    $mgr->runCmd(0, "zip -rj $donePhase2JobDir/orthomclResult $donePhase2JobDir/orthomclResult");
+
+    # move zipped result to delivery dir
+    my $key = md5_hex($jobDir);
+    move("$donePhase2JobDir/orthomclResult.zip", "$resultDir/orthomclResult-$key.zip");
 
     # email result
+    $mgr->log("  mailing notification");
+    mailResult("$donePhase2JobDir/info.txt", $key);
 }
 
 
@@ -288,7 +317,7 @@ sub handleNewJobs {
 
 	my $dbFilePath =  ($phase eq 'phase1')?
 	  "$clusterRunningJobDir/proteome.fasta" :
-	    $mgr->getConfig('dbFilePath');
+	    $mgr->getConfig('blastDbFilePath');
 
 	# build input/ dir
 	makeTaskFile($localInputDir, $clusterInputDir, $clusterRunningJobDir, $dbFilePath, $dbSize);
@@ -321,7 +350,7 @@ sub correctProteomeFile {
 
     open(O, $orig_proteomeFile) || die "can't open file $orig_proteomeFile";
     open(N, ">$proteomeFile") || die "can't open file $proteomeFile for writing";
-    while (<P>) {
+    while (<O>) {
 	s/\>/\>$fakeTaxonAbbrev\|/ if (/\>/);
 	print N $_;
     }
@@ -428,6 +457,43 @@ sub handleFailedJobs {
     }
 }
 
+sub mailResult {
+  my ($infoFile, $key) = @_;
+
+  open(I, $infoFile) || die "Can't open info file '$infoFile'";
+  my $info;
+  while (<I>) {
+    my($key, $value) = split(/\=/);
+    $info->{$key} = $value;
+  }
+  close(I);
+
+  my $link = $mgr->getConfig('resultBaseUrl');
+  $link = "$link/$key";
+  open(MAIL, "|mail -s 'OrthoMCL Result' $info->{email}");
+  print MAIL "
+Hello-
+
+Your OrthoMCL result for:
+  Job:        $info->{jobName}
+  Fasta file: $info->{fastaFileName}
+  Submitted:  $info->{submitted}
+
+Is now available at:
+  $link
+
+It will be available for 48 hours.
+
+Please write to help\@orthomcl.org, referencing the above link, if you have any questions or problems.
+
+Please do not reply to this mail.
+
+Thank you for using OrthoMCL,
+The OrthoMCL Team
+";
+  close(MAIL);
+}
+
 sub usage {
   print STDERR "
 
@@ -435,6 +501,8 @@ usage:
    orthomclManageUserProteomeJob config_file
 
 ** config file **
+blastDbFilePath= (blast database file)
+groupsFile=           (orthomcl groups to map blast results to)
 controlDir=           (local dir to control this job)
 clusterUserName=      (login to use to get into cluster server)
 clusterServer=        (name of machine)
@@ -447,10 +515,11 @@ nodePath=             (???)
 nodeClass=            (perl class to represent this type of node)
 taskSize=             (number of seqs to process in one batch)
 taskClass=            (perl class to manage that processing)
-orthomclProteinsFile= (blast database file)
 blastArgs=            (arguments for blast)
 blastBinDir=          (location of blast executable)
-groupsFile=           (orthomcl groups to map blast results to)
+mclBin=               (location of mcl executable)
+resultDir             (dir to write result zip file to)
+resultBaseUrl=          (URL to append job key to)
 ";
 
 exit(1);
