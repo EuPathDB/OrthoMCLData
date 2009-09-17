@@ -22,7 +22,7 @@ sub getConfig {
     while(<F>) {
       chomp;
       s/\s+$//;
-      next if /^\#/;
+      next if /^\#/ or /^$/;
       /^(\w+)\=(.+)/ || die "illegal line '$_' in config file '$self->{configFile}'\n";
       my $key=$1;
       my $val=$2;
