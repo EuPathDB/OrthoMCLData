@@ -119,12 +119,31 @@ my $deflineSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' |
 
 &copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
 
-# my $rbhFile = "$projectDir/$release/analysis_pipeline/primary/data/orthomclEng/master/mainresult/orthomcl.rbh"; #do differently
-# my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
+&makeInterproDownloadFile($mgr,"", "iprscan", "", "", "INTERPRO", "19.0", "OrthoMCL");
 
-# &createBiolayoutData($mgr, $rbhFile, $svgTemplate);
+my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
 
-# add step to map old ids to new ones
+#&createBiolayoutData($mgr, $svgTemplate); This ran far too slowly on the server, Jerric ran it manually on his PC and is looking into a solution - all indexes are in place and stats were run after loading the tables
+
+&makePairsDownloadFile($mgr, "OrthoMCL");
+
+&formatBlastFileForOrtho($mgr,"aa_seqs_OrthoMCL-3.0.fasta","/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-3.0","proteinSeqs","T");
+
+&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/blastSite"   , "/files/cbil2/orthoMCL/3.0/");
+
+#&copyFilesToComputeClusterForOrtho($mgr,'',"/files/cbil2/orthoMCL/3.0/blastSite","/genomics/binf/scratch/orthoMCL/3.0"); fix this and write step to copy the protein fasta file to cluster, rename proteinSeqs.fasta
+
+&mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/2/seqs_orthomcl-2.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
+
+&mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/2/groups_orthomcl-2.txt.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
+
+&mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/1/seqs_orthomcl-1.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
+
+&mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/1/orthomclGroups.txt","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
+
+#make all the download files gzipped
+
+#fix the pairs files to have abbrev|source_id, run a script on them - going forward the abbrev|source_id should be in the similarsequences table and the code should create the files that way
 
 #add step to map to inprot
 
