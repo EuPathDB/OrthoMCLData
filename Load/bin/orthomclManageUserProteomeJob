@@ -237,13 +237,12 @@ sub deliverResults {
       $mgr->log("Final processing for $phase2DoneJob");
       deliverResult("$controlDir/phase2/doneJobs/$phase2DoneJob", $phase2DoneJob);
       $mgr->log("  cleaning up local phase2 job dir");
-      copy("$controlDir/phase2/doneJobs/$phase2DoneJob", "/home/sfischer");
       rmtree("$controlDir/phase2/doneJobs/$phase2DoneJob");
     }
 }
 
 sub deliverResult {
-    my ($donePhase2JobDir, $jobDir) = @_;
+    my ($donePhase2JobDir, $jobId) = @_;
 
     my $groupsFile = $mgr->getConfig('groupsFile');
     my $mclBin = $mgr->getConfig('mclBin');
@@ -265,12 +264,11 @@ sub deliverResult {
     $mgr->runCmd(0, "zip -rj $donePhase2JobDir/orthomclResult $donePhase2JobDir/orthomclResult");
 
     # move zipped result to delivery dir
-    my $key = md5_hex($jobDir);
-    move("$donePhase2JobDir/orthomclResult.zip", "$resultDir/orthomclResult-$key.zip");
+    move("$donePhase2JobDir/orthomclResult.zip", "$resultDir/orthomclResult-$jobId.zip");
 
     # email result
     $mgr->log("  mailing notification");
-    mailResult("$donePhase2JobDir/info.txt", $key);
+    mailResult("$donePhase2JobDir/info.txt", $jobId);
 }
 
 
@@ -421,7 +419,7 @@ restart=no
 }
 
 sub startJob {
-    my ($clusterJobDir, $jobName) = @_;
+    my ($clusterJobDir, $jobId) = @_;
 
     my $clusterUserName = $mgr->getConfig('clusterUserName');
     my $clusterServer = $mgr->getConfig('clusterServer');
@@ -430,7 +428,7 @@ sub startJob {
     my $ppn = $mgr->getConfig('ppn');
 
     $mgr->log("Starting job on cluster in $clusterJobDir");
-    $mgr->runClusterTask($clusterUserName, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/$jobName.log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
+    $mgr->runClusterTask($clusterUserName, $clusterServer, "$clusterJobDir/processId", "$clusterJobDir/$jobId.log", "$clusterJobDir/input/controller.prop", $numNodes, 14400, $clusterQueue, $ppn);
 }
 
 
@@ -459,30 +457,31 @@ sub handleFailedJobs {
 }
 
 sub mailSubmit {
-  my ($infoFile, $jobName) = @_;
+  my ($infoFile, $jobId) = @_;
 
   my $msg = "
-Has been submitted.
-
-You will get a mail when it is done (6 to 24 hours).
+has been submitted.  You will get a mail when it is done (6 to 24 hours).
 ";
-  mailJob($infoFile, $jobName, "OrthoMCL Job - submitted", $msg);
+  mailJob($infoFile, $jobId, "OrthoMCL Job - submitted", $msg);
 }
 
 sub mailResult {
-  my ($infoFile, $jobName) = @_;
+  my ($infoFile, $jobId) = @_;
+
+  my $baseUrl = $mgr->getConfig('resultBaseUrl');
+  my $link = "$baseUrl$jobId";
 
   my $msg = "
-Is now available at:
+is complete.  The results are now available at:
   $link
 
-It will be available for 48 hours.
+They will be available for 48 hours.
 ";
-  mailJob($infoFile, $jobName, "OrthoMCL Job - done", $msg);
+  mailJob($infoFile, $jobId, "OrthoMCL Job - done", $msg);
 }
 
 sub mailJob {
-  my ($infoFile, $jobName, $subject, $message) = @_;
+  my ($infoFile, $jobId, $subject, $message) = @_;
 
   open(I, $infoFile) || die "Can't open info file '$infoFile'";
   my $info;
@@ -492,28 +491,31 @@ sub mailJob {
     $info->{$key} = $value;
   }
   close(I);
+  $info->{email} =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i or die "Illegal email address: '$info->{email}'\n";
 
-  my $link = $mgr->getConfig('resultBaseUrl');
-  $link = "$link/$key";
-  open(MAIL, "|mail -s '$subject' $info->{email}");
-  print MAIL "
-Hello-
+  my @a = split(/\@/, $info->{email});
+  my $login = shift(@a);
+
+  my $body = "
+Hello $login,
 
 Your OrthoMCL job:
-  ID:         $jobName
-  Job:        $info->{jobName}
+  ID:         $jobId
+  Name:       $info->{jobName}
   Fasta file: $info->{fastaFileName}
   Submitted:  $info->{submitted}
 $message
-
-Please write to help\@orthomcl.org, referencing the above link, if you have any questions or problems.
-
-Please do not reply to this mail.
-
 Thank you for using OrthoMCL,
 The OrthoMCL Team
 ";
-  close(MAIL);
+
+  open(SENDMAIL, "|/usr/sbin/sendmail -t") or die "Cannot open sendmail: $!";
+  print SENDMAIL "Subject: $subject\n";
+  print SENDMAIL "To: $info->{email}\n";
+  print SENDMAIL "From: help\@orthomcl.org\n";
+  print SENDMAIL "Content-type: text/plain\n\n";
+  print SENDMAIL $body;
+  close(SENDMAIL);
 }
 
 sub usage {
