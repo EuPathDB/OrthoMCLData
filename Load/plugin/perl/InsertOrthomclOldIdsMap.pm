@@ -123,7 +123,7 @@ sub run {
     my $mappedToCount = 0;
     foreach my $oldID (keys(%$oldIDs)) {
       if ($newIDsHash->{$oldID}) {
-	$self->insertMatch($oldID, $oldID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
+	$self->insertMatch($oldTaxon,$oldID, $oldID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
 	$idMappedCount++;
       } else {
 	my $foundIDs = $candidateSeqHash->{$missingSeqHash->{$oldID}};
@@ -131,7 +131,7 @@ sub run {
 	  $seqMappedCount++;
 	  foreach my $foundID (@$foundIDs) {
 	    $mappedToCount++;
-	    $self->insertMatch($oldID, $foundID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
+	    $self->insertMatch($oldTaxon, $oldID, $foundID, $newTaxon, $abbrevTaxonHsh,$dbRlsId);
 	  }
 	}
       }
@@ -299,7 +299,7 @@ sub getAbbrevTaxonHash {
 
 
 sub insertMatch {
-    my ($self, $oldId, $newId, $newTaxon, $abbrevTaxonHsh, $dbRlsId) = @_;
+    my ($self, $oldAbbrev, $oldId, $newId, $newTaxon, $abbrevTaxonHsh, $dbRlsId) = @_;
 
     my $lowercasePrimaryId = lc($oldId);
 
@@ -308,6 +308,10 @@ sub insertMatch {
 
     if (! $dbRef->getPrimaryIdentifier() || ($dbRef->getPrimaryIdentifier() && $dbRef->getPrimaryIdentifier() ne $oldId)) {
       $dbRef->setPrimaryIdentifier($oldId);
+    }
+
+    if (! $dbRef->getSecondaryIdentifier() || ($dbRef->getSecondaryaryIdentifier() && $dbRef->getSecondaryIdentifier() ne "$oldAbbrev|$oldId")) {
+      $dbRef->setSecondaryIdentifier("$oldAbbrev|$oldId");
     }
 
     my $taxonId = $abbrevTaxonHsh->{$newTaxon};
@@ -368,8 +372,8 @@ sub getExternalDatabaseRelease{
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.OrthologGroupAASequence',
-          'ApiDB.OrthologGroup',
+  return ('SRes.DbRef',
+          'DoTS.AASequenceDbRef',
 	 );
 }
 
