@@ -87,6 +87,9 @@ close(S);
 ####################################################################
 # scan similarities of input v. input to find paralog pairs
 ####################################################################
+
+exit(0) if $selfSimilarityFile eq 'NONE';  # skip paralog processing
+
 # find group based on best match of user's protein
 # also, while scanning, remember the best out-species hit for each input 
 # protein, used in second pass paralog processing
@@ -187,7 +190,8 @@ where:
                            evalue (gzipped file supported).
   self_similarity_file:    concise (orthomcl-style) similarity output for input
                            proteome v. input proteins, sorted by query_id,
-                           evalue (gzipped file supported).
+                           evalue (gzipped file supported).  Use 'NONE' to skip
+                           paralog processing and output.
   groups_file              standard orthomcl groups file
   taxon_abbrev             taxon abbreviation that has been prepended to protein IDs
   output_dir:              where to write output files
@@ -198,6 +202,7 @@ note: simseqs format output by blastSimilarity is sorted by query_id, evalue
 output:
   output_dir/orthologGroups
   output_dir/paralogPairs
+  output_dir/paralogGroups
 ";
     exit(1);
 }
