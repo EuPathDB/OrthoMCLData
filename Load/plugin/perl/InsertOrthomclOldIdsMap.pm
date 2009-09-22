@@ -310,7 +310,7 @@ sub insertMatch {
       $dbRef->setPrimaryIdentifier($oldId);
     }
 
-    if (! $dbRef->getSecondaryIdentifier() || ($dbRef->getSecondaryaryIdentifier() && $dbRef->getSecondaryIdentifier() ne "$oldAbbrev|$oldId")) {
+    if (! $dbRef->getSecondaryIdentifier() || ($dbRef->getSecondaryIdentifier() && $dbRef->getSecondaryIdentifier() ne "$oldAbbrev|$oldId")) {
       $dbRef->setSecondaryIdentifier("$oldAbbrev|$oldId");
     }
 
