@@ -302,8 +302,11 @@ sub handleNewJobs {
 	correctProteomeFile("$newJobDir/orig_proteome.fasta", "$newJobDir/proteome.fasta");
 
 	if ($phase eq 'phase1') {
-	    validateProteomeFile("$newJobDir/proteome.fasta");
-	    mailSubmit("$newJobDir/info.txt", $newJob);
+	    if (validateProteomeFile("$newJobDir/proteome.fasta")) {
+		mailSubmit("$newJobDir/info.txt", $newJob);
+	    } else {
+		mailInvalidFasta("$newJobDir/info.txt", $newJob);
+	    }
 	}
 
         # move new job dir to running/
@@ -342,6 +345,14 @@ sub handleNewJobs {
 
 sub validateProteomeFile {
     my ($proteomeFile) = @_;
+    my $length;
+    my $seqCount;
+    open(P, $proteomeFile) || die "\n";
+    while(<P>) {
+	$length += length($_);
+	$seqCount += 1 if /^\>\S+/;
+    }
+    return ($seqCount && $seqCount <= 100000 && $length <= $seqCount * 1000);
 }
 
 sub correctProteomeFile {
@@ -463,6 +474,15 @@ sub mailSubmit {
 has been submitted.  You will get a mail when it is done (6 to 24 hours).
 ";
   mailJob($infoFile, $jobId, "OrthoMCL Job - submitted", $msg);
+}
+
+sub mailInvalidFasta {
+  my ($infoFile, $jobId) = @_;
+
+  my $msg = "
+has an invalid sequence file.  The file must be in Fasta format and contain no more than 100,000 protein sequences.  Please resubmit with a valid file.
+";
+  mailJob($infoFile, $jobId, "OrthoMCL Job - invalid file", $msg);
 }
 
 sub mailResult {
