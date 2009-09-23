@@ -306,6 +306,7 @@ sub handleNewJobs {
 		mailSubmit("$newJobDir/info.txt", $newJob);
 	    } else {
 		mailInvalidFasta("$newJobDir/info.txt", $newJob);
+		rmtree($newJobDir);
 	    }
 	}
 
