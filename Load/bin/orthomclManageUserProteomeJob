@@ -287,9 +287,6 @@ sub handleNewJobs {
 	next if $newJob =~ /^\./;
 	$mgr->log("New $phase job: $newJob");
 
-	# discover size of orthomcl blast database
-	$dbSize = findDbSize() unless $dbSize;
-
 	my $clusterUserName = $mgr->getConfig('clusterUserName');
 	my $clusterServer = $mgr->getConfig('clusterServer');
 	my $newJobDir = "$newJobsDir/$newJob";
@@ -299,16 +296,21 @@ sub handleNewJobs {
 	my $clusterRunningJobDir = "$clusterRunningDir/$newJob";
 	my $clusterInputDir = "$clusterRunningJobDir/input";
 
-	correctProteomeFile("$newJobDir/orig_proteome.fasta", "$newJobDir/proteome.fasta");
-
 	if ($phase eq 'phase1') {
-	    if (validateProteomeFile("$newJobDir/proteome.fasta")) {
+	    if (validateProteomeFile("$newJobDir/orig_proteome.fasta")) {
 		mailSubmit("$newJobDir/info.txt", $newJob);
 	    } else {
+	        $mgr->log("  invalid fasta");
 		mailInvalidFasta("$newJobDir/info.txt", $newJob);
 		rmtree($newJobDir);
+		next;
 	    }
 	}
+
+	# discover size of orthomcl blast database
+	$dbSize = findDbSize() unless $dbSize;
+
+	correctProteomeFile("$newJobDir/orig_proteome.fasta", "$newJobDir/proteome.fasta");
 
         # move new job dir to running/
 	mkpath($runningJobDir);
@@ -353,6 +355,7 @@ sub validateProteomeFile {
 	$length += length($_);
 	$seqCount += 1 if /^\>\S+/;
     }
+    close(P);
     return ($seqCount && $seqCount <= 100000 && $length <= $seqCount * 1000);
 }
 
