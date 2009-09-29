@@ -54,9 +54,9 @@ The cladesFile is a depth first serialization of the clade tree.  Each clade has
 
 The head of a sample cladesFile looks like this: 
 ALL All
-|  ARCH Archea
-|  BACT Bacteria
-|  |  PROT Protobacteria
+|  ARCH Archea:common name
+|  BACT Bacteria:common name
+|  |  PROT Protobacteria:common name
 
 
 NOTES
@@ -187,13 +187,17 @@ sub parseCladeLine {
     return undef unless $line;
     # handle a clade, which looks like the following:
     # |  |  PRO Protobacteria
-    if ($line =~ /^([\|\s\s]*)(ALL|[A-Z]{4}) (\S+)/) {
+    if ($line =~ /^([\|\s\s]*)(ALL|[A-Z]{4}) ([\S|\s]+)/) {
       my $pipes = $1;
       my $cladeAbbrev = $2;
-      my $cladeName = $3;
+      my $cladeNames = $3;
+      my @nameArr = split(/\:/,$cladeNames);
+      my $cladeName = $nameArr[0];
+      my $commonName = $nameArr[1];
       $clade->{level} = length($pipes)/3; #count of pipe chars
       $clade->setThreeLetterAbbrev($cladeAbbrev);
       $clade->setName($cladeName);
+      $clade->setCommonName($commonName) if $commonName;
       $clade->setIsSpecies(0);
       $clade->setTaxonId(undef);
       $self->{clades}->{$clade->getThreeLetterAbbrev()} = $clade;
@@ -230,6 +234,7 @@ sub parseSpeciesFile {
 	  my $cladeAbbrev = $2;
 	  my $ncbiTaxonId = $3;
 	  $self->error("duplicate species abbrev '$speciesAbbrev'") if $speciesAbbrevs->{$speciesAbbrev};
+	  $self->error("species abbreviation must have 4 letters") if length($speciesAbbrev) != 4;
 	  $speciesAbbrevs->{$speciesAbbrev} = 1;
 	  $species->setThreeLetterAbbrev($speciesAbbrev);
 	  my $clade = $self->{clades}->{$cladeAbbrev};
