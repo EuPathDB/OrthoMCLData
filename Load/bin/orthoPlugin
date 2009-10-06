@@ -22,4 +22,5 @@ my $password = $gusConfig->getDatabasePassword();
 
 my $cmd = "java -Xmx1900m $sysProps -classpath $CLASSPATH org.apidb.orthomcl.load.plugin.PluginLoader $args $connString $login $password";
 
+print STDERR $cmd;
 system($cmd);

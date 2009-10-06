@@ -29,7 +29,7 @@ import org.apidb.orthomcl.load.plugin.Plugin;
  */
 public class GenerateBioLayoutPlugin implements Plugin {
 
-    public static final int MAX_GROUP_SZIE = 500;
+    public static final int MAX_GROUP_SIZE = 500;
 
     private static final Logger logger = Logger.getLogger(GenerateBioLayoutPlugin.class);
 
@@ -45,6 +45,14 @@ public class GenerateBioLayoutPlugin implements Plugin {
     public GenerateBioLayoutPlugin() throws ClassNotFoundException,
             InstantiationException, IllegalAccessException, SecurityException,
             NoSuchMethodException {
+        initialize();
+    }
+    
+    private void initialize() throws ClassNotFoundException,
+    InstantiationException, IllegalAccessException, SecurityException,
+    NoSuchMethodException {
+    	if (processor != null) System.
+    	
         Class<?> processorClass = Class.forName("BiolayoutProcessor");
         processor = processorClass.newInstance();
 
@@ -102,9 +110,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
                 + "      og.ortholog_group_id, og.number_of_members "
                 + " FROM apidb.OrthologGroup og "
                 + " WHERE biolayout_image IS NULL "
-                + "   AND number_of_members <= " + MAX_GROUP_SZIE
-                // + "   AND number_of_members > 1 "
-                + "   AND number_of_members > 3 "
+                + "   AND number_of_members <= " + MAX_GROUP_SIZE
+                + "   AND number_of_members > 1 "
                 + " ORDER BY number_of_members ASC");
         int groupCount = 0;
         int sequenceCount = 0;
@@ -124,10 +131,11 @@ public class GenerateBioLayoutPlugin implements Plugin {
             }
 
             // only run 10000 seqs for each run
-            // if (sequenceCount >= 10000) {
-            // hasMore = true;
-            // break;
-            // }
+            if (sequenceCount >= 10000) {
+            //hasMore = true;
+            //break;
+            	initialize();
+            }
         }
         logger.info("Total " + groupCount + " groups created.");
         rsGroup.close();
