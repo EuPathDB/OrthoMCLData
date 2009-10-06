@@ -176,6 +176,15 @@ public class BiolayoutProcessor {
         Map<Integer, List<Integer>> taxons = group.getNodeIdsByTaxons();
         for (int taxonId : taxons.keySet()) {
             List<Integer> taxon = taxons.get(taxonId);
+
+            // get color
+            VertexClass vertexClass = classes.getClassByID(taxonId);
+            Color color = Color.BLACK;
+            // get the color for this taxon
+            if (vertexClass != null) color = vertexClass.m_classColor;
+            String strColor = String.format("%1$06x",
+                    (color.getRGB() & 0xFFFFFF));
+
             Node node = group.nodes.get(taxon.get(0));
             writer.print("<g id=\"" + taxonId + "\" class=\"taxon\"");
             writer.print("  abbrev=\"" + node.abbreviation + "\"");
@@ -185,6 +194,7 @@ public class BiolayoutProcessor {
                 writer.print("<circle id=\"" + seqId + "\" class=\"gene\"");
                 writer.print("  cx=\"" + node.x + "\" cy=\"" + node.y + "\"");
                 writer.print("  r=\"5\" name=\"" + node.sourceId + "\"");
+                writer.print("  fill=\"#" + strColor + "\"");
                 writer.println("  description=\"" + node.description + "\" />");
             }
             writer.println("</g>");
