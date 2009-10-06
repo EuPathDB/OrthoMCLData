@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -98,6 +99,7 @@ public class BiolayoutProcessor {
         classes = frame.getClasses();
         graph = frame.getGraph();
         graph.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        graph.setSize(WIDTH, HEIGHT);
 
         Field field = LayoutFrame.class.getDeclaredField("m_nc");
         field.setAccessible(true);
@@ -158,8 +160,6 @@ public class BiolayoutProcessor {
     private void saveSVG(Group group, OutputStream svgStream) {
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(svgStream));
 
-        outputNodes(writer, group);
-        writer.flush();
         outputEdges(writer, group, EdgeType.Ortholog);
         writer.flush();
         outputEdges(writer, group, EdgeType.Coortholog);
@@ -167,6 +167,8 @@ public class BiolayoutProcessor {
         outputEdges(writer, group, EdgeType.Inparalog);
         writer.flush();
         outputEdges(writer, group, EdgeType.Normal);
+        writer.flush();
+        outputNodes(writer, group);
         writer.flush();
     }
 
@@ -247,7 +249,10 @@ public class BiolayoutProcessor {
     private void saveImage(OutputStream stream) throws IOException {
         BufferedImage image = new BufferedImage(WIDTH, HEIGHT,
                 BufferedImage.TYPE_INT_ARGB);
-        graph.updateBackImage(image.getGraphics());
+        Graphics graphics = image.getGraphics();
+        graphics.setColor(new Color(222, 222, 222));
+        graphics.fillRect(0, 0, WIDTH, HEIGHT);
+        graph.updateBackImage(graphics);
         ImageIO.write(image, "PNG", stream);
         stream.flush();
     }

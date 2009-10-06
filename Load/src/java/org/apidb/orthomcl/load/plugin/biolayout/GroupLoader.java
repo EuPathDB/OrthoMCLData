@@ -79,7 +79,7 @@ public class GroupLoader {
         loadCoorthologs(group);
         loadInparalogs(group);
         loadNormalEdges(group);
-        logger.debug("group #" + groupId + " loaded.");
+        //logger.debug("group #" + groupId + " loaded.");
         return group;
     }
 
@@ -87,12 +87,7 @@ public class GroupLoader {
         psSequence.setInt(1, group.groupId);
         ResultSet resultSet = psSequence.executeQuery();
 
-        boolean first = true;
         while (resultSet.next()) {
-            if (first) {
-                first = false;
-                logger.debug("query executed");
-            }
             Node node = new Node();
             node.sequenceId = resultSet.getInt("aa_sequence_id");
             node.sourceId = resultSet.getString("source_id");

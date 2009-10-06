@@ -126,7 +126,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
             group.name = rsGroup.getString("name");
             sequenceCount += rsGroup.getInt("number_of_members");
 
-            logger.debug("creating biolayout...");
+            //logger.debug("creating biolayout...");
             createLayout(group);
 
             groupCount++;
@@ -186,7 +186,6 @@ public class GenerateBioLayoutPlugin implements Plugin {
         psUpdateImage.setInt(3, group.groupId);
         // psUpdateImage.addBatch();
         psUpdateImage.execute();
-
-        logger.debug("image & svg saved.");
+        //logger.debug("image & svg saved.");
     }
 }
