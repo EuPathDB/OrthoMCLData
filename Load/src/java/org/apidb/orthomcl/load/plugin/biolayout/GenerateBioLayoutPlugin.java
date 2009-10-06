@@ -47,12 +47,16 @@ public class GenerateBioLayoutPlugin implements Plugin {
             NoSuchMethodException {
         initialize();
     }
-    
+
     private void initialize() throws ClassNotFoundException,
-    InstantiationException, IllegalAccessException, SecurityException,
-    NoSuchMethodException {
-    	if (processor != null) System.
-    	
+            InstantiationException, IllegalAccessException, SecurityException,
+            NoSuchMethodException {
+        logger.debug("initializing...");
+        processor = null;
+        saveMethod = null;
+        System.runFinalization();
+        System.gc();
+
         Class<?> processorClass = Class.forName("BiolayoutProcessor");
         processor = processorClass.newInstance();
 
@@ -132,9 +136,10 @@ public class GenerateBioLayoutPlugin implements Plugin {
 
             // only run 10000 seqs for each run
             if (sequenceCount >= 10000) {
-            //hasMore = true;
-            //break;
-            	initialize();
+                // hasMore = true;
+                // break;
+                sequenceCount = 0;
+                initialize();
             }
         }
         logger.info("Total " + groupCount + " groups created.");
