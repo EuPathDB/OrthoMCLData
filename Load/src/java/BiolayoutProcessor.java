@@ -184,7 +184,8 @@ public class BiolayoutProcessor {
                 node = group.nodes.get(seqId);
                 writer.print("<circle id=\"" + seqId + "\" class=\"gene\"");
                 writer.print("  cx=\"" + node.x + "\" cy=\"" + node.y + "\"");
-                writer.println("  r=\"5\" name=\"" + node.sourceId + "\" />");
+                writer.print("  r=\"5\" name=\"" + node.sourceId + "\"");
+                writer.println("  description=\"" + node.description + "\" />");
             }
             writer.println("</g>");
         }

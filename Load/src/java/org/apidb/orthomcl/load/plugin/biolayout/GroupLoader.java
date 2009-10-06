@@ -94,6 +94,9 @@ public class GroupLoader {
             node.taxonId = resultSet.getInt("taxon_id");
             node.abbreviation = resultSet.getString("three_letter_abbrev");
             node.description = resultSet.getString("description");
+            if (node.description != null)
+            	node.description = node.description.replaceAll("\\s+", " ").trim();
+            else node.description = "";
             node.organism = resultSet.getString("name");
             group.nodes.put(node.sequenceId, node);
         }
