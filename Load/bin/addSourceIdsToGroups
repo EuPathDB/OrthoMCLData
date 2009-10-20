@@ -41,13 +41,13 @@ my $idNum;
 
 while (<$sourceIdFh>){
   chomp;
-  if ($_ =~ /^$/) {
+  if ($_ =~ /^$/ || $_ =~ /NO_GROUP/) {
     next;
   }
 
   my @arr = split(/\t/, $_);
 
-  $arr[0] =~ s/^\w+\|//;
+  $arr[0] =~ s/^\w+\|// if $taxonAbbrev;
 
   push(@{$idToGroupHsh{$arr[1]}},$arr[0]);
 
@@ -72,7 +72,7 @@ while(<$inputGroupsFh>){
 
     if (defined $idToGroupHsh{$1}) {
       foreach my $id (@{$idToGroupHsh{$1}}){
-	$line .= " $taxonAbbrev|$id";
+	$line .= $taxonAbbrev ? " $taxonAbbrev|$id" : " $id";
       }
       $fixedGroups++;
 
