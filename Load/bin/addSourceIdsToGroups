@@ -11,15 +11,16 @@ use Getopt::Long;
 use FileHandle;
 use CBIL::Bio::SequenceUtils;
 
-my ($sourceIdFile,$inputGroupsFile,$outputGroupsFile, $taxonAbbrev, $log, $verbose);
+my ($sourceIdFile,$inputGroupsFile,$outputGroupsFile, $taxonAbbrev, $log, $verbose, $grpPrefix);
 &GetOptions("sourceIdFile=s" => \$sourceIdFile,
             "inputGroupsFile=s" => \$inputGroupsFile,
             "outputGroupsFile=s" => \$outputGroupsFile,
 	    "taxonAbbrev=s" => \$taxonAbbrev,
+	    "grpPrefix=s" => \$grpPrefix,
 	    "log=s" => \$log,
             "verbose!" => \$verbose);
 
-print STDERR "addSourceidsToGroups --sourceIdFile --inputGroupsfile --outputGroupsFile --$taxonAbbrev --log --verbose\n" unless ($sourceIdFile && $inputGroupsFile && $outputGroupsFile && $log);
+print STDERR "addSourceIdsToGroups --sourceIdFile --inputGroupsfile --outputGroupsFile --taxonAbbrev --log  --$grpPrefix --verbose\n" unless ($sourceIdFile && $inputGroupsFile && $outputGroupsFile && $log && $grpPrefix);
 
 my $f  = ($sourceIdFile =~ /\.gz$|\.Z$/) ? "zcat $sourceIdFile|" : '<'. $sourceIdFile;
 my $sourceIdFh = FileHandle->new($f);
@@ -35,21 +36,27 @@ die "Can't open file $outputGroupsFile for writing\n" unless $outputGroupsFh;
 my $logFh = FileHandle->new(">$log");
 die "Can't open log file $log for writing\n" unless $logFh;
 
-my %idToGroupHsh;
+my (%idToGroupHsh, %idToGroupHsh2, %done);
 
 my $idNum;
 
 while (<$sourceIdFh>){
   chomp;
-  if ($_ =~ /^$/ || $_ =~ /NO_GROUP/) {
-    next;
-  }
 
   my @arr = split(/\t/, $_);
 
   $arr[0] =~ s/^\w+\|// if $taxonAbbrev;
 
-  push(@{$idToGroupHsh{$arr[1]}},$arr[0]);
+  if ($_ =~ /^$/ || $_ =~ /NO_GROUP/) {
+    my $newGroup = $grpPrefix . $arr[2];
+    push(@{$idToGroupHsh2{$newGroup}},$arr[0]);
+    push(@{$idToGroupHsh2{$newGroup}},$arr[2]) unless $done{$arr[2]}==1;
+    $done{$arr[2]}=1;
+  }
+
+  else{
+    push(@{$idToGroupHsh{$arr[1]}},$arr[0]);
+  }
 
   $idNum++;
 
@@ -81,6 +88,14 @@ while(<$inputGroupsFh>){
   }
 
   print $outputGroupsFh "$line\n";
+}
+
+foreach my $grp (keys %idToGroupHsh2){
+  print $outputGroupsFh "$grp:";
+  foreach my $id (@{$idToGroupHsh2{$grp}}) {
+    print $outputGroupsFh " $id";
+  }
+  print $outputGroupsFh "\n";
 }
 
 print $logFh "$fixedGroups groups have had source_ids added\n";
