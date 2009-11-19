@@ -29,7 +29,7 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
-&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","([0-9]+)","$blastParams","blastp", "ncbi");
+&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","(\\S+)","$blastParams","blastp", "ncbi");
 
 &extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
@@ -39,119 +39,137 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
-#$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
+$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
 
-&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
-
-&parseBlastForSqlldr ($mgr,"ProteinSeqs-ProteinSeqs");
-
-&loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs");
-
-&orthomclPairs ($mgr, "no", "ortholog2WayIndex");
-
-&makeOrthoAbcFile ($mgr);
-
-&runMcl ($mgr, '1.5');
-
-&mclOutToGroupsFile ($mgr);
-
-# ##### iprscan #####
-my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
+ # ##### iprscan #####
+ my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
  
-&documentIPRScan($mgr,"v4.3.1");
+ &documentIPRScan($mgr,"v4.3.1");
 
-&createIprscanDir($mgr, "ProteinSeqs.fsa");
+ my $fetchSql2 = "select x.aa_sequence_id,source_id, sequence from dots.externalaasequence x, apidb.orthomcltaxon ot where ot.taxon_id = x.taxon_id";
 
-&copyFilesToComputeCluster($mgr,"iprscan");
+ &extractProteinSeqs($mgr, "ProteinSeqsIPRScan", $fetchSql2, $minLength, $maxStopCodonPercent);
 
-&startIprScanOnComputeCluster($mgr,"ProteinSeqs.fsa","apidb", 1);
+ &copyFilesToComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","seqfiles");
 
-&loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "3.0", "orthomclGroups.txt");
+ &createIprscanDir($mgr, "ProteinSeqsIPRScan.fsa");
 
-# $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
+ &copyFilesToComputeCluster($mgr,"iprscan");
 
-&copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
+ &startIprScanOnComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","apidb", 1);
 
-&loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+# &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-#&updateOrthologGroups($mgr);
+# &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",'',"blastSimilarity.out");
 
-&extractFilesForMsa($mgr, 500);
+# &orthomclPairs ($mgr, "no", "ortholog2WayIndex");
 
-&copyFilesToComputeCluster($mgr,"groups","seqfiles");
+# &makeOrthoAbcFile ($mgr);
 
-#&createMuscleDir       MAKE THIS STEP
+# &runMcl ($mgr, '1.5');
 
-#&copyFilesToComputeCluster();  MAKE THIS STEP
+# &mclOutToGroupsFile ($mgr);
 
-#&runMuscleForMSAFile($mgr);
+# &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "3.0", "orthomclGroups.txt");
 
-#$mgr->waitForCluster("Running muscle for msa", "waitMuscle");
+# # $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
-&copyFilesFromComputeCluster($mgr,, "msa");
+# &copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
 
-&loadMsaResultFiles($mgr,"msaFiles","(OG30_\\d+).msa","yes");
+# &loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+
+# #&updateOrthologGroups($mgr);
+
+# &extractFilesForMsa($mgr, 500);
+
+# &copyFilesToComputeCluster($mgr,"groups","seqfiles");
+
+# #&createMuscleDir       MAKE THIS STEP
+
+# #&copyFilesToComputeCluster();  MAKE THIS STEP
+
+# #&runMuscleForMSAFile($mgr);
+
+# #$mgr->waitForCluster("Running muscle for msa", "waitMuscle");
+
+# &copyFilesFromComputeCluster($mgr,, "msa");
+
+# &loadMsaResultFiles($mgr,"msaFiles","(OG30_\\d+).msa","yes");
 
 &loadGroupTaxonMatrix($mgr);
 
-&generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
+# &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
 
-my $downloadSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
-                   CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description ,x.sequence 
-                   from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
-                   apidb.orthologgroupaasequence oga 
-                   where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
-                   and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
+# my $downloadSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
+#                    CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description ,x.sequence 
+#                    from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
+#                    apidb.orthologgroupaasequence oga 
+#                    where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
+#                    and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
 
 
-&extractProteinSeqs($mgr, "seqs_orthomcl-3", $downloadSql);
+# &extractProteinSeqs($mgr, "seqs_orthomcl-3", $downloadSql);
 
-&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/seqs_orthomcl-3.fsa", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/seqs_orthomcl-3.fasta", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
+# &copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/seqs_orthomcl-3.fsa", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/seqs_orthomcl-3.fasta", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
 
-my $deflineSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
-                   CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description
-                   from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
-                   apidb.orthologgroupaasequence oga 
-                   where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
-                   and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
+# my $deflineSql = "select ot.three_letter_abbrev || '|' || x.source_id || ' | ' ||  
+#                    CASE WHEN og.name is null THEN 'no_group' ELSE  og.name END || ' | '  || x.description
+#                    from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroup og, 
+#                    apidb.orthologgroupaasequence oga 
+#                    where ot.taxon_id = x.taxon_id and x.aa_sequence_id = oga.aa_sequence_id(+) 
+#                    and oga.ortholog_group_id = og.ortholog_group_id(+) and x.taxon_id != 118568";
 
-&extractProteinSeqs($mgr, "deflines", $deflineSql,"","",1);
+# &extractProteinSeqs($mgr, "deflines", $deflineSql,"","",1);
 
-&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
+# &copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/seqfiles/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0/deflines", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/3.0");
 
-&makeInterproDownloadFile($mgr,"", "iprscan", "", "", "INTERPRO", "19.0", "OrthoMCL");
+# &makeInterproDownloadFile($mgr,"", "iprscan", "", "", "INTERPRO", "19.0", "OrthoMCL");
 
-my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
+# my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template"; 
 
-#&createBiolayoutData($mgr, $svgTemplate); This ran far too slowly on the server, Jerric ran it manually on his PC and is looking into a solution - all indexes are in place and stats were run after loading the tables
+# #&createBiolayoutData($mgr, $svgTemplate); This ran far too slowly on the server, Jerric ran it manually on his PC and is looking into a solution - all indexes are in place and stats were run after loading the tables
 
-&makePairsDownloadFile($mgr, "OrthoMCL");
+# &makePairsDownloadFile($mgr, "OrthoMCL");
 
-&formatBlastFileForOrtho($mgr,"aa_seqs_OrthoMCL-3.0.fasta","/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-3.0","proteinSeqs","T");
+# &formatBlastFileForOrtho($mgr,"aa_seqs_OrthoMCL-3.0.fasta","/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-3.0","proteinSeqs","T");
 
-&copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/blastSite"   , "/files/cbil2/orthoMCL/3.0/");
+# &copy($mgr, "/files/cbil2/orthoMCL/3.0/analysis_pipeline/primary/data/blastSite"   , "/files/cbil2/orthoMCL/3.0/");
 
-#&copyFilesToComputeClusterForOrtho($mgr,'',"/files/cbil2/orthoMCL/3.0/blastSite","/genomics/binf/scratch/orthoMCL/3.0"); fix this and write step to copy the protein fasta file to cluster, rename proteinSeqs.fasta
+# #&copyFilesToComputeClusterForOrtho($mgr,'',"/files/cbil2/orthoMCL/3.0/blastSite","/genomics/binf/scratch/orthoMCL/3.0"); fix this and write step to copy the protein fasta file to cluster, rename proteinSeqs.fasta
 
-&mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/2/seqs_orthomcl-2.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
+# &mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/2/seqs_orthomcl-2.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
 
-&mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/2/groups_orthomcl-2.txt.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
+# &mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/2/groups_orthomcl-2.txt.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho2Ortho3Abbrev","2");
 
-&mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/1/seqs_orthomcl-1.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
+# &mapOldIdsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoSeqs/1/seqs_orthomcl-1.fasta.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
 
-&mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/1/orthomclGroups.txt","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
+# &mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/1/orthomclGroups.txt","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-05-15/ortho1Ortho3Abbrev","1");
 
-#make all the download files gzipped
+# ########## steps to map protein seqs to ortho groups ###############################
 
-#fix the pairs files to have abbrev|source_id, run a script on them - going forward the abbrev|source_id should be in the similarsequences table and the code should create the files that way
+# #&createSimilarityDir($mgr,"GintestinalisAssemblageBProteins","aaSeqsOrthoMCL3","(\S+)","$blastParams","blastp", "ncbi");
 
-#add step to map to inprot
+# #&createSimilarityDir($mgr,"GintestinalisAssemblageEProteins","aaSeqsOrthoMCL3","(\S+)","$blastParams","blastp", "ncbi");
 
-#add a step to use orthomclDumpPairsFiles for download site 
+# #make all the step calls to run the orthoMCL mapper - copying back results is below
 
-#
-#
-# Last step
-#
+# &copyFilesFromComputeCluster($mgr,"GintestinalisAssemblageBProteins-aaSeqsOrthoMCL3","similarity");
+
+# &copyFilesFromComputeCluster($mgr,"GintestinalisAssemblageEProteins-aaSeqsOrthoMCL3","similarity");
+
+
+
+# #make all the download files gzipped
+
+# #fix the pairs files to have abbrev|source_id, run a script on them - going forward the abbrev|source_id should be in the similarsequences table and the code should create the files that way
+
+# #add step to map to inprot
+
+# #add a step to use orthomclDumpPairsFiles for download site 
+
+# #
+# #
+# # Last step
+# #
 $mgr->goodbye("Pipeline complete!\n");
 
