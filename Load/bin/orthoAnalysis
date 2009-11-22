@@ -58,11 +58,11 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
  &startIprScanOnComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","apidb", 1);
 
-# &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+ &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-# &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",'',"blastSimilarity.out");
+ &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",'',"blastSimilarity.out.gz");
 
-# &orthomclPairs ($mgr, "no", "ortholog2WayIndex");
+# &orthomclPairs ($mgr, "no", "");
 
 # &makeOrthoAbcFile ($mgr);
 
