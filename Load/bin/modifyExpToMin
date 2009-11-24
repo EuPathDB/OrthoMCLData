@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+
+my $simSeqFile = $ARGV[0];
+my $newSimSeqFile = $ARGV[1];
+
+&usage unless $simSeqFile && $newSimSeqFile;
+
+if ($simSeqFile =~ m/\.gz$/) {
+  open(F, "gunzip -c $fastaFile |") or die $!;
+}
+else {
+  open(F, "<$simSeqFile") or die $!;
+}
+
+my $minExp = -5;
+
+my $lineNum;
+
+while (<F>) {
+  chomp;
+
+  $lineNum++;
+
+  print STDERR "$lineNum lines being processed\n" if $lineNum % 1000000 == 0;
+
+  my @arr = split(/\s/,$_);
+
+  next if $arr[4] == 0;
+
+  $minExp = $arr[5] if $arr[5] < $minExp;
+}
+
+print STDERR "$lineNum total lines processed\n";
+
+print STDERR "The min pvalue_exp = $minExp. Where pvalue_exp = 0 , values will be modified to $minExp - 1\n";
+
+close(F);
+
+open (G, ">$newSimSeqFile") or die $!;
+
+if ($simSeqFile =~ m/\.gz$/) {
+  open(H, "gunzip -c $fastaFile |") or die $!;
+}
+else {
+  open(H, "<$simSeqFile") or die $!;
+}
+
+my $modNum;
+
+my $processed;
+
+while (<H>) {
+  chomp;
+
+  my @arr = split(/\s/,$_);
+
+  if ($arr[5] == 0) {
+
+    $arr[5] = $minExp - 1;
+
+    $modNum++;
+
+    print STDERR "$modNum lines modified\n" if $modNum % 500000 == 0;
+  }
+
+  print G join(" ", @arr);
+
+  print G "\n";
+
+  $processed++;
+
+  print STDERR "$processed lines printed into new file\n" if $processed % 1000000 ==0;
+
+}
+
+ print STDERR "$processed total lines printed into new file\n";
+
+ print STDERR "$modNum total lines were modified in the new file\n";
+
+
+ print STDERR "WARNING: $lineNum lines in $simSeqFile : $processed lines printed to $newSimSeqFile\n" if $lineNum != $processed;
+
+sub usage {
+  print "
+make a new file with pvalue_exp modified to the min - 1 value where pvalue_exp = 0
+
+usage:  modifyExpToMin inputSimSeqFile newSimSeqFile 
+";
+}
