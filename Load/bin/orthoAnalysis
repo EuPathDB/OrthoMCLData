@@ -60,9 +60,30 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
  &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
- &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",'',"blastSimilarity.out.gz");
+ my $ctlText = <<"EOF";
+    LOAD DATA
+    INFILE *
+    INTO TABLE apidb.similarsequences
+    FIELDS TERMINATED BY " " OPTIONALLY ENCLOSED BY '"'
+    TRAILING NULLCOLS
+   (query_id,
+    subject_id,
+    query_taxon_id,
+    subject_taxon_id,
+    evalue_mant,
+    evalue_exp,
+    percent_identity,
+    percent_match
+   )
+EOF
 
-# &orthomclPairs ($mgr, "no", "");
+#&updateBlastEval($mgr,blastSimilarity.out,blastSimilarity.out_modified);
+
+ &makeOrthoSqlldrCtlFile($mgr,"ProteinSeqs-ProteinSeqs","simSeq.ctl",$ctlText) 
+
+ &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",0,"blastSimilarity.out_modified", "simSeq.ctl");
+
+ &orthomclPairs ($mgr, "no", "updateMinimumEvalueExponent");
 
 # &makeOrthoAbcFile ($mgr);
 
@@ -96,7 +117,7 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
 
 # &loadMsaResultFiles($mgr,"msaFiles","(OG30_\\d+).msa","yes");
 
-&loadGroupTaxonMatrix($mgr);
+#&loadGroupTaxonMatrix($mgr);
 
 # &generateOrthomclDomainKeywords($mgr);#after iprscan, every protein should have domains, index the verbiage with this
 
