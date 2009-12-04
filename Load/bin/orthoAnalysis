@@ -77,15 +77,15 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
    )
 EOF
 
-#&updateBlastEval($mgr,blastSimilarity.out,blastSimilarity.out_modified);
+#&updateBlastEval($mgr,"ProteinSeqs-ProteinSeqs", "blastSimilarity.out","blastSimilarity.out_modified");
 
  &makeOrthoSqlldrCtlFile($mgr,"ProteinSeqs-ProteinSeqs","simSeq.ctl",$ctlText) 
 
- &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",0,"blastSimilarity.out_modified", "simSeq.ctl");
+ #&loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",0,"blastSimilarity.out_modified", "simSeq.ctl");
 
- &orthomclPairs ($mgr, "no", "updateMinimumEvalueExponent");
+ &orthomclPairs ($mgr, "no", "coOrthologNotOrtholog");
 
-# &makeOrthoAbcFile ($mgr);
+ &makeOrthoPairsFiles ($mgr);
 
 # &runMcl ($mgr, '1.5');
 
