@@ -104,8 +104,8 @@
             email = "interhelp@ebi.ac.uk"
             institution = "EBI"
         />
-        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan19.0/iprscan/data/</unpack>
-        <pluginArgs>--inPath @downloadDir@/InterproscanData/iprscan19.0/iprscan/data/</pluginArgs>
+        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan23.0/iprscan/data/</unpack>
+        <pluginArgs>--inPath @downloadDir@/InterproscanData/iprscan23.0/iprscan/data/</pluginArgs>
         <description>
             <![CDATA[
 			InterPro family of databases
@@ -829,8 +829,8 @@
         extDbRlsVer="6.1"
         extDbRlsDescrip="Giardia lamblia ATCC 50803 deprecated gene proteins from GiardiaDB"
         dbCommit="@dbcommit@">
-        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/giardiaDeprecatedGenes/2.0/geneSrt"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "^>[^\|]+\|[^\|]+\|([^\|]+)" --sequenceFile @downloadDir@/Giardia_lamblia_ATCC_50803_deprecated_proteome/geneSrt --regexSourceId "^>([^\|]+)\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/apiSiteFiles/downloadSite/GiardiaDB/release-2.0/Glamblia/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.0.fasta"/>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "product=([^\|]+)\|" --sequenceFile @downloadDir@/Giardia_lamblia_ATCC_50803_deprecated_proteome/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.0.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Giardia lamblia ATCC 50803 deprecated gene proteins from GiardiaDB
@@ -1082,27 +1082,6 @@
         </description>
     </resource>
 
-
-<resource resource="Toxoplasma_gondii_apicoplast_proteome" version="5.2"
-        displayName="Toxoplasma gondii apicoplast proteome from ToxoDB"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TgondiiApicoplastProteome"
-        extDbRlsVer="5.2"
-        extDbRlsDescrip="Toxoplasma gondii apicoplast proteome from ToxoDB"
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://toxodb.org/common/downloads/release-5.2/Tgondii/TgondiiApicoplastAnnotatedProteins_ToxoDB-5.2.fasta"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5811 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Toxoplasma_gondii_apicoplast_proteome/TgondiiApicoplastAnnotatedProteins_ToxoDB-5.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Toxoplasma gondii apicoplast proteome from ToxoDB 
-    ]]>
-        </description>
-    </resource>
-
-
 <resource resource="Rickettsia_prowazekii_MadridE_proteome" version="2009-04-26"
         displayName="Rickettsia prowazekii Madrid E Proteome"
         category="Proteome"
@@ -1122,24 +1101,58 @@
     </resource>
 
 
-<resource resource="Entamoeba_histolytica_HM-1_IMSS_proteome" version="2005-10-17"
+<resource resource="Entamoeba_histolytica_HM-1_IMSS_proteome" version="2009-04-24"
         displayName="Entamoeba histolytica HM-1:IMSS proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="EhistolyticaHM1IMSSProteome"
-        extDbRlsVer="2005-10-17"
-        extDbRlsDescrip="Entamoeba histolytica HM-1:IMSS proteome from Sanger"
-        contact="BLoftus:bjloftus@tigr.org"
-        url="ftp://ftp.sanger.ac.uk/pub/pathogens/Entamoeba/histolytica/Proteome/GeneDB_Ehistolytica_Proteins_17102005"
+        extDbRlsVer="2009-04-24"
+        extDbRlsDescrip="Entamoeba histolytica HM-1:IMSS proteome from JCVI"
         dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 294381 --regexDesc "^>[^\|]+\|[^\|]*\|[^\|]*\|([^\|]+)\|"   --sequenceFile @downloadDir@/Entamoeba_histolytica_HM-1_IMSS_proteome/GeneDB_Ehistolytica_Proteins_17102005 --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_histolytica/2009-04-24/e_histolytica.fasta" institution="AmoebaDB"/>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 294381 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_histolytica_HM-1_IMSS_proteome/e_histolytica.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
-    Entamoeba histolytica HM-1:IMSS proteins from WTSI
+    Entamoeba histolytica HM-1:IMSS proteins from JCVI
     ]]>
         </description>
     </resource>
+
+<resource resource="Entamoeba_dispar_SAW760_proteome" version="2009-04-24"
+        displayName="Entamoeba dispar SAW760 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EdisparSAW760Proteome"
+        extDbRlsVer="2009-04-24"
+        extDbRlsDescrip="Entamoeba dispar SAW760 proteome from JCVI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_dispar/2009-04-24/e_dispar.fasta" institution="AmoebaDB"/>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370354 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_dispar_SAW760_proteome/e_dispar.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Entamoeba  dispar SAW760 proteins from JCVI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Entamoeba_invadens_IP1_proteome" version="2009-04-24"
+        displayName="Entamoeba invadens IP1 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EinvadensIP1Proteome"
+        extDbRlsVer="2009-04-24"
+        extDbRlsDescrip="Entamoeba invadens IP1 proteome from JCVI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_invadens/2009-04-24/e_invadens.fasta" institution="AmoebaDB"/>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370355 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_invadens_IP1_proteome/e_invadens.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Entamoeba invadens IP1 proteins from JCVI
+    ]]>
+        </description>
+    </resource>
+
+
 
 <resource resource="Yersinia_enterocolitica_8081_proteome" version="2009-05-07"
         displayName="Yersinia enterocolitica 8081 Proteome"
@@ -1457,18 +1470,16 @@
         </description>
     </resource>
 
-<resource resource="Encephalitozoon_cuniculi_GB-M1_proteome" version="2008-06-11"
+<resource resource="Encephalitozoon_cuniculi_GB-M1_proteome" version="2009-06-30"
         displayName="Encephalitozoon cuniculi GB-M1 proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="EcuniculiGB-M1Proteome"
-        extDbRlsVer="2008-06-11"
+        extDbRlsVer="2009-06-30"
         extDbRlsDescrip="Encephalitozoon cuniculi GB-M1 chromosome I-XI proteome from NCBI"
-        contact="christian.vivares@univ-bpclermont.fr"
-        url="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Encephalitozoon_cuniculi/"
         dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 284813 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Encephalitozoon_cuniculi_GB-M1_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/MicrosporidiaDB/manualDelivery/Genomes/Encephalitozoon_cuniculi/2008-06-11/genbank/Ecuniculi.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 284813 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Encephalitozoon_cuniculi_GB-M1_proteome/Ecuniculi.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Encephalitozoon cuniculi GB-M1 proteins from NCBI
@@ -2849,24 +2860,6 @@
         </description>
     </resource>
 
-<resource resource="Trypanosoma_cruzi_CLBrener_proteome" version="2.0"
-        displayName="Trypanosoma cruzi strain CL Brener proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TcruziCLBrenerProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma cruzi strain CL Brener proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tcruzi.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353153 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_cruzi_CLBrener_proteome/Tcruzi.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trypanosoma cruzi strain CL Brener proteins from TriTrypDB 2.0
-    ]]>
-        </description>
-    </resource>
-
-
 <resource resource="Babesia_bovis_T2Bo_proteome" version="2009-08-17"
           category="Proteome" 
           displayName="Babesia bovis T2Bo proteome" 
@@ -2905,6 +2898,25 @@
         <description>
                <![CDATA[
                 Leishmania mexicana proteins from Sanger
+		    ]]>        
+        </description>
+    </resource>
+
+
+<resource resource="orthomclClades" version="2009-11-09"
+          category="Ontology" 
+          displayName="orthoMCL Clades" 
+          plugin="OrthoMCLData::Load::Plugin::InsertOrthomclTaxon"
+          dbCommit="@dbcommit@">
+        <manualGet contact="Deborah Pinney" 
+                   mail="pinney@pcbi.upenn.edu" 
+                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLClades/2009-11-09/orthomclClades.txt" 
+                   institution="University of Pennsylvania"
+                   />
+        <pluginArgs>--cladeFile @downloadDir@/orthomclClades/orthomclClades.txt --speciesFile /files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLTaxons/2009-11-06/orthomclTaxons.txt</pluginArgs>
+        <description>
+               <![CDATA[
+                Inserts rows in ApiDB.OrthoMCLTaxon
 		    ]]>        
         </description>
     </resource>
