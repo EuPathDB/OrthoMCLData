@@ -145,7 +145,7 @@ EOF
     while (my @row = $sth->fetchrow_array()) {
       my $seqId = $row[0];
       my $sourceId = $row[1];
-      push (@seqIdArr, "${seqId}:$source_id");
+      push (@seqIdArr, "${seqId}:$sourceId");
     }
     my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId);
 
@@ -293,12 +293,12 @@ sub updateOrthologGroupAaSequences {
 
     my @ids = split (/:/, $idents);
 
-    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$id[0]});
+    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$ids[0]});
 
     $orthGrpAaSeq->retrieveFromDB();
 
-    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$id[0]}) {
-      $orthGrpAaSeq->set('connectivity', $connectivity->{$id[0]});
+    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$ids[0]}) {
+      $orthGrpAaSeq->set('connectivity', $connectivity->{$ids[0]});
     }
 
     $submitted = $orthGrpAaSeq->submit();
