@@ -128,9 +128,9 @@ sub processUnfinishedGroups {
 
   my $sqlSelectOrthGrpAASeq = <<"EOF";
      SELECT
-       aa_sequence_id
-       FROM apidb.OrthologGroupAaSequence
-       WHERE ortholog_group_id = ?
+       oga.aa_sequence_id, x.secondary_identifier
+       FROM apidb.OrthologGroupAaSequence oga, dots.ExternalAASequence x
+       WHERE oga.ortholog_group_id = ? and oga.aa_sequence_id = x.aa_sequence_id
 EOF
 
   my $sth = $dbh->prepare($sqlSelectOrthGrpAASeq);
@@ -144,7 +144,8 @@ EOF
 
     while (my @row = $sth->fetchrow_array()) {
       my $seqId = $row[0];
-      push (@seqIdArr, $seqId);
+      my $sourceId = $row[1];
+      push (@seqIdArr, "${seqId}:$source_id");
     }
     my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId);
 
@@ -158,7 +159,6 @@ EOF
   return ($updatedGrps,$updatedGrpsAaSeqs);
 
 }
-
 
 sub processSeqsInGroup {
   my ($self,$seqIdArr, $groupId) = @_;
@@ -191,11 +191,11 @@ EOF
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + $1; $j < $grpSize ; $j++) {
-      my $sequence1 = $seqIdArr->[$i];
+      my @sequence1 = split (/:/, $seqIdArr->[$i]);
 
-      my $sequence2 = $seqIdArr->[$j];
+      my @sequence2 = split (/:/, $seqIdArr->[$j]);
 
-      $sth->execute($sequence1, $sequence2, $sequence2, $sequence1);
+      $sth->execute($sequence1[1], $sequence2[1], $sequence2[1], $sequence1[1]);
 
       while (my @row = $sth->fetchrow_array()) {
 	$pairCount++;
@@ -289,14 +289,16 @@ sub updateOrthologGroupAaSequences {
 
   my $submitted;
 
-  foreach my $id (@{$seqIdArr}) {
+  foreach my $idents (@{$seqIdArr}) {
 
-    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$id});
+    my @ids = split (/:/, $idents);
+
+    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$id[0]});
 
     $orthGrpAaSeq->retrieveFromDB();
 
-    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$id}) {
-      $orthGrpAaSeq->set('connectivity', $connectivity->{$id});
+    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$id[0]}) {
+      $orthGrpAaSeq->set('connectivity', $connectivity->{$id[0]});
     }
 
     $submitted = $orthGrpAaSeq->submit();
