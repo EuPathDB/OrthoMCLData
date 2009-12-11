@@ -77,7 +77,7 @@ $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeq
    )
 EOF
 
-#&updateBlastEval($mgr,"ProteinSeqs-ProteinSeqs", "blastSimilarity.out","blastSimilarity.out_modified");
+ &updateBlastEval($mgr,"ProteinSeqs-ProteinSeqs", "blastSimilarity.out","blastSimilarity.out_modified");
 
  &makeOrthoSqlldrCtlFile($mgr,"ProteinSeqs-ProteinSeqs","simSeq.ctl",$ctlText) 
 
@@ -87,35 +87,35 @@ EOF
 
  &makeOrthoPairsFiles ($mgr);
 
-# &runMcl ($mgr, '1.5');
+ &runMcl ($mgr, '1.5');
 
-# &mclOutToGroupsFile ($mgr);
+ &mclOutToGroupsFile ($mgr, "OG4_");
 
-# &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "3.0", "orthomclGroups.txt");
+ &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "4", "orthomclGroups.txt");
 
-# # $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
+ $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
-# &copyFilesFromComputeCluster($mgr,"ProteinSeqs.fsa","iprscan");
+ &copyFilesFromComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","iprscan");
 
-# &loadIprscanResults($mgr,"ProteinSeqs.fsa", "INTERPRO","19.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
+ &loadIprscanResults($mgr,"ProteinSeqsIPRScan.fsa", "INTERPRO","23.0",$insertInterproConfig, 'ExternalAASequence', '--srcIdColumn aa_sequence_id');
 
-# #&updateOrthologGroups($mgr);
+  &updateOrthologGroups($mgr);
 
-# &extractFilesForMsa($mgr, 500);
+  &extractFilesForMsa($mgr, 500);
 
 # &copyFilesToComputeCluster($mgr,"groups","seqfiles");
 
-# #&createMuscleDir       MAKE THIS STEP
+# &createMuscleDir($mgr);
 
-# #&copyFilesToComputeCluster();  MAKE THIS STEP
+# &copyFilesToComputeCluster($mgr,"groups", "seqfiles");  
 
-# #&runMuscleForMSAFile($mgr);
+# &startMuscleOnCluster($mgr, "apidb");
 
 # #$mgr->waitForCluster("Running muscle for msa", "waitMuscle");
 
 # &copyFilesFromComputeCluster($mgr,, "msa");
 
-# &loadMsaResultFiles($mgr,"msaFiles","(OG30_\\d+).msa","yes");
+# &loadMsaResultFiles($mgr,"msaFiles","(OG4_\\d+).msa","yes");
 
 #&loadGroupTaxonMatrix($mgr);
 
