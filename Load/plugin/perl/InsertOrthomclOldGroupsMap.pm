@@ -107,7 +107,7 @@ from DoTS.AASequence s, DoTS.AASequenceDbRef sr,
      SRes.DBref r, sres.externaldatabase db, sres.externaldatabaserelease dbr
 where s.aa_sequence_id = sr.aa_sequence_id
   and r.db_ref_id = sr.db_ref_id and r.external_database_release_id = dbr.external_database_release_id
-  and dbr.version = $version and dbr.external_database_id = db.external_database_id
+  and dbr.version = '$version' and dbr.external_database_id = db.external_database_id
   and db.name = 'OrthoMCL Old Seqs'";
 
     my $stmt = $self->prepareAndExecute($sql);
