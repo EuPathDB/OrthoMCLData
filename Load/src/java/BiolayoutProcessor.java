@@ -136,8 +136,8 @@ public class BiolayoutProcessor {
     private void parseData(Group group) throws OrthoMCLException {
         // create nodes and edges
         for (org.apidb.orthomcl.load.plugin.biolayout.Edge edge : group.edges.values()) {
-            String queryId = Integer.toString(edge.queryId).intern();
-            String subjectId = Integer.toString(edge.subjectId).intern();
+            String queryId =edge.queryId.intern();
+            String subjectId = edge.subjectId.intern();
             network.addNetworkConnection(queryId, subjectId, edge.weight);
         }
 
@@ -173,9 +173,9 @@ public class BiolayoutProcessor {
     }
 
     private void outputNodes(PrintWriter writer, Group group) {
-        Map<Integer, List<Integer>> taxons = group.getNodeIdsByTaxons();
+        Map<Integer, List<String>> taxons = group.getNodeIdsByTaxons();
         for (int taxonId : taxons.keySet()) {
-            List<Integer> taxon = taxons.get(taxonId);
+            List<String> taxon = taxons.get(taxonId);
 
             // get color
             VertexClass vertexClass = classes.getClassByID(taxonId);
@@ -189,7 +189,7 @@ public class BiolayoutProcessor {
             writer.print("<g id=\"" + taxonId + "\" class=\"taxon\"");
             writer.print("  abbrev=\"" + node.abbreviation + "\"");
             writer.println("  name=\"" + node.organism + "\">");
-            for (int seqId : taxon) {
+            for (String seqId : taxon) {
                 node = group.nodes.get(seqId);
                 writer.print("<circle id=\"" + seqId + "\" class=\"gene\"");
                 writer.print("  cx=\"" + node.x + "\" cy=\"" + node.y + "\"");

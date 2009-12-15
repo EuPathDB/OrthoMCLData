@@ -20,4 +20,8 @@ public class Node {
     public int x;
     public int y;
     public Color color = Color.BLACK;
+    
+    public String getCombinedId() {
+        return abbreviation + "|" + sourceId;
+    }
 }

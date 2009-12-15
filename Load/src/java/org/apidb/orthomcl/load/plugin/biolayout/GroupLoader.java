@@ -28,10 +28,14 @@ public class GroupLoader {
 
     public GroupLoader(Connection connection) throws ClassNotFoundException,
             SQLException {
-        String withClause = "WITH ogs AS (SELECT aa_sequence_id FROM "
-                + "apidb.OrthologGroupAaSequence WHERE ortholog_group_id = ?) ";
-        String whereClause = "WHERE o.sequence_id_a = ogs1.aa_sequence_id "
-                + "  AND o.sequence_id_b = ogs2.aa_sequence_id ";
+        String withClause = "WITH ogs AS "
+                + "(SELECT eas.secondary_identifier AS combine_id "
+                + "FROM apidb.OrthologGroupAaSequence ogs, "
+                + "  dots.ExternalAaSequence eas "
+                + "WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
+                + "  AND ogs.ortholog_group_id = ?) ";
+        String whereClause = "WHERE o.sequence_id_a = ogs1.combine_id "
+                + "  AND o.sequence_id_b = ogs2.combine_id ";
         String selectClause = "SELECT o.sequence_id_a as query_id, "
                 + "o.sequence_id_b as subject_id ";
         psSequence = connection.prepareStatement("SELECT eas.aa_sequence_id, "
@@ -53,10 +57,12 @@ public class GroupLoader {
                 + "FROM apidb.Inparalog o, ogs ogs1, ogs ogs2 " + whereClause);
         ((OraclePreparedStatement) psInparalog).setRowPrefetch(5000);
         psSimilarity = connection.prepareStatement(withClause
-                + "SELECT o.query_id, o.subject_id, o.evalue_mant, o.evalue_exp "
+                + "SELECT ogs1.aa_sequence_id AS query_id, "
+                + "  ogs2.aa_sequence_id AS subject_id, "
+                + "  o.evalue_mant, o.evalue_exp "
                 + "FROM apidb.SimilarSequences o, ogs ogs1, ogs ogs2 "
-                + "WHERE o.query_id = ogs1.aa_sequence_id "
-                + "  AND o.subject_id = ogs2.aa_sequence_id"
+                + "WHERE o.query_id = ogs1.combine_id "
+                + "  AND o.subject_id = ogs2.combine_id "
                 + "  AND o.query_id < o.subject_id ");
         ((OraclePreparedStatement) psSimilarity).setRowPrefetch(5000);
     }
@@ -79,7 +85,7 @@ public class GroupLoader {
         loadCoorthologs(group);
         loadInparalogs(group);
         loadNormalEdges(group);
-        //logger.debug("group #" + groupId + " loaded.");
+        // logger.debug("group #" + groupId + " loaded.");
         return group;
     }
 
@@ -94,11 +100,11 @@ public class GroupLoader {
             node.taxonId = resultSet.getInt("taxon_id");
             node.abbreviation = resultSet.getString("three_letter_abbrev");
             node.description = resultSet.getString("description");
-            if (node.description != null)
-            	node.description = node.description.replaceAll("\\s+", " ").trim();
+            if (node.description != null) node.description = node.description.replaceAll(
+                    "\\s+", " ").trim();
             else node.description = "";
             node.organism = resultSet.getString("name");
-            group.nodes.put(node.sequenceId, node);
+            group.nodes.put(node.getCombinedId(), node);
         }
     }
 
@@ -107,8 +113,8 @@ public class GroupLoader {
         ResultSet resultSet = psOrtholog.executeQuery();
         while (resultSet.next()) {
             Edge edge = new Edge();
-            edge.queryId = resultSet.getInt("query_id");
-            edge.subjectId = resultSet.getInt("subject_id");
+            edge.queryId = resultSet.getString("query_id");
+            edge.subjectId = resultSet.getString("subject_id");
             edge.type = EdgeType.Ortholog;
             group.edges.put(edge, edge);
         }
@@ -119,8 +125,8 @@ public class GroupLoader {
         ResultSet resultSet = psCoortholog.executeQuery();
         while (resultSet.next()) {
             Edge edge = new Edge();
-            edge.queryId = resultSet.getInt("query_id");
-            edge.subjectId = resultSet.getInt("subject_id");
+            edge.queryId = resultSet.getString("query_id");
+            edge.subjectId = resultSet.getString("subject_id");
             edge.type = EdgeType.Coortholog;
             group.edges.put(edge, edge);
         }
@@ -131,8 +137,8 @@ public class GroupLoader {
         ResultSet resultSet = psInparalog.executeQuery();
         while (resultSet.next()) {
             Edge edge = new Edge();
-            edge.queryId = resultSet.getInt("query_id");
-            edge.subjectId = resultSet.getInt("subject_id");
+            edge.queryId = resultSet.getString("query_id");
+            edge.subjectId = resultSet.getString("subject_id");
             edge.type = EdgeType.Inparalog;
             group.edges.put(edge, edge);
         }
@@ -143,8 +149,8 @@ public class GroupLoader {
         ResultSet resultSet = psSimilarity.executeQuery();
         while (resultSet.next()) {
             Edge edge = new Edge();
-            edge.queryId = resultSet.getInt("query_id");
-            edge.subjectId = resultSet.getInt("subject_id");
+            edge.queryId = resultSet.getString("query_id");
+            edge.subjectId = resultSet.getString("subject_id");
             if (group.edges.containsKey(edge)) {
                 edge = group.edges.get(edge);
             } else {

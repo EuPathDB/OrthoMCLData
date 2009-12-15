@@ -9,8 +9,8 @@ package org.apidb.orthomcl.load.plugin.biolayout;
  */
 public class Edge {
 
-    public int queryId;
-    public int subjectId;
+    public String queryId;
+    public String subjectId;
     public EdgeType type = EdgeType.Normal;
     public double evalueMant;
     public int evalueExp;
@@ -18,7 +18,7 @@ public class Edge {
 
     public Edge() {}
 
-    public Edge(int queryId, int subjectId) {
+    public Edge(String queryId, String subjectId) {
         this.queryId = queryId;
         this.subjectId = subjectId;
     }
@@ -32,8 +32,8 @@ public class Edge {
     public boolean equals(Object obj) {
         if (obj != null && obj instanceof Edge) {
             Edge edge = (Edge) obj;
-            return (queryId == edge.queryId && subjectId == edge.subjectId)
-                    || (queryId == edge.subjectId && subjectId == edge.queryId);
+            return (queryId.equals(edge.queryId) && subjectId.equals(edge.subjectId))
+                    || (queryId.equals(edge.subjectId) && subjectId.equals(edge.queryId));
         }
         return false;
     }
@@ -45,6 +45,6 @@ public class Edge {
      */
     @Override
     public int hashCode() {
-        return queryId + subjectId;
+        return queryId.hashCode() ^ subjectId.hashCode();
     }
 }
