@@ -57,8 +57,8 @@ public class GroupLoader {
                 + "FROM apidb.Inparalog o, ogs ogs1, ogs ogs2 " + whereClause);
         ((OraclePreparedStatement) psInparalog).setRowPrefetch(5000);
         psSimilarity = connection.prepareStatement(withClause
-                + "SELECT ogs1.aa_sequence_id AS query_id, "
-                + "  ogs2.aa_sequence_id AS subject_id, "
+                + "SELECT ogs1.combine_id AS query_id, "
+                + "  ogs2.combine_id AS subject_id, "
                 + "  o.evalue_mant, o.evalue_exp "
                 + "FROM apidb.SimilarSequences o, ogs ogs1, ogs ogs2 "
                 + "WHERE o.query_id = ogs1.combine_id "

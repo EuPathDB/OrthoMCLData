@@ -143,7 +143,7 @@ public class BiolayoutProcessor {
 
         // assign sequence-taxons
         for (Node node : group.nodes.values()) {
-            String nodeName = Integer.toString(node.sequenceId).intern();
+            String nodeName = node.getCombinedId().intern();
             Vertex vertex = (Vertex) network.m_hashMap.get(nodeName);
 
             if (vertex != null) {
@@ -250,7 +250,7 @@ public class BiolayoutProcessor {
             int y = (int) Math.round((gNode.getY() - miny) * scaley + margin);
             gNode.setLocation((int) x, (int) y);
             gNode.m_nodeSize = 2 * RADIUS;
-            int seqId = Integer.parseInt(gNode.getNodeName());
+            String seqId = gNode.getNodeName();
             Node node = group.nodes.get(seqId);
             node.x = x;
             node.y = y + topMargin;

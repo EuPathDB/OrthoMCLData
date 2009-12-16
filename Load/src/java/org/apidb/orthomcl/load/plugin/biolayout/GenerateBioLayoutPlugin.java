@@ -139,7 +139,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
             // only run 10000 seqs for each run
             if (sequenceCount >= 10000) {
                 sequenceCount = 0;
-                initialize();
+                //initialize();
             }
         }
         logger.info("Total " + groupCount + " groups created.");
