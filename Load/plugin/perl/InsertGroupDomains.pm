@@ -20,9 +20,13 @@ my $argsDeclaration =
 ];
 
 
+# NOTE:  THIS PLUGIN AND THE TABLE IT LOADS ARE MISNAMED.  Should be "OrthomclGroupDomainKeywords."  (It loads info about keywords, not domains.)
+
+# NOTE: THIS PLUGIN IS FLAWED.  IT IS IGNORING THE KEYWORD FILTERS.
+
 my $purpose = <<PURPOSE;
 Calculate the relevant pfam domain keywords for each ortholog group in the DB, 
-and insert the domains (with frequencies) into the OrthomclGroupDomain table.
+and insert the domains (with keyword frequencies) into the OrthomclGroupDomain table.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
