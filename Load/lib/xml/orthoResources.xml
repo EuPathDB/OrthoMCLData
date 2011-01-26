@@ -3,7 +3,7 @@
     <cleanups>
     </cleanups> 
 
-    <resource resource="taxonomy" version="2009-10-06" 
+    <resource resource="taxonomy" version="2010-12-17" 
         displayName="NCBI Taxonomy"
         publicUrl="ftp://ftp.ncbi.nih.gov/pub/taxonomy/"
         category="Ontology"
@@ -23,7 +23,7 @@
         </description>
     </resource>
 
-<resource resource="GO_evidence_codes" version="1.19"
+<resource resource="GO_evidence_codes" version="1.2"
         displayName="Gene Ontology evidence codes"        
         publicUrl="http://song.sourceforge.net"
         category="Ontology"   
@@ -39,15 +39,15 @@
         </description>
     </resource>
 
-<resource resource="GO" version="1.823"
+<resource resource="GO" version="1.1676"
             displayName="Gene Ontology"
             publicUrl="http://www.geneontology.org"
             category="Ontology"
             url="http://www.geneontology.org/ontology/gene_ontology.obo"
-            plugin="ApiCommonData::Load::Plugin::InsertGOTermsFromObo"
+            plugin="GUS::Supported::Plugin::InsertGeneOntology"
             extDbName="Gene Ontology"
-            extDbRlsVer="1.823"
-            extDbRlsDescrip="The Gene Ontology from 10/08/2009"
+            extDbRlsVer="1.1679"
+            extDbRlsDescrip="The Gene Ontology from 12/17/2010"
             dbCommit="@dbcommit@">
       <wgetArgs>--tries=5 --output-document=gene_ontology.obo</wgetArgs>
       <pluginArgs>--oboFile @downloadDir@/GO/gene_ontology.obo --extDbRlsName %EXT_DB_NAME% --extDbRlsVer %EXT_DB_RLS_VER%</pluginArgs>
@@ -58,14 +58,14 @@
       </description>
   </resource>   
 
-  <resource resource="enzymeDB" version="2009-09-22" 
+  <resource resource="enzymeDB" version="2010-12-01" 
             displayName="Enzyme nomenclature database"
             publicUrl="http://www.expasy.org/enzyme"
             category="Ontology"
             url="ftp://ftp.expasy.org/databases/enzyme/"
             plugin="GUS::Community::Plugin::LoadEnzymeDatabase"
             extDbName="enzymeDB"
-            extDbRlsVer="2009-09-22"
+            extDbRlsVer="2010-12-01"
             dbCommit="@dbcommit@">
      <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=enzclass.txt,enzyme.dat</wgetArgs>
      <pluginArgs>--InPath @downloadDir@/enzymeDB/ --enzymeDbName %EXT_DB_NAME% --enzymeDbRlsVer %EXT_DB_RLS_VER% @commit@</pluginArgs>
@@ -76,7 +76,7 @@
      </description>
   </resource>
 
-    <resource resource="SO" version="1.231"
+    <resource resource="SO" version="1.280"
         displayName="Sequence Ontology"        
         publicUrl="http://song.sourceforge.net"
         category="Ontology"      
@@ -92,29 +92,30 @@
      </description>
     </resource>
 
-        <resource resource="InterproscanData" version="23.0"
+        <resource resource="InterproscanData" version="29.0"
         plugin="ApiCommonData::Load::Plugin::InsertInterproDomainDbs"
         displayName="InterPro Database"
         publicUrl="http://www.ebi.ac.uk/interpro"
         category="Proteome"
         dbCommit="@dbcommit@">	
         <manualGet 
-            fileOrDir = "/files/cbil/data/cbil/toxoDb/manualDelivery/iprscan23.0/"
+            fileOrDir = "/files/cbil/data/cbil/EuPathDB/manualDelivery/global/domain/iprscanData/29.0/"
             contact = "EBI"
             email = "interhelp@ebi.ac.uk"
             institution = "EBI"
         />
-        <unpack>fixSuperfamily @downloadDir@/InterproscanData/iprscan23.0/iprscan/data/</unpack>
-        <pluginArgs>--inPath @downloadDir@/InterproscanData/iprscan23.0/iprscan/data/</pluginArgs>
+        <unpack>fixSuperfamily @downloadDir@/InterproscanData/29.0/iprscan/data/</unpack>
+        <pluginArgs>--inPath @downloadDir@/InterproscanData/29.0/iprscan/data/</pluginArgs>
         <description>
             <![CDATA[
 			InterPro family of databases
 		]]>
         </description>
         <publication pmid="15608177"/>
-    </resource>   
 
-<resource resource="Aquifex_aeolicus_VF5_proteome" version="2008-11-12"
+       </resource>
+
+    <resource resource="Aquifex_aeolicus_VF5_proteome" version="2008-11-12"
         displayName="Aquifex aeolicus VF5 proteome 2008-11-12"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
@@ -132,6 +133,7 @@
     ]]>
         </description>
     </resource>
+
 
 <resource resource="Thermotoga_maritima_MSB8_proteome" version="2009-05-01"
         displayName="Thermotoga maritima MSB8 proteome 2009-05-01"
@@ -804,89 +806,18 @@
         </description>
     </resource>
 
-<resource resource="Giardia_lamblia_ATCC_50803_proteome" version="2.0"
-        displayName="Giardia lamblia ATCC 50803 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="GlambliaATCC50803Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Giardia lamblia ATCC 50803 proteome from GiardiaDB"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/apiSiteFiles/downloadSite/GiardiaDB/release-2.0/Glamblia/GlambliaAnnotatedProteins_GiardiaDB-2.0.fasta" institution="GiardiaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Giardia_lamblia_ATCC_50803_proteome/GlambliaAnnotatedProteins_GiardiaDB-2.0.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Giardia lamblia ATCC 50803 proteins from GiardiaDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Giardia_lamblia_ATCC_50803_deprecated_proteome" version="2.0"
-        displayName="Giardia lamblia ATCC 50803 deprecated gene proteins"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="GlambliaATCC50803DepGenes"
-        extDbRlsVer="6.1"
-        extDbRlsDescrip="Giardia lamblia ATCC 50803 deprecated gene proteins from GiardiaDB"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/apiSiteFiles/downloadSite/GiardiaDB/release-2.0/Glamblia/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.0.fasta"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "product=([^\|]+)\|" --sequenceFile @downloadDir@/Giardia_lamblia_ATCC_50803_deprecated_proteome/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.0.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Giardia lamblia ATCC 50803 deprecated gene proteins from GiardiaDB
-    ]]>
-        </description>
-    </resource>
-
-
-
-<resource resource="Giardia_lamblia_P15_proteome" version="2.0"
-        displayName="Giardia lamblia P15 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="GlambliaP15Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Giardia lamblia P15 proteome from GiardiaDB"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/apiSiteFiles/downloadSite/GiardiaDB/release-2.0/GintestinalisAssemblageE/GintestinalisAssemblageEAnnotatedProteins_GiardiaDB-2.0.fasta" institution="GiardiaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 658858 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Giardia_lamblia_P15_proteome/GintestinalisAssemblageEAnnotatedProteins_GiardiaDB-2.0.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Giardia lamblia P15 proteins from GiardiaDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Giardia_intestinalis_ATCC_50581_proteome" version="2.0"
-        displayName="Giardia intestinalis ATCC 50581 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="GintestinalisATCC50581Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Giardia intestinalis ATCC 50581 proteome from GiardiaDB"
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Omar Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/apiSiteFiles/downloadSite/GiardiaDB/release-2.0/GintestinalisAssemblageB/GintestinalisAssemblageBAnnotatedProteins_GiardiaDB-2.0.fasta" institution="GiardiaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 598745 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Giardia_intestinalis_ATCC_50581_proteome/GintestinalisAssemblageBAnnotatedProteins_GiardiaDB-2.0.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Giardia intestinalis ATCC 50581 proteins from GiardiaDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Plasmodium_berghei_proteome" version="6.1"
+<resource resource="Plasmodium_berghei_proteome" version="7.1"
         displayName="Plasmodium berghei proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="PbergheiProteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium berghei proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pberghei/PbergheiAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pberghei/fasta/PbergheiAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5821 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_berghei_proteome/PbergheiAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5823 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_berghei_proteome/PbergheiAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium berghei proteins from PlasmoDB 
@@ -894,18 +825,18 @@
         </description>
     </resource>
 
-<resource resource="Plasmodium_yoelii_yoelii_17XNL_proteome" version="6.1"
+<resource resource="Plasmodium_yoelii_yoelii_17XNL_proteome" version="7.1"
         displayName="Plasmodium yoelii yoelii 17XNL proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="Pyoeliiyoelii17XNLProteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium yoelii yoelii 17XNL proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pyoelii/PyoeliiAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pyoelii/fasta/PyoeliiAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 352914 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_yoelii_yoelii_17XNL_proteome/PyoeliiAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 352914 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_yoelii_yoelii_17XNL_proteome/PyoeliiAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium yoelii yoelii 17XNL proteins from PlasmoDB 
@@ -913,18 +844,18 @@
         </description>
     </resource>
 
-<resource resource="Plasmodium_vivax_SaI-1_proteome" version="6.1"
+<resource resource="Plasmodium_vivax_SaI-1_proteome" version="7.1"
         displayName="Plasmodium vivax SaI-1 proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="PvivaxSaI-1Proteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium vivax SaI-1 proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pvivax/PvivaxAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pvivax/fasta/PvivaxAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 126793 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_vivax_SaI-1_proteome/PvivaxAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 126793 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_vivax_SaI-1_proteome/PvivaxAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium vivax SaI-1 proteins from PlasmoDB 
@@ -933,18 +864,18 @@
     </resource>
 
 
-<resource resource="Plasmodium_vivax_mito_proteome" version="6.1"
+<resource resource="Plasmodium_vivax_mito_proteome" version="7.1"
         displayName="Plasmodium vivax SaI-1 mito proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="PvivaxMitoProteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium vivax mitochondrial proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/PvivaxMito/PvivaxMitoAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/PvivaxMito/fasta/PvivaxMitoAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 126793 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_vivax_mito_proteome/PvivaxMitoAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 126793 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_vivax_mito_proteome/PvivaxMitoAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium vivax mitochondrial proteins from PlasmoDB 
@@ -952,18 +883,18 @@
         </description>
     </resource>
 
-<resource resource="Plasmodium_knowlesi_H_proteome" version="6.1"
+<resource resource="Plasmodium_knowlesi_H_proteome" version="7.1"
         displayName="Plasmodium knowlesi strain H proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="PknowlesiHProteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium knowlesi strain H proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pknowlesi/PknowlesiAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pknowlesi/fasta/PknowlesiAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5851 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_knowlesi_H_proteome/PknowlesiAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5851 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_knowlesi_H_proteome/PknowlesiAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium knowlesi strain H proteins from PlasmoDB
@@ -971,18 +902,18 @@
         </description>
     </resource>
 
-<resource resource="Plasmodium_chabaudi_proteome" version="6.1"
-        displayName="Plasmodium chabaudi proteome from PlasmoDB 6.1"
+<resource resource="Plasmodium_chabaudi_proteome" version="7.1"
+        displayName="Plasmodium chabaudi proteome from PlasmoDB 7.1"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="PchabaudiProteome"
-        extDbRlsVer="6.1"
+        extDbRlsVer="7.1"
         extDbRlsDescrip="Plasmodium chabaudi proteome from PlasmoDB"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pchabaudi/PchabaudiAnnotatedProteins_PlasmoDB-6.1.fasta"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pchabaudi/fasta/PchabaudiAnnotatedProteins_PlasmoDB-7.1.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5825 --regexDesc "product=([^\|]+)\|"  --sequenceFile @downloadDir@/Plasmodium_chabaudi_proteome/PchabaudiAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 31271  --regexDesc "product=([^\|]+)\|"  --sequenceFile @downloadDir@/Plasmodium_chabaudi_proteome/PchabaudiAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Plasmodium chabaudi proteins from PlasmoDB
@@ -990,18 +921,75 @@
         </description>
     </resource>
 
-<resource resource="Cryptosporidium_hominis_TU502_proteome" version="4.2"
+<resource resource="Plasmodium_falciparum_D47_proteome" version="7.1"
+        displayName="Plasmodium falciparum D47 proteome from PlasmoDB"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="PfalciparumProteome"
+        extDbRlsVer="7.1"
+        extDbRlsDescrip="Plasmodium falciparum D47 proteome from PlasmoDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://plasmodb.org/common/downloads/release-7.1/Pfalciparum/fasta/PfalciparumAnnotatedProteins_PlasmoDB-7.1.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_D47_proteome/PfalciparumAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Plasmodium falciparum proteins from PlasmoDB 
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Plasmodium_falciparum_mito_proteome" version="7.1"
+        displayName="Plasmodium falciparum mitochondrial proteome from PlasmoDB"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="PfalciparumMitoProteome"
+        extDbRlsVer="7.1"
+        extDbRlsDescrip="Plasmodium falciparum mito proteome from PlasmoDB" 
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://plasmodb.org/common/downloads/release-7.1/PfalciparumMito/fasta/PfalciparumMitoAnnotatedProteins_PlasmoDB-7.1.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_mito_proteome/PfalciparumMitoAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Plasmodium falciparum mitochondrial proteins from PlasmoDB 
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Plasmodium_falciparum_plastid_proteome" version="7.1"
+        displayName="Plasmodium falciparum plastid proteome from PlasmoDB"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="PfalciparumPlastidProteome"
+        extDbRlsVer="7.1"
+        extDbRlsDescrip="Plasmodium falciparum plastid proteome from PlasmoDB" 
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://plasmodb.org/common/downloads/release-7.1/PfalciparumPlastid/fasta/PfalciparumPlastidAnnotatedProteins_PlasmoDB-7.1.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_plastid_proteome/PfalciparumPlastidAnnotatedProteins_PlasmoDB-7.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Plasmodium falciparum plastid proteins from PlasmoDB 
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Cryptosporidium_hominis_TU502_proteome" version="4.3"
         displayName="Cryptosporidium hominis TU502 proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="ChominisTU502Proteome"
-        extDbRlsVer="4.2"
+        extDbRlsVer="4.3"
         extDbRlsDescrip="Cryptosporidium hominis TU502 proteome"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://cryptodb.org/common/downloads/release-4.2/Chominis/ChominisAnnotatedProteins_CryptoDB-4.2.fasta"
+        url="http://cryptodb.org/common/downloads/release-4.3/Chominis/fasta/ChominisAnnotatedProteins_CryptoDB-4.3.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353151 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_hominis_TU502_proteome/ChominisAnnotatedProteins_CryptoDB-4.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353151 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_hominis_TU502_proteome/ChominisAnnotatedProteins_CryptoDB-4.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Cryptosporidium hominis TU502 proteins from CryptoDB
@@ -1009,18 +997,18 @@
         </description>
     </resource>
 
-<resource resource="Cryptosporidium_parvum_Iowa_II_proteome" version="4.2"
+<resource resource="Cryptosporidium_parvum_Iowa_II_proteome" version="4.3"
         displayName="Cryptosporidium parvum Iowa II proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="CparvumIowaIIProteome"
-        extDbRlsVer="4.2"
+        extDbRlsVer="4.3"
         extDbRlsDescrip="Cryptosporidium parvum Iowa II proteome"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://cryptodb.org/common/downloads/release-4.2/Cparvum/CparvumAnnotatedProteins_CryptoDB-4.2.fasta"
+        url="http://cryptodb.org/common/downloads/release-4.3/Cparvum/fasta/CparvumAnnotatedProteins_CryptoDB-4.3.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353152 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_parvum_Iowa_II_proteome/CparvumAnnotatedProteins_CryptoDB-4.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353152 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_parvum_Iowa_II_proteome/CparvumAnnotatedProteins_CryptoDB-4.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Cryptosporidium parvum Iowa II proteins from CryptoDB
@@ -1028,18 +1016,18 @@
         </description>
     </resource>
 
-<resource resource="Cryptosporidium_muris_RN66_proteome" version="4.2"
+<resource resource="Cryptosporidium_muris_RN66_proteome" version="4.3"
         displayName="Cryptosporidium muris RN66 proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="CmurisRN66Proteome"
-        extDbRlsVer="4.2"
+        extDbRlsVer="4.3"
         extDbRlsDescrip="Cryptosporidium muris RN66 proteome"
         contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://cryptodb.org/common/downloads/release-4.2/Cmuris/CmurisAnnotatedProteins_CryptoDB-4.2.fasta"
+        url="http://cryptodb.org/common/downloads/release-4.3/Cmuris/fasta/CmurisAnnotatedProteins_CryptoDB-4.3.fasta"
         dbCommit="@dbcommit@">
         <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 441375 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_muris_RN66_proteome/CmurisAnnotatedProteins_CryptoDB-4.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 441375 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Cryptosporidium_muris_RN66_proteome/CmurisAnnotatedProteins_CryptoDB-4.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Cryptosporidium muris RN66 proteins from CryptoDB
@@ -1047,16 +1035,18 @@
         </description>
     </resource>
 
-<resource resource="Neospora_caninum_proteome" version="6.0"
+<resource resource="Neospora_caninum_proteome" version="6.2"
         displayName="Neospora caninum proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
         extDbName="NcaninumProteome"
-        extDbRlsVer="6.0"
+        extDbRlsVer="6.2"
         extDbRlsDescrip="Neospora caninum proteome"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://toxodb.org/common/downloads/release-6.2/NeosporaCaninum/fasta/NeosporaCaninumAnnotatedProteins_ToxoDB-6.2.fasta"
         dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Neospora/6.0/Ncaninum.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 29176 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Neospora_caninum_proteome/Ncaninum.fasta  --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 29176 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Neospora_caninum_proteome/NeosporaCaninumAnnotatedProteins_ToxoDB-6.2.fasta  --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
     Neospora caninum proteins from ToxoDB
@@ -1082,6 +1072,281 @@
         </description>
     </resource>
 
+
+<resource resource="GintestinalisAssemblageA_deprecated_proteome" version="2.3"
+        displayName="Gintestinalis Assemblage A deprecated gene proteins"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="GintestinalisAssemblageADepGenes"
+        extDbRlsVer="2.3"
+        extDbRlsDescrip="G.intestinalis Assemblage A deprecated gene proteins from GiardiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://giardiadb.org/common/downloads/release-2.3/GintestinalisAssemblageA/fasta/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "product=([^\|]+)\|" --sequenceFile @downloadDir@/GintestinalisAssemblageA_deprecated_proteome/GlambliaAnnotatedDeprecatedProteins_GiardiaDB-2.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    G.intestinalis Assemblage A deprecated gene proteins from GiardiaDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="GintestinalisAssemblageA_proteome" version="2.3"
+        displayName="G.intestinalis Assemblage A proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="GintestinalisAssemblageAProteome"
+        extDbRlsVer="2.3"
+        extDbRlsDescrip="G.intestinalis Assemblage A proteome from GiardiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://giardiadb.org/common/downloads/release-2.3/GintestinalisAssemblageA/fasta/GlambliaAnnotatedProteins_GiardiaDB-2.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 184922 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/GintestinalisAssemblageA_proteome/GlambliaAnnotatedProteins_GiardiaDB-2.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    G.intestinalis Assemblage A proteins from GiardiaDB
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="GintestinalisAssemblageE_proteome" version="2.3"
+        displayName="G.intestinalis Assemblage E proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="GintestinalisAssemblageEProteome"
+        extDbRlsVer="2.3"
+        extDbRlsDescrip="G.intestinalis Assemblage E proteome from GiardiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://giardiadb.org/common/downloads/release-2.3/GintestinalisAssemblageE/fasta/GintestinalisAssemblageEAnnotatedProteins_GiardiaDB-2.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 658858 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/GintestinalisAssemblageE_proteome/GintestinalisAssemblageEAnnotatedProteins_GiardiaDB-2.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    G.intestinalis Assemblage E proteins from GiardiaDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="GintestinalisAssemblageB_proteome" version="2.3"
+        displayName="G.intestinalis Assemblage B proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="GintestinalisAssemblageBProteome"
+        extDbRlsVer="2.3"
+        extDbRlsDescrip="G.intestinalis Assemblage B proteome from GiardiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://giardiadb.org/common/downloads/release-2.3/GintestinalisAssemblageB/fasta/GintestinalisAssemblageBAnnotatedProteins_GiardiaDB-2.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 598745 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/GintestinalisAssemblageB_proteome/GintestinalisAssemblageBAnnotatedProteins_GiardiaDB-2.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    G.intestinalis Assemblage B proteins from GiardiaDB
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Encephalitozoon_cuniculi_proteome" version="1.2"
+        displayName="Encephalitozoon cuniculi proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EcuniculiProteome"
+        extDbRlsVer="1.2"
+        extDbRlsDescrip="Encephalitozoon cuniculi proteome from MicrosporidiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://microsporidiadb.org/common/downloads/release-1.2/Ecuniculi/fasta/EcuniculiAnnotatedProteins_MicrosporidiaDB-1.2.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 284813 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Encephalitozoon_cuniculi_proteome/EcuniculiAnnotatedProteins_MicrosporidiaDB-1.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Encephalitozoon cuniculi proteins from MicrosporidiaDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Encephalitozoon_bieneusi_proteome" version="1.2"
+        displayName="Enterocytozoonn bieneusi proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EbieneusiProteome"
+        extDbRlsVer="1.2"
+        extDbRlsDescrip="Enterocytozoon bieneusi proteome from MicrosporidiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://microsporidiadb.org/common/downloads/release-1.2/Ebieneusi/fasta/EbieneusiAnnotatedProteins_MicrosporidiaDB-1.2.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 31281 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Encephalitozoon_bieneusi_proteome/EbieneusiAnnotatedProteins_MicrosporidiaDB-1.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Encephalitozoon cuniculi GB-M1 proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Encephalitozoon_intestinalis_proteome" version="1.2"
+        displayName="Encephalitozoon intestinalis proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Eintestinalis1Proteome"
+        extDbRlsVer="1.2"
+        extDbRlsDescrip="Encephalitozoon intestinalis proteome from MicrosporidiaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://microsporidiadb.org/common/downloads/release-1.2/Eintestinalis/fasta/EintestinalisAnnotatedProteins_MicrosporidiaDB-1.2.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 58839 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Encephalitozoon_intestinalis_proteome/EintestinalisAnnotatedProteins_MicrosporidiaDB-1.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Encephalitozoon intestinalis proteins from MicrosporidiaDB
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Trichomonas_vaginalis_G3_proteome" version="1.2"
+        displayName="Trichomonas vaginalis G3 proteome from TrichDB 1.2"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="TvaginalisG3Proteome"
+        extDbRlsVer="1.2"
+        extDbRlsDescrip="Trichomonas vaginalis G3 proteome from TrichDB 1.2"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://trichdb.org/common/downloads/release-1.2/Tvaginalis/fasta/TvaginalisAnnotatedProteins_TrichDB-1.2.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 412133 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trichomonas_vaginalis_G3_proteome/TvaginalisAnnotatedProteins_TrichDB-1.2.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trichomonas vaginalis G3 proteome from TrichDB 1.0
+    ]]>
+        </description>
+    </resource>
+
+
+
+<resource resource="Babesia_bovis_T2Bo_proteome" version="2009-08-17"
+          category="Proteome" 
+          displayName="Babesia bovis T2Bo proteome" 
+          plugin="GUS::Supported::Plugin::LoadFastaSequences"
+          extDbName="BbovisT2BoProteome"
+          extDbRlsVer="2009-08-17"
+          extDbRlsDescrip="Babesia bovis T2Bo proteome from NCBI"
+          dbCommit="@dbcommit@">
+        <manualGet contact="Deborah Pinney" 
+                   mail="pinney@pcbi.upenn.edu" 
+                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/Babesia_bovis/2009-08-17/sequences.fasta" 
+                   institution="University of Pennsylvania"
+                   />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 484906  --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Babesia_bovis_T2Bo_proteome/sequences.fasta --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+               <![CDATA[
+                Babesia bovis T2Bo proteins from NCBI
+		    ]]>        
+        </description>
+    </resource>
+
+<resource resource="Theileria_parva_proteome" version="2005-11-07"
+        displayName="Theileria parva proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="TparvaProteome"
+        extDbRlsVer="2005-11-07"
+        extDbRlsDescrip="Theileria parva chromosome 1 and 2, apicoplast proteome from NCBI"
+        contact="MJGardner:gardner@tigr.org"
+        url="ftp://ftp.ncbi.nih.gov/genomes/Protozoa/Theileria_parva/"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 333668 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Theileria_parva_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Theileria parva proteins from NCBI 
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Theileria_annulata_Ankara_proteome" version="2005-07-15"
+        displayName="Theileria annulata Ankara proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="TannulataAnkaraProteome"
+        extDbRlsVer="2005-07-15"
+        extDbRlsDescrip="Theileria annulata Ankara proteome from WTSI"
+        contact="MBerriman:mb4@sanger.ac.uk"
+        url="ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353154 --regexDesc "^>[^\|]+\|[^\|]*\|[^\|]*\|([^\|]+)\|"   --sequenceFile @downloadDir@/Theileria_annulata_Ankara_proteome/TANN.GeneDB.pep --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Theileria annulata Ankara proteins from WTSI
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Entamoeba_histolytica_HM-1_IMSS_proteome" version="1.3"
+        displayName="Entamoeba histolytica HM-1:IMSS proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EhistolyticaHM1IMSSProteome"
+        extDbRlsVer="1.3"
+        extDbRlsDescrip="Entamoeba histolytica HM-1:IMSS proteome from AmoebaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://amoebadb.org/common/downloads/release-1.3/Ehistolytica/fasta/EhistolyticaAnnotatedProteins_AmoebaDB-1.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 294381 --regexDesc "product=([^\|]+)\|"    --sequenceFile @downloadDir@/Entamoeba_histolytica_HM-1_IMSS_proteome/EhistolyticaAnnotatedProteins_AmoebaDB-1.3.fasta  --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Entamoeba histolytica HM-1:IMSS proteins from AmoebaDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Entamoeba_dispar_SAW760_proteome" version="1.3"
+        displayName="Entamoeba dispar SAW760 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EdisparSAW760Proteome"
+        extDbRlsVer="1.3"
+        extDbRlsDescrip="Entamoeba dispar SAW760 proteome from AmoebaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://amoebadb.org/common/downloads/release-1.3/Edispar/fasta/EdisparAnnotatedProteins_AmoebaDB-1.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370354 --regexDesc "product=([^\|]+)\|"    --sequenceFile @downloadDir@/Entamoeba_dispar_SAW760_proteome/EdisparAnnotatedProteins_AmoebaDB-1.3.fasta  --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Entamoeba dispar SAW760 proteins from AmoebaDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Entamoeba_invadens_IP1_proteome" version="1.3"
+        displayName="Entamoeba invadens IP1 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="EinvadensIP1Proteome"
+        extDbRlsVer="1.3"
+        extDbRlsDescrip="Entamoeba invadens IP1 proteome from AmoebaDB"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="http://amoebadb.org/common/downloads/release-1.3/Einvadens/fasta/EinvadensAnnotatedProteins_AmoebaDB-1.3.fasta"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370355 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Entamoeba_invadens_IP1_proteome/EinvadensAnnotatedProteins_AmoebaDB-1.3.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Entamoeba invadens IP1 proteins from AmoebaDB
+    ]]>
+        </description>
+    </resource>
+
 <resource resource="Rickettsia_prowazekii_MadridE_proteome" version="2009-04-26"
         displayName="Rickettsia prowazekii Madrid E Proteome"
         category="Proteome"
@@ -1099,60 +1364,6 @@
     ]]>
         </description>
     </resource>
-
-
-<resource resource="Entamoeba_histolytica_HM-1_IMSS_proteome" version="2009-04-24"
-        displayName="Entamoeba histolytica HM-1:IMSS proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="EhistolyticaHM1IMSSProteome"
-        extDbRlsVer="2009-04-24"
-        extDbRlsDescrip="Entamoeba histolytica HM-1:IMSS proteome from JCVI"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_histolytica/2009-04-24/e_histolytica.fasta" institution="AmoebaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 294381 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_histolytica_HM-1_IMSS_proteome/e_histolytica.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Entamoeba histolytica HM-1:IMSS proteins from JCVI
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Entamoeba_dispar_SAW760_proteome" version="2009-04-24"
-        displayName="Entamoeba dispar SAW760 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="EdisparSAW760Proteome"
-        extDbRlsVer="2009-04-24"
-        extDbRlsDescrip="Entamoeba dispar SAW760 proteome from JCVI"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_dispar/2009-04-24/e_dispar.fasta" institution="AmoebaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370354 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_dispar_SAW760_proteome/e_dispar.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Entamoeba  dispar SAW760 proteins from JCVI
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Entamoeba_invadens_IP1_proteome" version="2009-04-24"
-        displayName="Entamoeba invadens IP1 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="EinvadensIP1Proteome"
-        extDbRlsVer="2009-04-24"
-        extDbRlsDescrip="Entamoeba invadens IP1 proteome from JCVI"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/AmoebaDB/manualDelivery/Genomes/Entamoeba_invadens/2009-04-24/e_invadens.fasta" institution="AmoebaDB"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 370355 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Entamoeba_invadens_IP1_proteome/e_invadens.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Entamoeba invadens IP1 proteins from JCVI
-    ]]>
-        </description>
-    </resource>
-
-
 
 <resource resource="Yersinia_enterocolitica_8081_proteome" version="2009-05-07"
         displayName="Yersinia enterocolitica 8081 Proteome"
@@ -1190,25 +1401,6 @@
         </description>
     </resource>
 
-<resource resource="Coccidioides_immitis_RS_proteome" version="2008-10-29"
-        displayName="Coccidioides immitis RS strain Proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="CimmitisRSProteome"
-        extDbRlsVer="2008-10-29"
-        extDbRlsDescrip="Coccidioides immitis RS strain Proteome from the Broad Institute"
-        publicUrl="http://www.broad.mit.edu/annotation/genome/coccidioides_group"  
-        dbCommit="@dbcommit@">
-        <manualGet
-           fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Coccidioides_immitis_RS/coccidioides_immitis_rs_2_proteins.fasta"
-        />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  246410 --regexDesc "\|(.+)"  --sequenceFile @downloadDir@/Coccidioides_immitis_RS_proteome/coccidioides_immitis_rs_2_proteins.fasta --regexSourceId "^>([^\|\s]+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Coccidioides immitis RS strain proteins from the Broad Institute
-    ]]>
-        </description>
-    </resource>
 
 <resource resource="Coccidioides_posadasii_RMSCC3488_proteome" version="2008-10-29"    
         displayName="Coccidioides posadasii (RMSCC 3488) Proteome"
@@ -1292,46 +1484,6 @@
         </description>
     </resource>	
 
-
-
-<resource resource="Theileria_parva_proteome" version="2005-11-07"
-        displayName="Theileria parva proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TparvaProteome"
-        extDbRlsVer="2005-11-07"
-        extDbRlsDescrip="Theileria parva chromosome 1 and 2, apicoplast proteome from NCBI"
-        contact="MJGardner:gardner@tigr.org"
-        url="ftp://ftp.ncbi.nih.gov/genomes/Protozoa/Theileria_parva/"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 333668 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Theileria_parva_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Theileria parva proteins from NCBI 
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Theileria_annulata_Ankara_proteome" version="2005-07-15"
-        displayName="Theileria annulata Ankara proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TannulataAnkaraProteome"
-        extDbRlsVer="2005-07-15"
-        extDbRlsDescrip="Theileria annulata Ankara proteome from WTSI"
-        contact="MBerriman:mb4@sanger.ac.uk"
-        url="ftp://ftp.sanger.ac.uk/pub/pathogens/T_annulata/TANN.GeneDB.pep"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353154 --regexDesc "^>[^\|]+\|[^\|]*\|[^\|]*\|([^\|]+)\|"   --sequenceFile @downloadDir@/Theileria_annulata_Ankara_proteome/TANN.GeneDB.pep --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Theileria annulata Ankara proteins from WTSI
-    ]]>
-        </description>
-    </resource>
-
 <resource resource="Tetrahymena_thermophila_SB210_proteome" version="2006-10-24"
         displayName="Tetrahymena thermophila SB210 proteome"
         category="Proteome"
@@ -1347,142 +1499,6 @@
         <description>
             <![CDATA[
     Tetrahymena thermophila SB210 proteins from JCVI
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Trypanosoma_brucei_TREU927_proteome" version="2.0"
-        displayName="Trypanosoma brucei TREU927 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TbruceiTREU927Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma brucei TREU927 proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tbruceibrucei927.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 185431 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_brucei_TREU927_proteome/Tbruceibrucei927.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trypanosoma brucei TREU927 proteins from TriTrypDB from 2.0
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Trypanosoma_brucei_gambiense_proteome" version="2.0"
-        displayName="Trypanosoma brucei gambiense proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TbruceigambienseProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma brucei gambiense proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tbruceigambiense.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxI 31285 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_brucei_gambiense_proteome/Tbruceigambiense.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trypanosoma brucei gambiense proteins from TriTrypDB from 2.0
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Trypanosoma_congolense_proteome" version="2.0"
-        displayName="Trypanosoma congolense proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TcongolenseProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma congolense proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tcongolense.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxI 5692 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_congolense_proteome/Tcongolense.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trypanosoma congolense proteins from TriTrypDB from 2.0
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Trypanosoma_vivax_proteome" version="2.0"
-        displayName="Trypanosoma vivax proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TvivaxProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma vivax proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tvivax.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxI 5699 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_vivax_proteome/Tvivax.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trypanosoma congolense proteins from TriTrypDB from 2.0
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Leishmania_major_strain_Friedlin_proteome" version="2.0"
-        displayName="Leishmania major strain Friedlin proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="LmajorFriedlinProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Leishmania major strain Friedlin proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Lmajor.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 347515 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Leishmania_major_strain_Friedlin_proteome/Lmajor.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Leishmania major strain Friedlin proteins from TriTrypDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Leishmania_braziliensis_MHOM_BR_75_M2904_proteome" version="2.0"
-        displayName="Leishmania braziliensis MHOM/BR/75/M2904 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="LbraziliensisMHOMBR75M2904Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Leishmania braziliensis MHOM/BR/75/M2904 proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Lbraziliensis.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 420245 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Leishmania_braziliensis_MHOM_BR_75_M2904_proteome/Lbraziliensis.fasta  --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Leishmania braziliensis MHOM/BR/75/M2904 proteins from TriTrypDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Leishmania_infantum_JPCM5_proteome" version="2.0"
-        displayName="Leishmania infantum JPCM5 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="LinfantumJPCM5Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Leishmania infantum JPCM5 proteome from TriTrypDB 2.0"
-        dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Linfantum.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  435258  --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Leishmania_infantum_JPCM5_proteome/Linfantum.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Leishmania infantum JPCM5 proteins from TriTrypDB
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Encephalitozoon_cuniculi_GB-M1_proteome" version="2009-06-30"
-        displayName="Encephalitozoon cuniculi GB-M1 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="EcuniculiGB-M1Proteome"
-        extDbRlsVer="2009-06-30"
-        extDbRlsDescrip="Encephalitozoon cuniculi GB-M1 chromosome I-XI proteome from NCBI"
-        dbCommit="@dbcommit@">
-        <manualGet contact="Vishal Nayak" email="vishalkn@pcbi.upenn.edu" fileOrDir="/files/cbil/data/cbil/MicrosporidiaDB/manualDelivery/Genomes/Encephalitozoon_cuniculi/2008-06-11/genbank/Ecuniculi.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 284813 --regexDesc "^>[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Encephalitozoon_cuniculi_GB-M1_proteome/Ecuniculi.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Encephalitozoon cuniculi GB-M1 proteins from NCBI
     ]]>
         </description>
     </resource>
@@ -1506,43 +1522,6 @@
         </description>
     </resource>
 
-<resource resource="Cryptococcus_neoformans_JEC21_proteome" version="2007-04-20"
-        displayName="Cryptococcus neoformans var. neoformans JEC21 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="CneoformansJEC21Proteome"
-        extDbRlsVer="2007-04-20"
-        extDbRlsDescrip="Cryptococcus neoformans var. neoformans JEC21 chromosome 1-14 proteome from NCBI"
-        contact="crypt@tigr.org"
-        url="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Cryptococcus_neoformans_var_JEC21/"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 214684  --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Cryptococcus_neoformans_JEC21_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Cryptococcus neoformans var. neoformans JEC21 proteins from NCBI
-    ]]>
-        
-</description>
-    </resource>
-
-<resource resource="Phanerochaete_chrysosporium_RP-78_proteome" version="2.0"
-        displayName="Phanerochaete chrysosporium RP-78 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="PchrysosporiumRP-78Proteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Phanerochaete chrysosporium RP-78 proteome from JGI"
-        publicUrl="http://genome.jgi-psf.org/Phchr1/Phchr1.home.html"
-        dbCommit="@dbcommit@">
-        <manualGet contact="D Rokhsar" email="dsrokhsar@lbl.gov" fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/Phanerochaete_chrysosporium/2.0/BestModels2.1.prot" institution="JGI"/>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 273507 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Phanerochaete_chrysosporium_RP-78_proteome/BestModels2.1.prot --regexSourceId "^>jgi\|[^\|]+\|[^\|]+\|([^\|\s]+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Phanerochaete chrysosporium RP-78 proteins from JGI
-    ]]>
-        </description>
-    </resource>
 
 <resource resource="Ashbya_gossypii_proteome" version="2009-10-13"
         displayName="Ashbya gossypii proteome"
@@ -1562,25 +1541,6 @@
         </description>
     </resource>
 
-<resource resource="Neurospora_crassa_OR74A_proteome" version="2006-05-04"
-        displayName="Neurospora crassa OR74A proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="NcrassaOR74AProteome"
-        extDbRlsVer="2006-05-04"
-        extDbRlsDescrip="Neurospora crassa OR74A chromosomal and plasmid Mauricevill proteome from NCBI"
-        contact="BBirren:bwb@genome.wi.mit.edu"
-        url="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Neurospora_crassa/"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 367110 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Neurospora_crassa_OR74A_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Neurospora crassa OR74A proteins from NCBI
-    ]]>
-        
-</description>
-    </resource>
 
 <resource resource="Yarrowia_lipolytica_CLIB122_proteome" version="2008-10-29"
         displayName="Yarrowia lipolytica CLIB122 proteome"
@@ -1683,24 +1643,6 @@
 </description>
     </resource>
 
-<resource resource="Aspergillus_fumigatus_Af293_proteome" version="2009-01-06"
-        displayName="Aspergillus fumigatus Af293 proteome"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="AfumigatusAf293Proteome"
-        extDbRlsVer="2009-01-06"
-        extDbRlsDescrip="Aspergillus fumigatus Af293 proteome from NCBIxs"
-        contact="MBerriman:mb4@sanger.ac.uk"
-        url="ftp://ftp.ncbi.nih.gov/genomes/Fungi/Aspergillus_fumigatus/"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5 --mirror --no-parent --no-directories --no-host-directories --cut-dirs=3 --accept=*.faa</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 330879 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --seqFileDir @downloadDir@/Aspergillus_fumigatus_Af293_proteome --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Aspergillus fumigatus Af293 proteins from NCBI
-    ]]>
-        </description>
-</resource> 
 
 <resource resource="Guillardia_theta_proteome" version="2.0"
         displayName="Guillardia theta proteome"
@@ -2728,103 +2670,6 @@
 </resource>
 
 
-<resource resource="Trichomonas_vaginalis_G3_proteome" version="1.0"
-        displayName="Trichomonas vaginalis G3 proteome from TrichDB 1.0"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TvaginalisG3Proteome"
-        extDbRlsVer="1.0"
-        extDbRlsDescrip="Trichomonas vaginalis G3 proteome from TrichDB 1.0"
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://trichdb.org/common/downloads/release-1.0/TvaginalisAnnotatedProteins_TrichDB-1.0.fasta"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 412133 --regexDesc "\|release\-1\.0\/([^\|]+)$"   --sequenceFile @downloadDir@/Trichomonas_vaginalis_G3_proteome/TvaginalisAnnotatedProteins_TrichDB-1.0.fasta --regexSourceId "^>[^\|]+\|[^\|]+\|([^\|]+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Trichomonas vaginalis G3 proteome from TrichDB 1.0
-    ]]>
-        </description>
-    </resource>
-
-
-<resource resource="Plasmodium_falciparum_D47_proteome" version="6.1"
-        displayName="Plasmodium falciparum D47 proteome from PlasmoDB"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="PfalciparumProteome"
-        extDbRlsVer="6.1"
-        extDbRlsDescrip="Plasmodium falciparum D47 proteome from PlasmoDB"
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/Pfalciparum/PfalciparumAnnotatedProteins_PlasmoDB-6.1.fasta"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_D47_proteome/PfalciparumAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Plasmodium falciparum proteins from PlasmoDB 
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Plasmodium_falciparum_mito_proteome" version="6.1"
-        displayName="Plasmodium falciparum mitochondrial proteome from PlasmoDB"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="PfalciparumMitoProteome"
-        extDbRlsVer="6.1"
-        extDbRlsDescrip="Plasmodium falciparum mito proteome from PlasmoDB" 
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/PfalciparumMito/PfalciparumMitoAnnotatedProteins_PlasmoDB-6.1.fasta"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_mito_proteome/PfalciparumMitoAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Plasmodium falciparum mitochondrial proteins from PlasmoDB 
-    ]]>
-        </description>
-    </resource>
-
-<resource resource="Plasmodium_falciparum_plastid_proteome" version="6.1"
-        displayName="Plasmodium falciparum plastid proteome from PlasmoDB"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="PfalciparumPlastidProteome"
-        extDbRlsVer="6.1"
-        extDbRlsDescrip="Plasmodium falciparum plastid proteome from PlasmoDB" 
-        contact="OHarb:oharb@pcbi.upenn.edu"
-        url="http://plasmodb.org/common/downloads/release-6.1/PfalciparumPlastid/PfalciparumPlastidAnnotatedProteins_PlasmoDB-6.1.fasta"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 36329 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Plasmodium_falciparum_plastid_proteome/PfalciparumPlastidAnnotatedProteins_PlasmoDB-6.1.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Plasmodium falciparum plastid proteins from PlasmoDB 
-    ]]>
-        </description>
-    </resource>
-
-
-<resource resource="Saccharomyces_cerevisiae_S288C_proteome" version="53"
-        displayName="Saccharomyces cerevisiae S288C proteome from Ensembl, release 53"
-        category="Proteome"
-        plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="Saccharomyces cerevisiae proteome from Ensembl"
-        extDbRlsVer="53"
-        extDbRlsDescrip="Saccharomyces cerevisiae S288C proteome from Ensembl, release 53, based on data obtained from SGD"
-        contact="http://www.ensembl.org/Help/Contact"
-        url="ftp://ftp.ensembl.org/pub/current_fasta/saccharomyces_cerevisiae/pep/Saccharomyces_cerevisiae.SGD1.01.53.pep.all.fa.gz"
-        dbCommit="@dbcommit@">
-        <wgetArgs>--tries=5</wgetArgs>
-        <unpack>processEnsProtFile --fastaFile @downloadDir@/Saccharomyces_cerevisiae_S288C_proteome/Saccharomyces_cerevisiae.SGD1.01.53.pep.all.fa.gz  --maxStopCodonPercent 20 --outputFile @downloadDir@/Saccharomyces_cerevisiae_S288C_proteome/Saccharomyces_cerevisiae.SGD1.01.53.fasta --log @logDir@/Saccharomyces_cerevisiae_geneAndProtNum </unpack>
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 559292 --sequenceFile @downloadDir@/Saccharomyces_cerevisiae_S288C_proteome/Saccharomyces_cerevisiae.SGD1.01.53.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-            <![CDATA[
-    Saccharomyces cerevisiae S288C proteins from Ensembl 53, data originally from SGD
-    ]]>
-      </description>
-</resource>
 
 <resource resource="Brugia_malayi_proteome" version="2008-03-08"
         displayName="Brugia malayi proteome from nematode.net"
@@ -2843,77 +2688,450 @@
         </description>
     </resource>
 
-<resource resource="Trypanosoma_cruzi_CLBrener_proteome" version="2.0"
-        displayName="Trypanosoma cruzi strain CL Brener proteome"
+<resource resource="Leishmania_braziliensis_proteome" version="3.0"
+        displayName="Leishmania braziliensis  proteome"
         category="Proteome"
         plugin="GUS::Supported::Plugin::LoadFastaSequences"
-        extDbName="TcruziCLBrenerProteome"
-        extDbRlsVer="2.0"
-        extDbRlsDescrip="Trypanosoma cruzi strain CL Brener proteome from TriTrypDB 2.0"
+        extDbName="L.braziliensis Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Leishmania braziliensis proteome from TriTrypDB 3.0"
         dbCommit="@dbcommit@">
-        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/TriTryps/2.0/Tcruzi.fasta" />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 353153 --regexDesc "^>[^\|]+\|([^\|]+)"   --sequenceFile @downloadDir@/Trypanosoma_cruzi_CLBrener_proteome/Tcruzi.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/LbraziliensisAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5660 --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Leishmania_braziliensis_proteome/LbraziliensisAnnotatedProteins.fasta  --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
             <![CDATA[
-    Trypanosoma cruzi strain CL Brener proteins from TriTrypDB 2.0
+    Leishmania braziliensis proteins from TriTrypDB
     ]]>
         </description>
     </resource>
 
-<resource resource="Babesia_bovis_T2Bo_proteome" version="2009-08-17"
-          category="Proteome" 
-          displayName="Babesia bovis T2Bo proteome" 
-          plugin="GUS::Supported::Plugin::LoadFastaSequences"
-          extDbName="BbovisT2BoProteome"
-          extDbRlsVer="2009-08-17"
-          extDbRlsDescrip="Babesia bovis T2Bo proteome from NCBI"
-          dbCommit="@dbcommit@">
-        <manualGet contact="Deborah Pinney" 
-                   mail="pinney@pcbi.upenn.edu" 
-                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/Babesia_bovis/2009-08-17/sequences.fasta" 
-                   institution="University of Pennsylvania"
-                   />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 484906  --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Babesia_bovis_T2Bo_proteome/sequences.fasta --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+<resource resource="Leishmania_infantum_proteome" version="3.0"
+        displayName="Leishmania infantum proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="L.infantum Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Leishmania infantum proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/LinfantumAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  5671  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Leishmania_infantum_proteome/LinfantumAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
         <description>
-               <![CDATA[
-                Babesia bovis T2Bo proteins from NCBI
-		    ]]>        
-        </description>
-    </resource>
-
-<resource resource="Leishmania_mexicana_proteome" version="2009-06-11"
-          category="Proteome" 
-          displayName="Leishmania mexicana proteome" 
-          plugin="GUS::Supported::Plugin::LoadFastaSequences"
-          extDbName="LmexicanaProteome"
-          extDbRlsVer="2009-06-11"
-          extDbRlsDescrip="Leishmania mexicana proteome from Sanger"
-          dbCommit="@dbcommit@">
-        <manualGet contact="Deborah Pinney" 
-                   mail="pinney@pcbi.upenn.edu" 
-                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/Leishmania_mexicana_proteome/2009-06-11/Lmex.pep.gz" 
-                   institution="University of Pennsylvania"
-                   />
-        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5665  --sequenceFile @downloadDir@/Leishmania_mexicana_proteome/Lmex.pep.gz --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
-        <description>
-               <![CDATA[
-                Leishmania mexicana proteins from Sanger
-		    ]]>        
+            <![CDATA[
+    Leishmania infantum proteins from TriTrypDB
+    ]]>
         </description>
     </resource>
 
 
-<resource resource="orthomclClades" version="2009-11-09"
+<resource resource="Leishmania_major_Friedlin_proteome" version="3.0"
+        displayName="Leishmania major Friedlin proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="L.major Friedlin Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Leishmania major Friedlin proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/LmajorFriedlinAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  347515  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Leishmania_major_Friedlin_proteome/LmajorFriedlinAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Leishmania major Friedlin proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Leishmania_mexicana_proteome" version="3.0"
+        displayName="Leishmania mexicana proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="L.mexicana Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Leishmania mexicana proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/LmexicanaAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  5665  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Leishmania_mexicana_proteome/LmexicanaAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Leishmania mexicana proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Trypanosoma_brucei_proteome" version="3.0"
+        displayName="Trypanosoma brucei proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="T.brucei Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Trypanosoma brucei proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/TbruceiAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  5691  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trypanosoma_brucei_proteome/TbruceiAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trypanosoma brucei proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Trypanosoma_brucei_gambiense_proteome" version="3.0"
+        displayName="Trypanosoma brucei gambiense proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="T.brucei gambiense Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Trypanosoma brucei gambiense proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/TbruceigambienseAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  31285  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trypanosoma_brucei_gambiense_proteome/TbruceigambienseAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trypanosoma brucei gambiense proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Trypanosoma_congolense_proteome" version="3.0"
+        displayName="Trypanosoma congolense proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="T.congolense Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Trypanosoma congolense proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/TcongolenseAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  5692  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trypanosoma_congolense_proteome/TcongolenseAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trypanosoma congolense proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Trypanosoma_cruzi_proteome" version="3.0"
+        displayName="Trypanosoma cruzi proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="T.cruzi Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Trypanosoma cruzi proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/TcruziAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  353153  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trypanosoma_cruzi_proteome/TcruziAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trypanosoma cruzi proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Trypanosoma_vivax_proteome" version="3.0"
+        displayName="Trypanosoma vivax proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="T.vivax Proteome"
+        extDbRlsVer="3.0"
+        extDbRlsDescrip="Trypanosoma vivax proteome from TriTrypDB 3.0"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/home/weili1/proteinSeqTryp3.0/TvivaxAnnotatedProteins.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  5699  --regexDesc "product=([^\|]+)\|"   --sequenceFile @downloadDir@/Trypanosoma_vivax_proteome/TvivaxAnnotatedProteins.fasta --regexSourceId "^>[^\|]+\|([^\|]+)\s+\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Trypanosoma vivax proteins from TriTrypDB
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Aspergillus_fumigatus_af293_proteome" version="2010_12_22"
+        displayName="Aspergillus fumigatus af293 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Aspergillus fumigatus af293 proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Aspergillus fumigatus af293 proteome from AspGD"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/aspergillus_fumigatus_af293/2010_12_22/aspergillus_fumigatus_af293.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId  330879 --regexDesc "amino\sacids\)\s(.+)$"   --sequenceFile @downloadDir@/Aspergillus_fumigatus_af293_proteome/aspergillus_fumigatus_af293.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Aspergillus fumigatus af293 proteins from AspGD
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Aspergillus_nidulans_a4_s06_proteome" version="2010_12_22"
+        displayName="Aspergillus nidulans a4 s06 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Aspergillus nidulans a4 s06 proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Aspergillus nidulans a4 s06 proteome from AspGD"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/aspergillus_nidulans_a4_s06-aspgd/2010_12_22/aspergillus_nidulans_a4_s06-aspgd.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 162425 --regexDesc "amino\sacids\)\s(.+)$"   --sequenceFile @downloadDir@/Aspergillus_nidulans_a4_s06_proteome/aspergillus_nidulans_a4_s06-aspgd.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Aspergillus nidulans a4 s06 proteins from AspGD
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Saccharomyces_cerevisiae_s288c_proteome" version="2010_12_22"
+        displayName="Saccharomyces cerevisiae s288c proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Saccharomyces cerevisiae s288c proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Saccharomyces cerevisiae s288c proteome from SGD"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/saccharomyces_cerevisiae_s288c/2010_12_22/saccharomyces_cerevisiae_s288c.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 559292 --regexDesc "\|([^\|]+)\|"   --sequenceFile @downloadDir@/Saccharomyces_cerevisiae_s288c_proteome/saccharomyces_cerevisiae_s288c.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Saccharomyces cerevisiae s288c from SGD
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Cryptococcus_neoformans_gattii_proteome" version="2010_12_22"
+        displayName="Cryptococcus neoformans gattii proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Cryptococcus neoformans gattii proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Cryptococcus neoformans gattii proteome from Broad"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/cryptococcus_neoformans_gattii_r265/2010_12_22/cryptococcus_neoformans_gattii_r265_1.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 37769 --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\("   --sequenceFile @downloadDir@/Cryptococcus_neoformans_gattii_proteome/cryptococcus_neoformans_gattii_r265_1.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Cryptococcus neoformans gattii proteins from Broad
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Cryptococcus_neoformans_grubii_proteome" version="2010_12_22"
+        displayName="Cryptococcus neoformans grubii proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Cryptococcus neoformans grubii proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Cryptococcus neoformans grubii proteome from Broad"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/cryptococcus_neoformans_grubii_h99/2010_12_22/cryptococcus_neoformans_grubii_h99_2.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 235443 --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\("   --sequenceFile @downloadDir@/Cryptococcus_neoformans_grubii_proteome/cryptococcus_neoformans_grubii_h99_2.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Cryptococcus neoformans grubii proteins from Broad
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Neurospora_crassa_proteome" version="2010_12_22"
+        displayName="Neurospora crassa proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Neurospora crassa proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Neurospora crassa proteome from Broad"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/neurospora_crassa_or74a_10/2010_12_22/neurospora_crassa_or74a_10.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 367110 --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\("   --sequenceFile @downloadDir@/Neurospora_crassa_proteome/neurospora_crassa_or74a_10.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Neurospora crassa proteins from Broad
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Phanerochaete_chrysosporium_proteome" version="2010_12_22"
+        displayName="Phanerochaete chrysosporium proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Phanerochaete chrysosporium proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Phanerochaete chrysosporium proteome from JGI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/phanerochaete_chrysosporium_2_1/2010_12_22/phanerochaete_chrysosporium_2_1.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5306 --sequenceFile @downloadDir@/Phanerochaete_chrysosporium_proteome/phanerochaete_chrysosporium_2_1.fasta --regexSourceId "^>jgi\|[^\|]+\|[^\|]+\|([^\|]+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Phanerochaete chrysosporium proteins from JGI
+    ]]>
+        </description>
+    </resource>
+
+
+<resource resource="Candida_albicans_proteome" version="2010_12_22"
+        displayName="Candida albicans proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Candida albicans proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Candida albicans proteome from Broad"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Candida_albicans/2010_12_22/candida_albicans.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 5476 --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\(\d+" --sequenceFile @downloadDir@/Candida_albicans_proteome/candida_albicans.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Candida albicans proteins from Broad
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Coccidioides_immitis_proteome" version="2010_12_22"
+        displayName="Coccidioides immitis proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Coccidioides immitis proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Coccidioides immitis proteome from Broad"
+        dbCommit="@dbcommit@">
+        <manualGet contact="J. Stajich" email="jason.stajich@ucr.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/coccidioides_immitis_rs_3/2010_12_22/coccidioides_immitis_rs_3.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 246410 --regexDesc ">[^\|]+\|[^\|]+\|([^\|]+)\(\d+" --sequenceFile @downloadDir@/Coccidioides_immitis_proteome/coccidioides_immitis_rs_3.fasta --regexSourceId "^>(\S+)" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Coccidioides immitis RS proteins from Broad
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Mycobacterium_leprae_Br4923_proteome" version="2010_12_22"
+        displayName="Mycobacterium leprae Br4923 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Mycobacterium leprae Br4923 proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Mycobacterium leprae Br4923 proteome from NCBI"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Mycobacterium_leprae_Br4923_uid59293/NC_011896.faa"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 561304 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Mycobacterium_leprae_Br4923_proteome/NC_011896.faa --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Mycobacterium leprae Br4923 proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Wolbachia_endosymbiont_proteome" version="2010_12_22"
+        displayName="Wolbachia endosymbiont of Culex quinquefasciatus Pel proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Wolbachia endosymbiont of Culex quinquefasciatus Pel proteome"
+        extDbRlsVer="2010_12_22"
+        extDbRlsDescrip="Wolbachia endosymbiont of Culex3001 quinquefasciatus Pel proteome from NCBI"
+        contact="OHarb:oharb@pcbi.upenn.edu"
+        url="ftp://ftp.ncbi.nih.gov/genomes/Bacteria/Wolbachia_endosymbiont_of_Culex_quinquefasciatus_Pel_uid30313/NC_010981.faa"
+        dbCommit="@dbcommit@">
+        <wgetArgs>--tries=5</wgetArgs>
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 570417 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Wolbachia_endosymbiont_proteome/NC_010981.faa --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Wolbachia endosymbiont of Culex quinquefasciatus Pel proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Macaca_mulatta_proteome" version="2010_10_14"
+        displayName="Macaca mulatta proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Macaca mulatta proteome"
+        extDbRlsVer="2010_10_14"
+        extDbRlsDescrip="Macaca mulatta proteome from NCBI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Macaca_mulatta/2010_10_14/protein.fa"/> 
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 9544 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Macaca_mulatta_proteome/protein.fa --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Macaca mulatta proteome from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Equus_caballus_proteome" version="2008_07_15"
+        displayName="Equus caballus proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Equus caballus proteome proteome"
+        extDbRlsVer="2008_07_15"
+        extDbRlsDescrip="Equus caballus proteome proteome from NCBI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Equus_caballus/2008_07_15/protein.fa" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 9796 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Equus_caballus_proteome/protein.fa --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Equus caballus proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Volvox_carteri_f_nagariensis_proteome" version="2010_08_10"
+        displayName="Volvox carteri f. nagariensis proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Volvox carteri f. nagariensis proteome"
+        extDbRlsVer="2010_08_10"
+        extDbRlsDescrip="Volvox carteri f. nagariensis proteome from NCBI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Volvox_carteri/2010_08_10/genome_result.txt" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 3068 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Volvox_carteri_f_nagariensis_proteome/genome_result.txt --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Volvox carteri f. nagariensis proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Micromonas_sp_RCC299_proteome" version="2009_04_15"
+        displayName="Micromonas sp. RCC299 proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Micromonas sp. RCC299 proteome"
+        extDbRlsVer="2009_04_15"
+        extDbRlsDescrip="Micromonas sp. RCC299 from NCBI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Micromonas_sp_RCC299/2009_04_15/sequence.fasta"/> 
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 296587 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Micromonas_sp_RCC299_proteome/sequence.fasta --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Micromonas sp. RCC299 proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="Ixodes_scapularis_Wikel_proteome" version="2008_12_03"
+        displayName="Ixodes scapularis Wikel proteome"
+        category="Proteome"
+        plugin="GUS::Supported::Plugin::LoadFastaSequences"
+        extDbName="Ixodes scapularis Wikel proteome"
+        extDbRlsVer="2008_12_03"
+        extDbRlsDescrip="Ixodes scapularis Wikel from NCBI"
+        dbCommit="@dbcommit@">
+        <manualGet contact="O. Harb" email="oharb@pcbi.upenn.edu" fileOrDir="/files/cbil2/orthoMCL/manualDelivery/Ixodes_scapularis_Wikel/2008_12_03/sequence.fasta" />
+        <pluginArgs>--externalDatabaseName %EXT_DB_NAME% --externalDatabaseVersion %EXT_DB_RLS_VER% --ncbiTaxId 6945 --regexDesc "^>gi\|\d+\|[^\|]+\|[^\|]+\|([^\|]+)$"   --sequenceFile @downloadDir@/Ixodes_scapularis_Wikel_proteome/sequence.fasta --regexSourceId "^>gi\|\d+\|[^\|]+\|([^\|]+)\.\d\|" --tableName "DoTS::ExternalAASequence"</pluginArgs>
+        <description>
+            <![CDATA[
+    Ixodes scapularis Wikel proteins from NCBI
+    ]]>
+        </description>
+    </resource>
+
+<resource resource="orthomclClades" version="2010-12-27"
           category="Ontology" 
           displayName="orthoMCL Clades" 
-          plugin="OrthoMCLData::Load::Plugin::InsertOrthomclTaxon"
+          plugin="ApiCommonData::Load::Plugin::InsertOrthomclTaxon"
           dbCommit="@dbcommit@">
         <manualGet contact="Deborah Pinney" 
                    mail="pinney@pcbi.upenn.edu" 
-                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLClades/2009-11-09/orthomclClades.txt" 
+                   fileOrDir="/files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLClades/2010-12-27/orthomclClades.txt" 
                    institution="University of Pennsylvania"
                    />
-        <pluginArgs>--cladeFile @downloadDir@/orthomclClades/orthomclClades.txt --speciesFile /files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLTaxons/2009-11-06/orthomclTaxons.txt</pluginArgs>
+        <pluginArgs>--cladeFile @downloadDir@/orthomclClades/orthomclClades.txt --speciesFile /files/cbil/data/cbil/orthoMCL/manualDelivery/orthoMCLTaxons/2010-12-27/orthomclTaxons.txt</pluginArgs>
         <description>
                <![CDATA[
                 Inserts rows in ApiDB.OrthoMCLTaxon
@@ -2921,6 +3139,12 @@
         </description>
     </resource>
 
+
 </resourcesPipeline>
+
+
+
+
+
 
 
