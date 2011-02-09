@@ -39,6 +39,8 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 &copyFilesToComputeCluster($mgr,"Proteome-ProteinSeqs", "similarity");
 
+&copyFilesToComputeCluster($mgr,"Proteome-Proteome", "similarity");
+
 &copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
 
 &copyFilesToComputeCluster($mgr,"Proteome.fsa","seqfiles");
