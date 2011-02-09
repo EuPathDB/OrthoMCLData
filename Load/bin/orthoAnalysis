@@ -12,7 +12,7 @@ my $printXML = $ARGV[1];
 my ($mgr, $projectDir, $release, $allSpecies)
   = &initOrthomclAnalysis($propertiesFile, $printXML);
 
-&copyPipelineDirToComputeCluster($mgr);
+#&copyPipelineDirToComputeCluster($mgr);
 
 ##############################################################################
 ########   The Pipeline                                               ########
@@ -29,73 +29,73 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 # &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
-# &createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","(\\S+)","$blastParams","blastp", "ncbi");
+&createSimilarityDir($mgr,"ProteinSeqs","ProteinSeqs","(\\S+)","$blastParams","blastp", "ncbi");
 
-# &extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
+&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
 
-# &copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+&copyFilesToComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-# &copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
+&copyFilesToComputeCluster($mgr,"ProteinSeqs.fsa","seqfiles");
 
-# &startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
+&startProteinBlastOnComputeCluster($mgr,"ProteinSeqs","ProteinSeqs","apidb");
 
-# $mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
+$mgr->waitForCluster("ProteinSeqs blast similarity", "waitProteinSeqs-ProteinSeqs");
 
-#  # ##### iprscan #####
-#  my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
- 
-#  &documentIPRScan($mgr,"v4.3.1");
+##### iprscan #####
+my $insertInterproConfig = "$projectDir/$release/insertInterpro-config.xml";
 
-#  my $fetchSql2 = "select x.aa_sequence_id,source_id, sequence from dots.externalaasequence x, apidb.orthomcltaxon ot where ot.taxon_id = x.taxon_id";
+&documentIPRScan($mgr,"v4.3.1");
 
-#  &extractProteinSeqs($mgr, "ProteinSeqsIPRScan", $fetchSql2, $minLength, $maxStopCodonPercent);
+my $fetchSql2 = "select x.aa_sequence_id,source_id, sequence from dots.externalaasequence x, apidb.orthomcltaxon ot where ot.taxon_id = x.taxon_id";
 
-#  &copyFilesToComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","seqfiles");
+&extractProteinSeqs($mgr, "ProteinSeqsIPRScan", $fetchSql2, $minLength, $maxStopCodonPercent);
 
-#  &createIprscanDir($mgr, "ProteinSeqsIPRScan.fsa");
+&copyFilesToComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","seqfiles");
 
-#  &copyFilesToComputeCluster($mgr,"iprscan");
+&createIprscanDir($mgr, "ProteinSeqsIPRScan.fsa");
 
-#  &startIprScanOnComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","apidb", 1);
+&copyFilesToComputeCluster($mgr,"iprscan");
 
-#  &copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
+&startIprScanOnComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","apidb", 1);
 
-#  my $ctlText = <<"EOF";
-#     LOAD DATA
-#     INFILE *
-#     INTO TABLE apidb.similarsequences
-#     FIELDS TERMINATED BY " " OPTIONALLY ENCLOSED BY '"'
-#     TRAILING NULLCOLS
-#    (query_id,
-#     subject_id,
-#     query_taxon_id,
-#     subject_taxon_id,
-#     evalue_mant,
-#     evalue_exp,
-#     percent_identity,
-#     percent_match
-#    )
-# EOF
+&copyFilesFromComputeCluster($mgr,"ProteinSeqs-ProteinSeqs", "similarity");
 
-#  &updateBlastEval($mgr,"ProteinSeqs-ProteinSeqs", "blastSimilarity.out","blastSimilarity.out_modified");
+  my $ctlText = <<"EOF";
+     LOAD DATA
+     INFILE *
+     INTO TABLE apidb.similarsequences
+     FIELDS TERMINATED BY " " OPTIONALLY ENCLOSED BY '"'
+     TRAILING NULLCOLS
+    (query_id,
+     subject_id,
+     query_taxon_id,
+     subject_taxon_id,
+     evalue_mant,
+     evalue_exp,
+     percent_identity,
+     percent_match
+    )
+EOF
 
-#  &makeOrthoSqlldrCtlFile($mgr,"ProteinSeqs-ProteinSeqs","simSeq.ctl",$ctlText) 
+  &updateBlastEval($mgr,"ProteinSeqs-ProteinSeqs", "blastSimilarity.out.gz","blastSimilarity.out_modified");
 
-#  &loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",0,"blastSimilarity.out_modified", "simSeq.ctl");
+  &makeOrthoSqlldrCtlFile($mgr,"ProteinSeqs-ProteinSeqs","simSeq.ctl",$ctlText); 
 
-#  &orthomclPairs ($mgr, "no", "coOrthologNotOrtholog");
+  #&loadBlastWithSqlldr($mgr,"ProteinSeqs-ProteinSeqs",0,"blastSimilarity.out_modified", "simSeq.ctl");
 
-#  &makeOrthoPairsFiles ($mgr);
+  &orthomclPairs ($mgr, "no", "");
 
-#  &runMcl ($mgr, '1.5');
+  &makeOrthoPairsFiles ($mgr);
 
-#  &mclOutToGroupsFile ($mgr, "OG4_", 10000);   ##change the startWith number to the largest in the previous build plus 1 
+  &runMcl ($mgr, '1.5');
 
-#  &copy($mgr, "/files/cbil2/orthoMCL/4/analysis_pipeline/primary/data/mcl/orthomclGroups.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-4/groups_OrthoMCL-4.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/release-4", "yes");
+ &mclOutToGroupsFile ($mgr, "OG5_", 10000);   ##change the startWith number to the largest in the previous build plus 1 
 
-#  &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "4", "orthomclGroups.txt");x
+  &copy($mgr, "/files/cbil2/orthoMCL/5/analysis_pipeline/primary/data/mcl/orthomclGroups.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-5/groups_OrthoMCL-5.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/release-5", "yes");
 
-#  $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
+  &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "5", "orthomclGroups.txt");
+
+  $mgr->waitForCluster("ProteinSeqs interproscan", "waitProteinSeqs-Interproscan");
 
 #  &copyFilesFromComputeCluster($mgr,"ProteinSeqsIPRScan.fsa","iprscan");
 
@@ -176,7 +176,7 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 #  &mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/3/groups_OrthoMCL-3.txt.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-11-06/ortho3Ortho4Abbrev","3");
 
-&makeOrthoResourceFile($mgr);
+#&makeOrthoResourceFile($mgr);
 
 # # ########## steps to map protein seqs to ortho groups ###############################
 
