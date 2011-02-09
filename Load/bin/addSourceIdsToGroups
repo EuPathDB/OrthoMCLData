@@ -20,7 +20,7 @@ my ($sourceIdFile,$inputGroupsFile,$outputGroupsFile, $taxonAbbrev, $log, $verbo
 	    "log=s" => \$log,
             "verbose!" => \$verbose);
 
-print STDERR "addSourceIdsToGroups --sourceIdFile --inputGroupsfile --outputGroupsFile --taxonAbbrev --log  --$grpPrefix --verbose\n" unless ($sourceIdFile && $inputGroupsFile && $outputGroupsFile && $log && $grpPrefix);
+print STDERR "addSourceIdsToGroups --sourceIdFile --inputGroupsfile --outputGroupsFile --taxonAbbrev --log  --grpPrefix --verbose\n" unless ($sourceIdFile && $inputGroupsFile && $outputGroupsFile && $log && $grpPrefix);
 
 my $f  = ($sourceIdFile =~ /\.gz$|\.Z$/) ? "zcat $sourceIdFile|" : '<'. $sourceIdFile;
 my $sourceIdFh = FileHandle->new($f);
@@ -48,6 +48,7 @@ while (<$sourceIdFh>){
   $arr[0] =~ s/^\w+\|// if $taxonAbbrev;
 
   if ($_ =~ /^$/ || $_ =~ /NO_GROUP/) {
+    $arr[0] =~ s/(\w+)/$taxonAbbrev\|$1/g if $taxonAbbrev;
     my $newGroup = $grpPrefix . $arr[2];
     push(@{$idToGroupHsh2{$newGroup}},$arr[0]);
     push(@{$idToGroupHsh2{$newGroup}},$arr[2]) unless $done{$arr[2]}==1;
