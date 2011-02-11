@@ -51,7 +51,7 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 $mgr->waitForCluster("Proteome-ProteinSeqs blast similarity", "waitProteome-ProteinSeqs");
 
-$mgr->waitForCluster("Proteome-Proteome blast similarity", "waitProteome-ProteinSeqs");
+$mgr->waitForCluster("Proteome-Proteome blast similarity", "waitProteome-Proteome");
 
 &copyFilesFromComputeCluster($mgr,"Proteome-ProteinSeqs", "similarity");
 
