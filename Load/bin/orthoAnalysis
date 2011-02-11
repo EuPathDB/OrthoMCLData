@@ -91,7 +91,7 @@ EOF
 
  &mclOutToGroupsFile ($mgr, "OG5_", 10000);   ##change the startWith number to the largest in the previous build plus 1 
 
-  &copy($mgr, "/files/cbil2/orthoMCL/5/analysis_pipeline/primary/data/mcl/orthomclGroups.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-5/groups_OrthoMCL-5.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/release-5", "yes");
+  #&copy($mgr, "/files/cbil2/orthoMCL/5/analysis_pipeline/primary/data/mcl/orthomclGroups.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-5/groups_OrthoMCL-5.txt", "/files/cbil/data/cbil/apiSiteFiles/downloadSite/orthomcl/release-5", "yes");
 
   &loadOrthoMCLResultsForOrthomclDB($mgr, "OrthoMCL", "5", "orthomclGroups.txt");
 
@@ -177,21 +177,6 @@ EOF
 #  &mapOldGroupsToNewIds($mgr,"/files/cbil2/orthoMCL/manualDelivery/previousOrthoGroups/3/groups_OrthoMCL-3.txt.gz","/files/cbil2/orthoMCL/manualDelivery/orthoMCLTaxons/2009-11-06/ortho3Ortho4Abbrev","3");
 
 #&makeOrthoResourceFile($mgr);
-
-# # ########## steps to map protein seqs to ortho groups ###############################
-
-# # #&createSimilarityDir($mgr,"GintestinalisAssemblageBProteins","aaSeqsOrthoMCL3","(\S+)","$blastParams","blastp", "ncbi");
-
-# # #&createSimilarityDir($mgr,"GintestinalisAssemblageEProteins","aaSeqsOrthoMCL3","(\S+)","$blastParams","blastp", "ncbi");
-
-# # #make all the step calls to run the orthoMCL mapper - copying back results is below
-
-# # &copyFilesFromComputeCluster($mgr,"GintestinalisAssemblageBProteins-aaSeqsOrthoMCL3","similarity");
-
-# # &copyFilesFromComputeCluster($mgr,"GintestinalisAssemblageEProteins-aaSeqsOrthoMCL3","similarity");
-
-
-
 
 # # #add step to map to inprot
 
