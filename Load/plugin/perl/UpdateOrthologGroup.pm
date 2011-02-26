@@ -145,7 +145,7 @@ EOF
     while (my @row = $sth->fetchrow_array()) {
       my $seqId = $row[0];
       my $sourceId = $row[1];
-      push (@seqIdArr, "${seqId}:$sourceId");
+      push (@seqIdArr, "${seqId},$sourceId");
     }
     my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId);
 
@@ -191,9 +191,9 @@ EOF
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + $1; $j < $grpSize ; $j++) {
-      my @sequence1 = split (/:/, $seqIdArr->[$i]);
+      my @sequence1 = split (/,/, $seqIdArr->[$i]);
 
-      my @sequence2 = split (/:/, $seqIdArr->[$j]);
+      my @sequence2 = split (/,/, $seqIdArr->[$j]);
 
       $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
@@ -291,7 +291,7 @@ sub updateOrthologGroupAaSequences {
 
   foreach my $idents (@{$seqIdArr}) {
 
-    my @ids = split (/:/, $idents);
+    my @ids = split (/,/, $idents);
 
     my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$ids[0]});
 
