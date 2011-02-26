@@ -195,7 +195,7 @@ EOF
 
       my @sequence2 = split (/:/, $seqIdArr->[$j]);
 
-      $sth->execute($sequence1[1], $sequence2[1], $sequence2[1], $sequence1[1]);
+      $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
       while (my @row = $sth->fetchrow_array()) {
 	$pairCount++;
