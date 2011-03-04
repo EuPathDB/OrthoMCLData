@@ -48,7 +48,7 @@ while (<$sourceIdFh>){
   $arr[0] =~ s/^\w+\|// if $taxonAbbrev;
 
   if ($_ =~ /^$/ || $_ =~ /NO_GROUP/) {
-    $arr[0] =~ s/(\w+)/$taxonAbbrev\|$1/g if $taxonAbbrev;
+    $arr[0] =~ s/(\S+)/$taxonAbbrev\|$1/g if $taxonAbbrev;
     my $newGroup = $grpPrefix . $arr[2];
     push(@{$idToGroupHsh2{$newGroup}},$arr[0]);
     push(@{$idToGroupHsh2{$newGroup}},$arr[2]) unless $done{$arr[2]}==1;
