@@ -32,7 +32,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
 
     public static final int MAX_GROUP_SIZE = 500;
 
-    private static final Logger logger = Logger.getLogger(GenerateBioLayoutPlugin.class);
+    private static final Logger logger = Logger
+            .getLogger(GenerateBioLayoutPlugin.class);
 
     private GroupLoader loader;
     private Object processor;
@@ -105,13 +106,14 @@ public class GenerateBioLayoutPlugin implements Plugin {
         logger.debug("Getting unfinished groups...");
         Map<Integer, String> groups = new LinkedHashMap<Integer, String>();
         Statement stGroup = connection.createStatement();
-        ((OracleStatement) stGroup).setRowPrefetch(1000);
+        ((OracleStatement) stGroup).setRowPrefetch(5000);
         ResultSet rsGroup = stGroup.executeQuery("SELECT "
                 + "      ortholog_group_id, name "
                 + " FROM apidb.OrthologGroup "
                 + " WHERE biolayout_image IS NULL "
                 + "   AND number_of_members <= " + MAX_GROUP_SIZE
-                + "   AND number_of_members > 1");
+                + "   AND number_of_members > 1 "
+                + "ORDER BY number_of_members ASC");
 
         int groupCount = 0;
         int sequenceCount = 0;
@@ -122,6 +124,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
         }
         rsGroup.close();
         stGroup.close();
+        logger.debug(groups.size() + " groups to be processed.");
 
         for (int groupId : groups.keySet()) {
             Group group = loader.getGroup(groupId);
@@ -139,7 +142,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
             // only run 10000 seqs for each run
             if (sequenceCount >= 10000) {
                 sequenceCount = 0;
-                //initialize();
+                // initialize();
             }
         }
         logger.info("Total " + groupCount + " groups created.");
