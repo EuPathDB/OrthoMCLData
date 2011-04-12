@@ -39,7 +39,7 @@
         </description>
     </resource>
 
-<resource resource="GO" version="1.1676"
+<resource resource="GO" version="1.1679"
             displayName="Gene Ontology"
             publicUrl="http://www.geneontology.org"
             category="Ontology"
@@ -3139,6 +3139,23 @@
         </description>
     </resource>
 
+<resource resource="orthomclResources" version="2010_12_03"
+          category="Documentation" 
+          displayName="orthoMCL Resources" 
+          plugin="OrthoMCLData::Load::Plugin::InsertOrthomclResource"
+          dbCommit="@dbcommit@">
+        <manualGet contact="Deborah Pinney" 
+                   mail="pinney@pcbi.upenn.edu" 
+                   fileOrDir="/files/cbil2/orthoMCL/manualDelivery/orthoMCLResources/2010_12_03/orthomclResources.txt" 
+                   institution="University of Pennsylvania"
+                   />
+        <pluginArgs>--resourceFile @downloadDir@/orthomclResources/orthomclResources.txt </pluginArgs>
+        <description>
+               <![CDATA[
+                Inserts rows in ApiDB.OrthoMCLResource
+		    ]]>        
+        </description>
+    </resource>
 
 </resourcesPipeline>
 
