@@ -34,13 +34,12 @@ Insert the Orthomcl-DB specific resource information used by the OrthoMCL Data S
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
-The speciesFile is the proteome file with the following tab delimited columns:
-  organism name
+The resourceFile is the proteome file with the following tab delimited columns:
   3 letter species abrev
   ncbi tax id
-  data source
+  organism name
+  data source name abbreviated (e.g. GenBank or JGI)
   URL to get file
-  description
 
 NOTES
 
@@ -117,12 +116,12 @@ sub parseResourceLine {
 
     my $stmt = $dbh->prepare($sql);
 
-    my ($taxonId) = $self->getTaxonId($stmt, $resData[1]);
+    my ($taxonId) = $self->getTaxonId($stmt, $resData[0]);
 
     my $resource = GUS::Model::ApiDB::OrthomclResource->new({'orthomcl_taxon_id'=>$taxonId,
                                                           'resource_name'=>$resData[3],
                                                           'resource_url'=>$resData[4],
-                                                          'description'=>$resData[5]});
+                                                          'strain' => $resData[2]});
     unless ($resource->retrieveFromDB()) {
       $num = $resource->submit();
       $resource->undefPointerCache();
