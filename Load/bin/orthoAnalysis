@@ -156,7 +156,7 @@ my $svgTemplate = "$ENV{GUS_HOME}/data/OrthoMCLData/Load/svg.template";
 
 # # #&createBiolayoutData($mgr, $svgTemplate); This ran far too slowly on the server, Jerric ran it manually on his PC and is looking into a solution - all indexes are in place and stats were run after loading the tables
 
-#  &formatBlastFileForOrtho($mgr,"aa_seqs_OrthoMCL-5.fasta","/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-5","proteinSeqs","T");
+#  &formatBlastFileForOrtho($mgr,"seqs_OrthoMCL-5.fasta","/files/cbil/data/cbil/apiSiteFiles/downloadSite/OrthoMCL/release-5","proteinSeqs","T");
 
 #  &copy($mgr, "/files/cbil2/orthoMCL/5/analysis_pipeline/primary/data/blastSite/*", "/files/cbil/data/cbil/apiSiteFiles/webServices/OrthoMCL/release-5", "/files/cbil/data/cbil/apiSiteFiles/webServices/OrthoMCL/release-5");
 
