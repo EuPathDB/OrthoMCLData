@@ -167,6 +167,8 @@ sub run {
 
     # submit the last group (unless no groups were read)
     if ($cur_group) {
+      my %keywords = %{FunKeyword(\@lines)};
+      foreach my $k (keys %keywords) {
 	my $keyword = GUS::Model::ApiDB::OrthomclGroupKeyword->new();
 	
 	$keyword->setOrthologGroupId($cur_group);
@@ -174,6 +176,7 @@ sub run {
 	$keyword->setFrequency($keywords{$k});
 	
 	$keyword->submit();
+      }
     }
     
     return "Done adding group keywords.";
