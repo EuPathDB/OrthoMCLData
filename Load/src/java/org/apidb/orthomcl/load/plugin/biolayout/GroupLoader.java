@@ -100,9 +100,12 @@ public class GroupLoader {
             node.taxonId = resultSet.getInt("taxon_id");
             node.abbreviation = resultSet.getString("three_letter_abbrev");
             node.description = resultSet.getString("description");
-            if (node.description != null) node.description = node.description.replaceAll(
-                    "\\s+", " ").trim();
-            else node.description = "";
+            if (node.description != null) {
+                node.description = node.description.replaceAll("\\s+", " ").trim();
+                node.description = node.description.replaceAll("<", "&lt;");
+                node.description = node.description.replaceAll(">", "&gt;");
+                node.description = node.description.replaceAll("\"", "'");
+            } else node.description = "";
             node.organism = resultSet.getString("name");
             group.nodes.put(node.getCombinedId(), node);
         }
