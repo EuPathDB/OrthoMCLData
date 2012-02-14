@@ -15,27 +15,33 @@ my ($mgr, $projectDir, $release, $allSpecies)
 &copyPipelineDirToComputeCluster($mgr);
 
 ##############################################################################
-########   The Pipeline                                               ########
+########   Pipeline to map proteomes to existing orthoMCL groups      ########
 ##############################################################################
 
+######note: gus.config should point to current orthoMCL instance so that pipe can extract proteins #######
 
-##### all proteomes vs all proteomes ncbi blastp #####
+##### params for the ncbi blastp : proteomes to be mapped  vs the orthoMCL proteome set #####
 
 my $blastParams = "-F 'm S' -v 100000 -b 100000 -z 1300000 -e 1e-5";
 
 my $minLength = 10;
 my $maxStopCodonPercent = 20;
 my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence from dots.externalaasequence x, apidb.orthomcltaxon ot where ot.taxon_id = x.taxon_id";
-
+### copy file of proteomes to be mapped to seqfiles dir from location specified by property =  proteomePath
 &copyProteomeFile($mgr);
 
 &documentBlast($mgr, 'BLASTP', "Protein sequences", "Protein sequences", $blastParams);
 
+### Proteome = proteomes to be mapped, ProteinSeqs = proteins used for existing orthoMCL build 
 &createSimilarityDir($mgr,"Proteome","ProteinSeqs","(\\S+)","$blastParams","blastp", "ncbi", "printSimSeqs");
 
 &createSimilarityDir($mgr,"Proteome","Proteome","(\\S+)","$blastParams","blastp", "ncbi", "printSimSeqs");
 
-&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
+####extract proteins from dots.ExternalAASequence table in current orthoMCL instance
+#####&extractProteinSeqs($mgr, "ProteinSeqs", $fetchSql, $minLength, $maxStopCodonPercent);
+
+####copy protein file from the orthoMCL build, extracting was taking far too long
+&copyOrthoMCLProteinsFile($mgr);
 
 &copyFilesToComputeCluster($mgr,"Proteome-ProteinSeqs", "similarity");
 
