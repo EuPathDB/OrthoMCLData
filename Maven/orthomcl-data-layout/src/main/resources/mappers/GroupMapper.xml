@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.orthomcl.data.layout.GroupMapper">
+
+	<resultMap type="Group" id="GroupMap">
+		<constructor>
+			<idArg column="ortholog_group_id" javaType="_int" />
+		</constructor>
+		<result property="members" column="number_of_members" />
+	</resultMap>
+
+    <resultMap type="BlastScore" id="BlastScoreMap">
+        <constructor>
+            <idArg column="query_id" javaType="_int" />
+            <idArg column="subject_id" javaType="_int" />
+        </constructor>
+        <result property="evalueMant" column="evalue_mant" />
+        <result property="evalueExp" column="evalue_exp" />
+    </resultMap>
+
+	<select id="selectMinExp" resultType="int">
+    <![CDATA[
+        SELECT evalue_exp FROM ApiDB.SimilarSequences 
+        WHERE evalue_mant = 0 AND rownum = 1
+    ]]>
+	</select>
+
+	<select id="selectGroups" parameterType="int" resultMap="GroupMap"
+		fetchSize="10000">
+    <![CDATA[
+        SELECT ortholog_group_id, number_of_members
+        FROM ApiDB.OrthologGroup
+        WHERE number_of_members <= #{maxMember}
+          AND ortholog_group_id NOT 
+              IN (SELECT ortholog_group_id 
+                  FROM ${orthomcl-data-layout.layout.table})
+        ORDER BY number_of_members ASC
+    ]]>
+	</select>
+
+	<select id="selectSequences" parameterType="int" resultType="int"
+		fetchSize="500">
+    <![CDATA[
+        SELECT aa_sequence_id FROM ApiDB.OrthologGroupAASequence
+        WHERE ortholog_group_id = #{groupId}
+    ]]>
+	</select>
+
+	<select id="selectBlastScores" parameterType="int" resultMap="BlastScoreMap"
+		fetchSize="5000">
+    <![CDATA[
+		WITH Sequences AS 
+		(    SELECT eas.aa_sequence_id, eas.secondary_identifier AS sequence_id
+		     FROM DoTS.ExternalAASequence eas, ApiDB.OrthologGroupAASequence ogs
+		     WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+		       AND ogs.ortholog_group_id = #{groupId})
+		SELECT s1.aa_sequence_id AS query_id, s2.aa_sequence_id AS subject_id, 
+		       ss.evalue_mant, ss.evalue_exp
+		FROM ApiDB.SimilarSequences ss, Sequences s1, Sequences s2
+		WHERE ss.query_id = s1.sequence_id AND ss.subject_id = s2.sequence_id
+    ]]>
+	</select>
+
+	<insert id="insertLayout" parameterType="Sequence">
+    <![CDATA[
+        INSERT INTO ${orthomcl-data-layout.layout.table}
+               (ortholog_group_id, aa_sequence_id, layout_x, layout_y)
+        VALUES (#{groupId}, #{id}, #{x}, #{y})
+    ]]>
+	</insert>
+
+</mapper>
