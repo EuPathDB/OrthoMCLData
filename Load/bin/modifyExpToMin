@@ -6,10 +6,10 @@ my $newSimSeqFile = $ARGV[1];
 &usage unless $simSeqFile && $newSimSeqFile;
 
 if ($simSeqFile =~ m/\.gz$/) {
-  open(F, "gunzip -c $fastaFile |") or die $!;
+  open(F, "gunzip -c $fastaFile |") or die "failed to open \"$simSeqFile\":" . $!;
 }
 else {
-  open(F, "<$simSeqFile") or die $!;
+  open(F, "<$simSeqFile") or die "failed to open \"$simSeqFile\":" . $!;
 }
 
 my $minExp = -5;
