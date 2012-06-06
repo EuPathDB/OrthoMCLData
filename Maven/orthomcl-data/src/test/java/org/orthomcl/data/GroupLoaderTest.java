@@ -32,8 +32,9 @@ public class GroupLoaderTest {
     }
 
     private Connection createConnection() throws IOException, SQLException {
-        File configFile = new File(
-                "../../../../gus_home/config/OrthoMCL/model-config.xml");
+    	String gusHome = System.getenv("GUS_HOME");
+    	logger.debug("Found GUS home: " + gusHome);
+        File configFile = new File(gusHome + "/config/OrthoMCL/model-config.xml");
         logger.debug("Config File: " + configFile.getAbsolutePath());
         byte[] buffer = new byte[(int) configFile.length()];
         InputStream input = new FileInputStream(configFile);

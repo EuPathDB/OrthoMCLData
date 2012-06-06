@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 
 public class GroupLoader {
     
+    @SuppressWarnings("unused")
     private static final Logger logger = Logger.getLogger(GroupLoader.class);
 
     private final Connection connection;
