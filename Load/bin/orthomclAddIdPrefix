@@ -7,7 +7,7 @@ usage unless (scalar(@ARGV) == 3);
 open(IN, $inFile) || die "Can't open input file '$inFile'";
 open(OUT, ">$outFile") || die "Can't open output file '$outFile'";
 while (<IN>) {
-  s/^>(\S+)/>$prefix$1/;
+  s/^>(\S+)/>$prefix|$1/;
   print OUT $_;
 }
 
@@ -19,6 +19,6 @@ Add a prefix to the IDs in a fasta file.
 
 Usage:  $0 prefix inputFastaFile outputFastaFile
 
-"
+";
 exit(1);
 }
