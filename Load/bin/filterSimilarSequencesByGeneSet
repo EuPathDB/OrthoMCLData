@@ -17,9 +17,7 @@ my ($gusConfigFile, $suffix, $proteinsFile, $undo, $verbose);
 	    "undo!" => \$undo,
 	    "verbose!" => \$verbose);
 
-&usage
-  if !$suffix
-     || (!$undo && !$proteinsFile);
+&usage unless $undo || $proteinsFile;
 
 my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
 
