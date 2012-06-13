@@ -14,7 +14,8 @@ my ($gusConfigFile, $suffix, $taxaDir, $undo, $collapseClades, $verbose);
 &GetOptions("gusConfigFile=s" => \$gusConfigFile,
 	    "suffix=s" => \$suffix,
 	    "taxaDir=s" => \$taxaDir,
-	    "verbose!" => \$verbose);
+	    "verbose!" => \$verbose)
+  or die "calling GetOptions";
 
 &usage unless $suffix && $taxaDir;
 
