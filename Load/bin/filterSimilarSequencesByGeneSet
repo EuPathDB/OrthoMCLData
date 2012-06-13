@@ -85,7 +85,7 @@ while (my ($queryId, $subjectId, $queryTaxonId, $subjectTaxonId, $queryClade,
   $insert->execute($queryId, $subjectId, $queryTaxonId, $subjectTaxonId, $evalueMant, $evalueExp, $percentIdentity, $percentMatch) or die "inserting";
 
   $writeCount++;
-  if (!($writeCount % 10000) ) {
+  if (!($writeCount % 1000000) ) {
     print STDERR "$writeCount records written\n" if $verbose;
     $dbh->commit();
   }
