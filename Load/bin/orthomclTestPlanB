@@ -48,6 +48,10 @@ sub findRepresentatives {
 
   my $pvalueExponentCutoff = -5;
 
+  # open residuals file
+  open(my $fh, ">", $residualsFile)
+    or die "cannot open residuals file \"$residualsFile\" for writing: $!";
+
   # prepare query for secondary (that is, non-representative) protein IDs
   my $secondaryQuery = $dbh->prepare(<<SQL);
     select distinct query_id
@@ -79,8 +83,18 @@ SQL
     my ($representative) = $repQuery->fetchrow_array();
     $repQuery->finish();
 
-    $insertStmt->execute($secondary, $representative);
+    if ($representative) {
+      # we found a representative; insert the representative/constituent pair
+      $insertStmt->execute($secondary, $representative);
+    } else {
+      # no representative found; write this protein ID to the residuals file
+      print $fh "$secondary\n";
+    }
   }
 
   $secondaryQuery->finish();
+
+  close($fh)
+    or warn "close failed: $!";
+
 }
