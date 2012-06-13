@@ -18,7 +18,7 @@ my ($gusConfigFile, $suffix, $proteinsFile, $undo, $collapseClades, $verbose);
 	    "collapseClades!" => \$collapseClades,
 	    "verbose!" => \$verbose);
 
-&usage unless $suffix && ($undo || $proteinsFile);
+&usage unless $undo || $proteinsFile;
 
 my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
 
