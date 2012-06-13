@@ -1,0 +1,81 @@
+#!/usr/bin/perl
+
+# extract the maximal subset of the SimilarSequences table involving only the given taxa
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+
+use Getopt::Long;
+use GUS::Supported::GusConfig;
+use GUS::ObjRelP::DbiDatabase;
+
+my ($gusConfigFile, $suffix, $taxaDir, $undo, $collapseClades, $verbose);
+&GetOptions("gusConfigFile=s" => \$gusConfigFile,
+	    "suffix=s" => \$suffix,
+	    "taxaDir=s" => \$taxaDir,
+	    "verbose!" => \$verbose);
+
+&usage unless $suffix && $taxaDir;
+
+my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
+
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        $verbose,0,1,
+                                        $gusconfig->getCoreSchemaName());
+
+my $dbh = $db->getQueryHandle(0);
+
+chdir $taxaDir || die "Can't chdir to '$taxaDir'\n";
+my @taxonNames = map {/(\w+).fasta/; "'$1'"; } <*.fasta>;
+my $taxonList = join(', ', @taxonNames);
+
+print STDERR "preparing insert statement for SimilarSequences$suffix at " . `date` . "\n" if $verbose;
+my $insert = $dbh->prepare(<<SQL) or die;
+    insert into apidb.SimilarSequences$suffix
+                (query_id, subject_id, query_taxon_id, subject_taxon_id,
+                 evalue_mant, evalue_exp, percent_identity, percent_match)
+    values (?, ?, ?, ?, ?, ?, ?, ?)
+SQL
+
+print STDERR "preparing SimilarSequences query at " . `date` . "\n" if $verbose;
+my $query = $dbh->prepare(<<SQL) or die "trying";
+          select query_id, subject_id, query_taxon_id, subject_taxon_id,
+                 evalue_mant, evalue_exp, percent_identity, percent_match
+          from apidb.SimilarSequences\@orth500n
+          where query_taxon_id in ($taxonList)
+            and subject_taxon_id in ($taxonList)
+SQL
+
+print STDERR "executing SimilarSequences query at " . `date` . "\n" if $verbose;
+$query->execute();
+
+print STDERR "iterating through rows at " . `date` . "\n" if $verbose;
+my $writeCount;
+while (my ($queryId, $subjectId, $queryTaxonId, $subjectTaxonId,
+           $evalueMant, $evalueExp, $percentIdentity, $percentMatch) = $query->fetchrow_array()) {
+
+  $insert->execute($queryId, $subjectId, $queryTaxonId, $subjectTaxonId, $evalueMant, $evalueExp, $percentIdentity, $percentMatch) or die "inserting";
+
+  $writeCount++;
+  if (!($writeCount % 10000) ) {
+    print STDERR "$writeCount records written\n" if $verbose;
+    $dbh->commit();
+  }
+}
+
+$dbh->commit();
+print STDERR "finished at " . `date` . "\n" if $verbose;
+
+sub usage {
+  print STDERR <<USAGE;
+
+filterSimilarSequencesByTaxon -suffix <suffix> -taxaDir <dir> [ -gusConfigFile <file> ] [ -verbose ]
+
+
+USAGE
+
+  die "happy";
+}
