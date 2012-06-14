@@ -20,7 +20,7 @@
 	    <dependency>
 	      <groupId>org.orthomcl</groupId>
 	      <artifactId>orthomcl-common</artifactId>
-	      <version>${pom.version}</version>
+	      <version>${project.version}</version>
 	    </dependency>
 	      
 	    <dependency>
@@ -79,9 +79,9 @@
   </build>
   
   <modules>
-    <module>orthomcl-common</module>
-    <module>orthomcl-data</module>
-    <module>orthomcl-client</module>
+    <module>Common</module>
+    <module>Data</module>
+    <module>Client</module>
   </modules>
 
 </project>
