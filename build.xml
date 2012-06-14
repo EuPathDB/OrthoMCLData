@@ -1,4 +1,4 @@
-<project name="OrthoMCL" default="Installation" basedir=".">
+<project name="OrthoMCL" default="OrthoMCLData-Installation" basedir=".">
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
@@ -58,12 +58,18 @@
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
+	<!-- removed  -->
   <target name="OrthoMCLData-Installation" depends="ApiCommonData-Installation,
-													OrthoMCLShared-Installation,
-			OrthoMCLData/Load-Installation">
+                                                    OrthoMCLData-MavenInstallation,
+                                                    OrthoMCLShared-Installation,
+                                                    OrthoMCLData/Load-Installation">
     <ant target="defaultProjectInstall"/>
   </target>  
 
+  <target name="OrthoMCLData-MavenInstallation">
+    <ant target="defaultMavenInstall"/>
+  </target>
+		
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation-postprocess">
