@@ -58,9 +58,8 @@
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-	<!-- removed  -->
+  <!-- removed OrthoMCLData-MavenInstallation until maven issues worked out -->
   <target name="OrthoMCLData-Installation" depends="ApiCommonData-Installation,
-                                                    OrthoMCLData-MavenInstallation,
                                                     OrthoMCLShared-Installation,
                                                     OrthoMCLData/Load-Installation">
     <ant target="defaultProjectInstall"/>
@@ -69,7 +68,7 @@
   <target name="OrthoMCLData-MavenInstallation">
     <ant target="defaultMavenInstall"/>
   </target>
-		
+    
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation-postprocess">
