@@ -82,7 +82,7 @@ print STDERR "finished at " . `date` . "\n" if $verbose;
 sub usage {
   print STDERR <<USAGE;
 
-filterSimsByProteinIdsInMemory [ -suffix <suffix> ] -proteinsFile <fasta-file> [ -collapseClades ] [ -gusConfigFile <file> ] [ -verbose ]
+filterSimsByProteinIdsInMemory [ -suffix <suffix> ] -proteinsFile <fasta-file> -simsFile <blastsimilarities.out> [ -collapseClades ] [ -gusConfigFile <file> ] [ -verbose ]
 
 
 USAGE
@@ -265,7 +265,7 @@ sub writeControlFile {
   open(CTL, ">$ctlFile") || die "Can't open '$ctlFile' for writing";
   print CTL <<"EOF";
      LOAD DATA
-     BADFILE $badFile
+     BADFILE '$badFile'
      INTO TABLE apidb.similarsequences$suffix
      FIELDS TERMINATED BY " " OPTIONALLY ENCLOSED BY '"'
      TRAILING NULLCOLS
