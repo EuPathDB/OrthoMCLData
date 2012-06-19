@@ -66,7 +66,16 @@
   </target>  
 
   <target name="OrthoMCLData-MavenInstallation">
-    <ant target="defaultMavenInstall"/>
+    <ant target="mavenCleanInstall"/>
+    <ant target="deployMavenArtifacts">
+      <property name="module" value="Common"/>
+    </ant>
+    <ant target="deployMavenArtifacts">
+      <property name="module" value="Data"/>
+    </ant>
+    <ant target="deployMavenArtifacts">
+      <property name="module" value="Client"/>
+    </ant>
   </target>
     
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
