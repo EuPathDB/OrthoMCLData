@@ -62,7 +62,8 @@ public class GroupLoaderTest {
         //testLoadGroup("OG5_126586", 481, 114961);
     }
 
-    private void testLoadGroup(String name, int geneCount, int scoreCount)
+    @SuppressWarnings("unused")
+	private void testLoadGroup(String name, int geneCount, int scoreCount)
             throws SQLException, OrthoMCLDataException, IOException {
         long start = System.currentTimeMillis();
         byte[] group = loader.getGroupData(name);

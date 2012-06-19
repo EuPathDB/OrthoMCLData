@@ -18,7 +18,8 @@ import org.apache.log4j.Logger;
  */
 public class GroupLoader {
 
-    private static Logger logger = Logger.getLogger(GroupLoader.class);
+    @SuppressWarnings("unused")
+	private static Logger logger = Logger.getLogger(GroupLoader.class);
 
     private PreparedStatement psSequence;
     private PreparedStatement psOrtholog;
