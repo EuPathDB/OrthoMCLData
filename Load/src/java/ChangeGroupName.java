@@ -14,6 +14,7 @@ import java.util.List;
  * @author xingao
  *
  */
+@Deprecated
 public class ChangeGroupName {
 
     /**
@@ -21,13 +22,18 @@ public class ChangeGroupName {
      * @throws Exception 
      */
     public static void main(String[] args) throws Exception {
+      if (args.length != 3) {
+        System.out.println("changeGroupName <connection_string> <login> <password>");
+        System.exit(-1);
+      }     
+      
         final int BASE = 70612;
         
         System.out.println("Making connections...");
         
         Class.forName("oracle.jdbc.driver.OracleDriver");
         Connection connection = DriverManager.getConnection(
-                "jdbc:oracle:oci:@orthomcl", "jerric", "bdomsalp");
+                args[0], args[1], args[2]);
         
         System.out.println("Getting names...");
         

@@ -41,6 +41,11 @@
       <scope>test</scope>
     </dependency>
     
+    <dependency>
+      <groupId>net.lliira.common</groupId>
+      <artifactId>lliira-common-graphics</artifactId>
+    </dependency>
+    
   </dependencies>
 
   <build>

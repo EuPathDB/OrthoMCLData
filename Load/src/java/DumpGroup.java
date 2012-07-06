@@ -34,8 +34,8 @@ public class DumpGroup {
     public static void main(String[] args) throws ClassNotFoundException,
             SQLException, IOException {
         
-        if (args.length != 1) {
-            System.err.println("Usage: java DumpGroup <out_file>");
+        if (args.length != 4) {
+            System.err.println("Usage: java DumpGroup <out_file> <connection_string> <login> <password>");
             System.exit(-1);
         }
         String fileName = args[0];
@@ -44,7 +44,7 @@ public class DumpGroup {
 
         Class.forName("oracle.jdbc.driver.OracleDriver");
         Connection connection = DriverManager.getConnection(
-                "<jdbc_connection_string>", "<login>", "<password>");
+                args[1], args[2], args[3]);
         Statement stmt = connection.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT og.name, eas.source_id, "
                 + "      ot.three_letter_abbrev "
