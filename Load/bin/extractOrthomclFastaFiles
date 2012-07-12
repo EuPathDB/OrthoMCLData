@@ -33,11 +33,10 @@ order by tn.name, tla
 ";
 my $stmt = $dbh->prepare($sql);
 
-$genus_name =~ s/ //g;  # remove white space
-
 $stmt->execute();
 while (my($organismAbbrev, $genusName, $genusTaxonId) = $stmt->fetchrow_array()) {
   print STDERR "processing $organismAbbrev\n";
+  $genusName =~ s/ //g;  # remove white space
   my $genusDir = "$targetDir/$genusName";
   mkdir($genusDir) unless  -d $genusDir;
   my $idsql = "";
