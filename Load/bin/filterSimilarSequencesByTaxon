@@ -33,6 +33,14 @@ chdir $taxaDir || die "Can't chdir to '$taxaDir'\n";
 my @taxonNames = map {/(\w+).fasta/; "'$1'"; } <*.fasta>;
 my $taxonList = join(', ', @taxonNames);
 
+print STDERR "creating SimilarSequences$suffix (if it doesn't already exist) at " . `date` . "\n" if $verbose;
+my $insert = $dbh->do(<<SQL);
+          create table apidb.SimilarSequences$suffix as
+          select *
+          from apidb.SimilarSequences\@orth500n
+          where 1 = 0
+SQL
+
 print STDERR "preparing insert statement for SimilarSequences$suffix at " . `date` . "\n" if $verbose;
 my $insert = $dbh->prepare(<<SQL) or die;
     insert into apidb.SimilarSequences$suffix
