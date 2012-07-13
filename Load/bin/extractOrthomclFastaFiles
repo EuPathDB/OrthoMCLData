@@ -29,22 +29,26 @@ from taxonGenus tg, sres.TaxonName tn, sres.Taxon gtax
 where tg.genus_taxon_id = tn.taxon_id
   and tn.name_class = 'scientific name'
   and tg.genus_taxon_id = gtax.taxon_id
-order by tn.name, tla
+order by genus_sci_name, tla
 ";
 my $stmt = $dbh->prepare($sql);
 
 $stmt->execute();
-while (my($organismAbbrev, $genusName, $genusTaxonId) = $stmt->fetchrow_array()) {
-  print STDERR "processing $organismAbbrev\n";
-  $genusName =~ s/ //g;  # remove white space
+my $prevGenus;
+while (my($organismAbbrev, $genusTaxonId, $genusName) = $stmt->fetchrow_array()) {
+  print STDERR "processing $genusName - $organismAbbrev\n";
+  $genusName =~ s/ /_/g;  # remove white space
   my $genusDir = "$targetDir/$genusName";
   mkdir($genusDir) unless  -d $genusDir;
-  my $idsql = "";
-  my $cmd = "gusExtractSequences --outputFile $genusDir/$organismAbbrev.fasta --idSQL '$idsql'";
-  system($cmd) && die "Failed running '$cmd'\n $?";
-  $cmd = "fgpReplace \\> \\>$organismAbbrev\\| $genusDir/$organismAbbrev.fasta";
-  system($cmd) && die "Failed running '$cmd'\n $?";
+  my $idsql = "select ot.three_letter_abbrev || '|' || x.source_id, '', sequence
+ from dots.externalaasequence x, apidb.orthomcltaxon ot
+ where ot.three_letter_abbrev = '$organismAbbrev'
+ and x.taxon_id = ot.taxon_id";
+  my @cmd = ('gusExtractSequences', '--outputFile', "$genusDir/$organismAbbrev.fasta", '--idSQL', $idsql);
+  system(@cmd) && die "Failed running '" . join(" ", @cmd) . "'\n $?";
 }
+
+$dbh->disconnect();
 
 sub usage {
   print STDERR "
@@ -54,13 +58,14 @@ one place a fasta file named using the orthomcl abbreviation for that organism. 
 
 Usage:  extractOrthomclFastaFiles output_dir
 
-Where output_dir is the location to place the clade directories.
+Where:
+ - output_dir: is the location to place the clade directories.
+
 ";
   exit(1);
 }
 
 sub getDbHandle {
-
   my $gusConfigFile = $ENV{GUS_HOME} . "/config/gus.config";
   my @properties = ();
   my $gusconfig = CBIL::Util::PropertySet->new($gusConfigFile, \@properties, 1);
