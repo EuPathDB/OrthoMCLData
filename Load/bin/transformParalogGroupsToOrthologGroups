@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+use strict;
+use Getopt::Long;
+
+my($prefix,$pFile,$outFile,$oFile);
+
+
+&GetOptions("prefix=s" => \$prefix, 
+            "pFile=s" => \$pFile,
+            "outFile=s" => \$outFile,
+            "oFile=s" => \$oFile,
+            );
+
+open(F, "$pFile") || die "file '$pFile' not found\n";
+die "OrthologGroups file '$oFile' not found\n" unless -e "$oFile";
+system("cp $oFile $outFile");
+open(O,">>$outFile") || die "unable to open '$outFile' for appending new groups\n";
+while(<F>){
+  chomp;
+  my @ids = split(/\s+/,$_);
+  print O "${prefix}$ids[0]: ".join(" ",@ids)."\n";
+}
