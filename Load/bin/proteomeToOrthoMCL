@@ -67,5 +67,7 @@ $mgr->waitForCluster("Proteome-Proteome blast similarity", "waitProteome-Proteom
 
 &addIdsToGroupsFile($mgr);
 
+&addParalogGroups($mgr);
+
 $mgr->goodbye("Pipeline complete!\n");
 
