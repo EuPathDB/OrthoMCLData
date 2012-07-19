@@ -1,3 +1,4 @@
+package org.apidb.orthomcl.load.tools;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;

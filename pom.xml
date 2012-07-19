@@ -40,6 +40,12 @@
         <artifactId>commons-cli</artifactId>
         <version>1.2</version>
       </dependency>
+
+      <dependency>
+        <groupId>postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>7.4.1-jdbc3</version>
+      </dependency>
       
       <dependency>
         <groupId>com.oracle</groupId>
@@ -79,6 +85,7 @@
   </build>
   
   <modules>
+    <module>Load</module>
     <module>Common</module>
     <module>Data</module>
     <module>Client</module>
