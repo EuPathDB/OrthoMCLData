@@ -20,7 +20,19 @@ my ($groupFile1,$groupFile2,$outFile1,$outFile2, $log,$verbose);
             "log=s" => \$log,
             "verbose!" => \$verbose);
 
-print STDERR "usage:\n compOrthoGroups --groupFile1 <name for input groups file for version 1 printed during build with format:  OG30_10000: ppat|fgenesh1_pg.scaffold_468000013> --groupFile2 <groups file for version 2> --outputFile1 <name for output pairs file for version 1 with format: TVAG_000010|TVAG_000920> --outputFile2  --log <file indicating progress and accumulated stats> --verbose\n\nconsiders protein ids that are in both ortho versions only (common ids)\n Prints a log with:\n a)Total number of clusters\n b)Number of clusters with at least one common id\n c)Number of singleton clusters that are common ids\n d)Non-singleton clusters but have no common id pairs\n\n Also prints a file for each ortho version containing all pairs where both members of the pair are common ids\n" unless ($groupFile1 && $groupFile2 && $outFile1 && $outFile2  && $log);
+die "usage:
+  compOrthoGroups --groupFile1 <name for input groups file for version 1 printed during build with format:  OG30_10000: ppat|fgenesh1_pg.scaffold_468000013> --groupFile2 <groups file for version 2> --outputFile1 <name for output pairs file for version 1 with format: TVAG_000010|TVAG_000920> --outputFile2  --log <file indicating progress and accumulated stats> --verbose
+
+considers protein ids that are in both ortho versions only (common ids)
+Prints a log with:
+   a)Total number of clusters
+   b)Number of clusters with at least one common id
+   c)Number of singleton clusters that are common ids
+   d)Non-singleton clusters but have no common id pairs
+
+ Also prints a file for each ortho version containing all pairs where both members of the pair are common ids
+"
+ unless ($groupFile1 && $groupFile2 && $outFile1 && $outFile2  && $log);
 
 my $logFh = FileHandle->new(">$log");
 die "Can't open log file $log for writing\n" unless $logFh;
