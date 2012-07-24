@@ -34,8 +34,12 @@ while(<PF>) {
 }
 close(PF);
 
+if ($file =~ /\.gz$/) {
+    open(SF, "gunzip -c $simsFile |") || die "Can't open pipe to SimilarSequences file '$simsFile'\n";
+} else {
+    open(SF, $simsFile) || die "Can't open SimilarSequences file '$simsFile' at " . `date`;
+}
 
-open(SF, $simsFile) || die "Can't open SimilarSequences file '$simsFile' at " . `date`;
 my $outputFile = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/testdata/filteredSs.$$.dat";
 my $sqlldrLog = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/testdata/filteredSs.$$.log";
 open(OUT, '>', $outputFile) || die "Can't open output file '$outputFile' for writing at " . `date`;
