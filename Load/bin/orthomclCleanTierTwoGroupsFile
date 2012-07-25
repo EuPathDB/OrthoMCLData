@@ -1,0 +1,38 @@
+#!/usr/bin/perl
+
+use strict;
+
+&usage() unless scalar(@ARGV) == 3;
+
+# at risk of using too much memory.
+
+my $inputFile = shift(@ARGV);
+my $outputGroupsFile = shift(@ARGV);
+my $outputSingletonsFile = shift(@ARGV);
+
+open(IN, $inputFile) || die "Can't open input file '$inputFile'\n";
+open(OUTGRP, ">$outputGroupsFile") || die "Can't open output file '$outputGroupsFile'\n";
+open(OUTSING, ">$outputSingletonsFile") || die "Can't open output file '$outputSingletonsFile'\n";
+
+while (<IN>) {
+  my @a = split(/\s/);
+  my $grp = shift(@a);
+  my @b = map { s/^\w+\|//; $_;} @a;
+  if (scalar(@a) == 1) {
+    print OUTSING "$b[0]\n";
+  } else {
+    print OUTGRP join(" ", $grp, @b) . "\n";
+  }
+}
+
+sub usage {
+  die "
+
+Postprocess tier 2 groups file:
+  - remove clade suffix from protein IDs
+  - break singletons into their own file
+
+Usage: orthomclCleanTierTwoGroupsFile tier_two_groups_file output_groups_file output_singletons_file
+
+";
+}
