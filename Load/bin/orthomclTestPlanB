@@ -9,17 +9,14 @@ my $dbh;
 my $residualsFile = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/testdata/planBResiduals.fasta";
 
 print STDERR "Tier 1: running ortholog-groups workflow on representatives\n";
-# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBReps -r");
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBtier1 -r");
 
 # for each non-representative protein, find its best match among representative proteins
 print STDERR "callingFindRepresentatives() to find a representative protein for each secondary protein\n";
 findRepresentatives();
 
-# create SimilarSequences_res table for "residual" proteins, which didn't find a group to join
-system("filterSimilarSequencesByGeneSet -suffix _res -verbose -proteinsFile $residualsFile");
-
 # run ortholog-groups workflow on residuals
-system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBResiduals -r");
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBtier2 -r");
 
 sub getDbHandle {
 
@@ -43,10 +40,11 @@ sub findRepresentatives {
   $dbh = getDbHandle();
 
   my $repsDir = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/testdata/representatives";
-  chdir $repsDir;
-  my $representativeTaxa = join(', ', map("'$_'", <*>));
+  chdir $repsDir || die "Can't chdir to '$repsDir'\n";
+  my @taxonNames = map {/(\w+).fasta/; "'$1'"; } <*.fasta>;
+  my $representativeTaxa = join(', ', @taxonNames);
 
-  my $pvalueExponentCutoff = -5;
+  my $pvalueExponentCutoff = 0; # no cutoff at all
 
   # open residuals file
   open(my $fh, ">", $residualsFile)
@@ -76,6 +74,7 @@ SQL
 
 
   $secondaryQuery->execute();
+  my $writeCount;
   while (my($secondary) = $secondaryQuery->fetchrow_array()) {
 
     # find this protein's representative
@@ -88,7 +87,7 @@ SQL
       $insertStmt->execute($secondary, $representative);
     } else {
       # no representative found; write this protein ID to the residuals file
-      print $fh "$secondary\n";
+      print $fh "> $secondary\n";
     }
   }
 
