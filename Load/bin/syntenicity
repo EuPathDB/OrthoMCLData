@@ -50,8 +50,8 @@ my $testSql = <<SQL;
      order by taxon, sequence_id, location
 SQL
 
-# my $geneQuery = $dbh->prepare($euPathSql);
-my $geneQuery = $dbh->prepare($testSql);
+my $geneQuery = $dbh->prepare($euPathSql);
+# my $geneQuery = $dbh->prepare($testSql);
 
 print "executing gene-location query at " . `date`;
 $geneQuery->execute();
@@ -261,7 +261,7 @@ foreach my $smallerTaxon (sort keys %orthologousSynteny)  {
 print sort({$b <=> $a} @outputRecords);
 
 # print total score
-print "$divider\nOverall synteny score: $syntenicity\n";
+print "$divider\nOverall synteny score: $syntenicity\n$divider\n";
 
 # print "done. at " . `date`;
 
