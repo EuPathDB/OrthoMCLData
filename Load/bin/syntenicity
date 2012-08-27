@@ -32,7 +32,7 @@ while (<F>) {
 close(F);
 
 print "preparing query for gene locations at " . `date`;
-my $geneQuery = $dbh->prepare(<<SQL);
+my $euPathSql = <<SQL;
        select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
               as taxon,
               lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
@@ -42,10 +42,16 @@ my $geneQuery = $dbh->prepare(<<SQL);
               species
        from ApidbTuning.GeneAttributes\@eupaan
        order by project_id, organism, species, sequence_id, na_sequence_id, start_min
---     select taxon, protein_id, sequence_id, location, species
---     from SynTest
---     order by taxon, sequence_id, location
 SQL
+
+my $testSql = <<SQL;
+     select taxon, protein_id, sequence_id, location, species
+     from SynTest
+     order by taxon, sequence_id, location
+SQL
+
+# my $geneQuery = $dbh->prepare($euPathSql);
+my $geneQuery = $dbh->prepare($testSql);
 
 print "executing gene-location query at " . `date`;
 $geneQuery->execute();
@@ -117,15 +123,10 @@ while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchr
     $sequenceCount = 0;
   }
 
-  $sequenceCount++
-    if $lastSequence ne $sequence;
-  $lastSequence = $sequence;
 
-  next unless $group{$protein}; # ignore genes not in groups (could be insertion)
-  $taxonGroups{$taxon}++;
-  next if $group{$protein} eq $lastGroup; # ignore repeats
+  $taxonGroups{$taxon}++ if $group{$protein};
 
-  if ($sequence eq $lastSequence) {
+  if ($lastGroup && $group{$protein} && ($sequence eq $lastSequence) && ($group{$protein} ne $lastGroup) ) {
 
     my $smallerGroup = ($group{$protein} lt $lastGroup) ? $group{$protein} : $lastGroup;
     my $biggerGroup = ($group{$protein} gt $lastGroup) ? $group{$protein} : $lastGroup;
@@ -139,7 +140,11 @@ while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchr
     $adjacency{$smallerGroup}{$biggerGroup} = \@a;
   }
 
-  $lastGroup = $group{$protein};
+  $lastGroup = $group{$protein}
+    if $group{$protein} && ($lastGroup ne $group{$protein});
+  $sequenceCount++
+    if $lastSequence ne $sequence;
+  $lastSequence = $sequence;
 }
 
 print "\n\n" if $verbose;
@@ -224,13 +229,13 @@ foreach my $smallerGroup (sort keys %synteny)  {
 # print "\nprinting report at " . `date`;
 
 # print protein and group counts, for QA purposes
-if ($verbose) {
+# if ($verbose) {
   print "$divider\nproteins located and assigned to groups, by taxon:\n";
   print "\n             ------taxon------ ----proteins----\n                                located grouped\n";
   foreach my $taxon (sort keys %taxonReads) {
     printf "%30s  %7d %7d\n", $speciesString{$taxon}, $taxonReads{$taxon}, $taxonGroups{$taxon};
   }
-}
+# }
 
 # print paralogous scores by taxon
 my @outputRecords;
