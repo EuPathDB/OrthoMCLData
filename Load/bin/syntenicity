@@ -4,7 +4,7 @@
 # two groups are adjacent to each other in more than one organism, or more than
 # one place in a single organism
 
-# usage: syntenicity <groupsFile>
+# usage: syntenicity <groupsFile> [ -verbose ]
 
 use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
@@ -17,55 +17,118 @@ my %group;
 
 my $dbh = getDbHandle();
 
-print "reading orthomclGroups.txt into hash at " . `date` . "\n";
+print "reading orthomclGroups.txt into hash at " . `date`;
 my $groupsFile = $ARGV[0];
+my $verbose = ($ARGV[1] eq '-verbose');
+
 open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
 while (<F>) {
     my @a = split(/\s+/);
     my $groupName = $a[0];
+    $groupName =~ s/:$//;
     shift(@a);
     map {$group{$_} = $groupName} @a;
 }
 close(F);
 
-print "preparing query for gene locations at " . `date` . "\n";
-# prepare query for secondary (that is, non-representative) protein IDs
+print "preparing query for gene locations at " . `date`;
 my $geneQuery = $dbh->prepare(<<SQL);
-    select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
-           as taxon,
-           lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
-           || '|' || source_id as protein_id,
-           project_id || '-' || sequence_id || '-' || na_sequence_id as sequence_id,
-           start_min as location,
-           species
-    from ApidbTuning.GeneAttributes\@eupaan
-    order by project_id, organism, species, sequence_id, na_sequence_id, start_min
+       select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
+              as taxon,
+              lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
+              || '|' || source_id as protein_id,
+              project_id || '-' || sequence_id || '-' || na_sequence_id as sequence_id,
+              start_min as location,
+              species
+       from ApidbTuning.GeneAttributes\@eupaan
+       order by project_id, organism, species, sequence_id, na_sequence_id, start_min
+--     select taxon, protein_id, sequence_id, location, species
+--     from SynTest
+--     order by taxon, sequence_id, location
 SQL
 
-print "executing gene-location query at " . `date` . "\n";
+print "executing gene-location query at " . `date`;
 $geneQuery->execute();
 
-my ($lastSequence, $lastGroup); # to compare the previous iteration with the current one
+my ($lastTaxon, $lastSequence, $lastGroup); # to compare the previous iteration with the current one
 my (%taxonReads, %taxonGroups); # counts, by taxon, of protein IDs read and group assignments found
+my $sequenceCount; # how many sequences for the current taxon
+my ($allTaxonCount, $allGeneMin, $allGeneMax, $allGeneTotal,
+    $allSequenceMin, $allSequenceMax, $allSequenceTotal); # stats for all taxa
+my ($groupedTaxonCount, $groupedGeneMin, $groupedGeneMax, $groupedGeneTotal,
+    $groupedSequenceMin, $groupedSequenceMax, $groupedSequenceTotal); # stats for taxa with ortholog groups
 my %speciesString; # indexed by taxon abbreviation, returns genus-species string
 my %adjacency; # indexed in two dimensions by group, stores array of taxon (abbrevs), to represent
                                        # the list of taxa in which those two groups are adjacent
 my %synteny; # indexed like the adjacency hash, stores a flag set if the adjacency has occurred more than once
 my $syntenicity; # overall score
 
-print "iterating through gene locations and noting group adjacencies at " . `date` . "\n";
+print "iterating through gene locations and noting group adjacencies at " . `date`;
+my $divider = "------------------------------------------------------------";
+print "$divider\nGenomic locations:\n" if $verbose;
 while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchrow_array()) {
   $taxonReads{$taxon}++;
   $speciesString{$taxon} = $species;
 
-  next unless $group{$protein};
+  # draw genome picture, if we're being verbose
+  if ($verbose) {
+    if ($taxon ne $lastTaxon) {
+      printf "\n\n%30s ", $species;
+    } elsif ($sequence ne $lastSequence) {
+      print "  ";
+    }
+    print "-" . ($group{$protein} ? $group{$protein} : $protein) . "-";
+  }
 
+  # update stats
+  if ($taxon ne $lastTaxon) {
+    if ($lastTaxon) {
+      $allTaxonCount++;
+
+      $allGeneMin = $taxonReads{$lastTaxon}
+	if (!$allGeneMin) || ($taxonReads{$lastTaxon} < $allGeneMin);
+      $allGeneMax = $taxonReads{$lastTaxon}
+	if $taxonReads{$lastTaxon} > $allGeneMax;
+      $allGeneTotal += $taxonReads{$lastTaxon};
+
+      $allSequenceMin = $sequenceCount
+	if (!$allSequenceMin) || ($sequenceCount < $allSequenceMin);
+      $allSequenceMax = $sequenceCount
+	if $sequenceCount > $allSequenceMax;
+      $allSequenceTotal += $sequenceCount;
+
+      if ($taxonGroups{$lastTaxon}) {
+	$groupedTaxonCount++;
+
+	$groupedGeneMin = $taxonReads{$lastTaxon}
+	  if (!$groupedGeneMin) || ($taxonReads{$lastTaxon} < $groupedGeneMin);
+	$groupedGeneMax = $taxonReads{$lastTaxon}
+	  if $taxonReads{$lastTaxon} > $groupedGeneMax;
+	$groupedGeneTotal += $taxonReads{$lastTaxon};
+
+	$groupedSequenceMin = $sequenceCount
+	  if (!$groupedSequenceMin) || ($sequenceCount < $groupedSequenceMin);
+	$groupedSequenceMax = $sequenceCount
+	  if $sequenceCount > $groupedSequenceMax;
+	$groupedSequenceTotal += $sequenceCount;
+      }
+    }
+    $lastTaxon = $taxon;
+    $sequenceCount = 0;
+  }
+
+  $sequenceCount++
+    if $lastSequence ne $sequence;
+  $lastSequence = $sequence;
+
+  next unless $group{$protein}; # ignore genes not in groups (could be insertion)
   $taxonGroups{$taxon}++;
+  next if $group{$protein} eq $lastGroup; # ignore repeats
 
   if ($sequence eq $lastSequence) {
 
-    my $smallerGroup = ($group{$protein} gt $lastGroup) ? $group{$protein} : $lastGroup;
-    my $biggerGroup = ($group{$protein} lt $lastGroup) ? $group{$protein} : $lastGroup;
+    my $smallerGroup = ($group{$protein} lt $lastGroup) ? $group{$protein} : $lastGroup;
+    my $biggerGroup = ($group{$protein} gt $lastGroup) ? $group{$protein} : $lastGroup;
 
     my @a;
     if ($adjacency{$smallerGroup}{$biggerGroup}) {
@@ -75,64 +138,117 @@ while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchr
     push (@a, $taxon);
     $adjacency{$smallerGroup}{$biggerGroup} = \@a;
   }
+
   $lastGroup = $group{$protein};
-  $lastSequence = $sequence;
 }
 
-print "finishing geneQuery at " . `date` . "\n";
+print "\n\n" if $verbose;
+
+if ($lastTaxon) {
+  $allTaxonCount++;
+
+  $allGeneMin = $taxonReads{$lastTaxon}
+    if (!$allGeneMin) || ($taxonReads{$lastTaxon} < $allGeneMin);
+  $allGeneMax = $taxonReads{$lastTaxon}
+    if $taxonReads{$lastTaxon} > $allGeneMax;
+  $allGeneTotal += $taxonReads{$lastTaxon};
+
+  $allSequenceMin = $sequenceCount
+    if (!$allSequenceMin) || ($sequenceCount < $allSequenceMin);
+  $allSequenceMax = $sequenceCount
+    if $sequenceCount > $allSequenceMax;
+  $allSequenceTotal += $sequenceCount;
+
+  if ($taxonGroups{$lastTaxon}) {
+    $groupedTaxonCount++;
+
+    $groupedGeneMin = $taxonReads{$lastTaxon}
+      if (!$groupedGeneMin) || ($taxonReads{$lastTaxon} < $groupedGeneMin);
+    $groupedGeneMax = $taxonReads{$lastTaxon}
+      if $taxonReads{$lastTaxon} > $groupedGeneMax;
+    $groupedGeneTotal += $taxonReads{$lastTaxon};
+
+    $groupedSequenceMin = $sequenceCount
+      if (!$groupedSequenceMin) || ($sequenceCount < $groupedSequenceMin);
+    $groupedSequenceMax = $sequenceCount
+      if $sequenceCount > $groupedSequenceMax;
+    $groupedSequenceTotal += $sequenceCount;
+  }
+
+  print "$allTaxonCount taxa, each comprising $allGeneMin to $allGeneMax genes and $allSequenceMin to $allSequenceMax sequences, for a total of $allGeneTotal genes and $allSequenceTotal sequences.\n";
+  print "Considering only taxa with at least one ortholog-group assignment, $groupedTaxonCount taxa, each comprising $groupedGeneMin to $groupedGeneMax genes and $groupedSequenceMin to $groupedSequenceMax sequences, for a total of $groupedGeneTotal genes and $groupedSequenceTotal sequences.\n";
+}
+
+# print "finishing geneQuery at " . `date`;
 $geneQuery->finish();
 $dbh->disconnect();
 
-print "iterating through syntenies at " . `date` . "\n";
-my %taxonSynteny; # indexed by two taxon abbrevs, stores a count of syntenies between the two
+# print "iterating through adjacent group pairings at " . `date`;
+print "$divider\nOrtholog-group adjacencies:\n\n" if $verbose;
+my %orthologousSynteny; # indexed by two taxon abbrevs, stores a count of syntenies between the two
+my %paralogousSynteny; # indexed by one taxon abbrev, stores a count of paralogous synteny for that taxon
 foreach my $smallerGroup (sort keys %synteny)  {
   foreach my $biggerGroup (sort keys %{$synteny{$smallerGroup}}) {
-    my @a = @{$adjacency{$smallerGroup}{$biggerGroup}};
 
-    # bump up overall score by one less than array size
-    $syntenicity += $#a;
+    my @adjacencyTaxonList = @{$adjacency{$smallerGroup}{$biggerGroup}};
 
-    # iterate through all N-choose-2 pairings from @a
-    for (my $i = 0; $i < $#a; $i++) {
-      for (my $j = $i + 1; $j <= $#a; $j++) {
-	my $smallerTaxon = ($a[$i] lt $a[$j]) ? $a[$i] : $a[$j];
-	my $biggerTaxon = ($a[$i] gt $a[$j]) ? $a[$i] : $a[$j];
-	$taxonSynteny{$smallerTaxon}{$biggerTaxon} += 1;
+    if ($verbose) {
+      print "$smallerGroup-$biggerGroup: " . join(" ", @adjacencyTaxonList) . "\n";
+    }
+
+    # bump up overall score by array size
+    $syntenicity += $#adjacencyTaxonList + 1;
+
+    # make list of distinct taxa with this adjacency
+    my %hit;
+    for (my $i = 0; $i <= $#adjacencyTaxonList; $i++) {
+      $hit{$adjacencyTaxonList[$i]}++;
+    }
+
+    my @distinctTaxa = sort keys %hit;
+
+    foreach my $taxon (sort keys %hit) {
+      $paralogousSynteny{$taxon} += $hit{$taxon}
+	if $hit{$taxon} > 1;
+    }
+
+    for (my $i = 0; $i < $#distinctTaxa; $i++) {
+      for (my $j = $i + 1; $j <= $#distinctTaxa; $j++) {
+	$orthologousSynteny{$distinctTaxa[$i]}{$distinctTaxa[$j]} += 1;
       }
     }
+
   }
 }
 
-print "printing report at " . `date` . "\n";
+# print "\nprinting report at " . `date`;
 
 # print protein and group counts, for QA purposes
-print "\n                               ----proteins----\n                                located grouped\n";
-foreach my $taxon (sort keys %taxonReads) {
-  printf "%30s  %7d %7d\n", $speciesString{$taxon}, $taxonReads{$taxon}, $taxonGroups{$taxon};
+if ($verbose) {
+  print "$divider\nproteins located and assigned to groups, by taxon:\n";
+  print "\n             ------taxon------ ----proteins----\n                                located grouped\n";
+  foreach my $taxon (sort keys %taxonReads) {
+    printf "%30s  %7d %7d\n", $speciesString{$taxon}, $taxonReads{$taxon}, $taxonGroups{$taxon};
+  }
 }
 
 # print paralogous scores by taxon
-print "\nIntra-taxon (paralogous) scores by taxon\n";
 my @outputRecords;
-foreach my $smallerTaxon (sort keys %taxonSynteny)  {
-  foreach my $biggerTaxon (sort keys %{$taxonSynteny{$smallerTaxon}}) {
-    if ($smallerTaxon eq $biggerTaxon) {
-      my $s = sprintf "%9d %30s\n", $taxonSynteny{$smallerTaxon}{$biggerTaxon},
-	              $speciesString{$smallerTaxon};
-      push (@outputRecords, $s);
-    }
-  }
+foreach my $taxon (sort keys %paralogousSynteny)  {
+  my $s = sprintf "%9d %-30s\n", $paralogousSynteny{$taxon}, $speciesString{$taxon};
+  push (@outputRecords, $s);
 }
+print "$divider\nIntra-taxon (paralogous) scores by taxon\n";
 print sort({$b <=> $a} @outputRecords);
 
 # print orthologous scores by taxon pair
-print "\nInter-taxon (orthologous) scores by taxon pair\n";
+print "$divider\nInter-taxon (orthologous) scores by taxon pair\n";
 @outputRecords = undef;
-foreach my $smallerTaxon (sort keys %taxonSynteny)  {
-  foreach my $biggerTaxon (sort keys %{$taxonSynteny{$smallerTaxon}}) {
+foreach my $smallerTaxon (sort keys %orthologousSynteny)  {
+  foreach my $biggerTaxon (sort keys %{$orthologousSynteny{$smallerTaxon}}) {
     if ($smallerTaxon ne $biggerTaxon) {
-      my $s = sprintf "%6d %30s %30s\n", $taxonSynteny{$smallerTaxon}{$biggerTaxon},
-	              $speciesString{$smallerTaxon}, $speciesString{$biggerTaxon};
+      my $s = sprintf "%6d %-60s\n", $orthologousSynteny{$smallerTaxon}{$biggerTaxon},
+	              $speciesString{$smallerTaxon} . "-" . $speciesString{$biggerTaxon};
       push (@outputRecords, $s);
     }
   }
@@ -140,9 +256,9 @@ foreach my $smallerTaxon (sort keys %taxonSynteny)  {
 print sort({$b <=> $a} @outputRecords);
 
 # print total score
-print "\nOverall synteny score: $syntenicity\n";
+print "$divider\nOverall synteny score: $syntenicity\n";
 
-print "done. at " . `date` . "\n";
+# print "done. at " . `date`;
 
 sub getDbHandle {
 
