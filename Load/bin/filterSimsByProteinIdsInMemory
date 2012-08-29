@@ -249,7 +249,7 @@ sub setCladeHash {
 	    'tbru',   5690, # Trypanosoma brucei
 	    'tbrg',   5690, # Trypanosoma brucei gambiense
 	    'tcon',   5690, # Trypanosoma congolense
-	    'tcru',   5690, # Trypanosoma cruzi strain CL Brener
+	    'tcru',   5693, # Trypanosoma cruzi strain CL Brener  -- species level for this special case
 	    'tviv',   5690, # Trypanosoma vivax
 	    'vcho',    662, # Vibrio cholerae O1 biovar El Tor str. N16961
 	    'vcar',   3066, # Volvox carteri f. nagariensis
