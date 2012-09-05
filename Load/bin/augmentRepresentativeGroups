@@ -7,10 +7,20 @@
 # proteins (i.e. those not from representative taxa) by adding each secondary
 # protein to the same group as the protein to which it has greatest similarity
 
+# usage:
+#  augmentRepresentativeGroups $inputGroupsFile $outputGroupsFile $residualsFile
+
 use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 use DBI;
+
+# my $groupsFile = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBtier1/data/repGroups/orthomclGroups.txt";
+# my $groupsFile = "/home/iodice/groupFiles/tier1GroupsAndSingletons.txt";
+my $groupsFile = $ARGV[0];
+my $outputGroupsFile = $ARGV[1];
+# my $residualsFile = "/home/iodice/argResiduals.fasta";
+my $residualsFile = $ARGV[2];
 
 $| = 1;
 
@@ -18,10 +28,9 @@ my $groups;
 my %grouplist;
 
 my $dbh = getDbHandle();
-my $residualsFile = "/home/iodice/argResiduals.fasta";
 
 print "reading orthomclGroups.txt into hash at " . `date` . "\n";
-my $groupsFile = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/planBtier1/data/repGroups/orthomclGroups.txt";
+
 open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
 while (<F>) {
     my @a = split(/\s+/);
@@ -59,6 +68,7 @@ my $repQuery = $dbh->prepare(<<SQL);
     from apidb.SimilarSequences\@orth500n
     where query_id = ?
       and subject_taxon_id in ($representativeTaxa)
+      and subject_id in (select query_id from apidb.SimilarSequences\@orth500n)
       and evalue_exp <= $pvalueExponentCutoff
     order by evalue_exp, evalue_mant desc
 SQL
@@ -77,9 +87,14 @@ while (my($secondary) = $secondaryQuery->fetchrow_array()) {
     # we found a representative; update the hash
     my $groupName = $groups->{$representative};
     # print "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
-    my @a = @{$grouplist{$groupName}};
-    push (@a, $secondary);
-    $grouplist{$groupName} = \@a;
+
+    if ($groupName) {
+      my @a = @{$grouplist{$groupName}};
+      push (@a, $secondary);
+      $grouplist{$groupName} = \@a;
+    } else {
+      print "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
+    }
   } else {
     # no representative found; write this protein ID to the residuals file
     print $fh "> $secondary\n";
@@ -94,7 +109,7 @@ close($fh)
   or warn "close failed: $!";
 
 print "writing out augmented groups at " . `date` . "\n";
-open(OUT, ">", "/home/iodice/augmuntedOrthologGroups.txt");
+open(OUT, ">", $outputGroupsFile) || die "Can't open groups file '$outputGroupsFile'\n";
 foreach my $group (keys %grouplist) {
   my @a = @{$grouplist{$group}};
   print OUT "$group " . join(" ", @a) . "\n";
