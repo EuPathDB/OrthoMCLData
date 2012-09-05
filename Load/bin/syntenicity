@@ -16,17 +16,16 @@ my %group;
 
 my $dbh = getDbHandle();
 
-print "reading orthomclGroups.txt into hash at " . `date`;
-
 my $groupsFile = $ARGV[0];
 &usage unless $groupsFile;
 shift(@ARGV);
-my ($verbose, $testQuery, $proteinScoreTable);
+my ($verbose, $testQuery, $proteinScoreFile);
 GetOptions("verbose!" => \$verbose,
            "testQuery!" => \$testQuery,
-           "proteinScoreTable=s" => \$proteinScoreTable,
+           "proteinScoreFile=s" => \$proteinScoreFile,
 	  );
 
+print "reading orthomclGroups.txt into hash at " . `date` if $verbose;
 open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
 while (<F>) {
     my @a = split(/\s+/);
@@ -37,7 +36,7 @@ while (<F>) {
 }
 close(F);
 
-print "preparing query for gene locations at " . `date`;
+print "preparing query for gene locations at " . `date` if $verbose;
 my $euPathSql = <<SQL;
        select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
               as taxon,
@@ -63,7 +62,7 @@ if ($testQuery) {
   $geneQuery = $dbh->prepare($euPathSql);
 }
 
-print "executing gene-location query at " . `date`;
+print "executing gene-location query at " . `date` if $verbose;
 $geneQuery->execute();
 
 my ($lastTaxon, $lastSequence, $lastGroup); # to compare the previous iteration with the current one
@@ -82,8 +81,8 @@ my %adjacencyProteins; # indexed two-dimensionally like %adjacencyTaxa, stores a
 my %synteny; # indexed like the adjacencyTaxa hash, stores a flag set if the adjacency has occurred more than once
 my $syntenicity; # overall score
 
-print "iterating through gene locations and noting group adjacencies at " . `date`;
-my $divider = "------------------------------------------------------------";
+print "iterating through gene locations and noting group adjacencies at " . `date` if $verbose;
+my $divider = "\n------------------------------------------------------------\n";
 print "$divider\nGenomic locations:\n" if $verbose;
 my $lastGroupedProtein;
 while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchrow_array()) {
@@ -159,7 +158,6 @@ while (my($taxon, $protein, $sequence, $location, $species) = $geneQuery->fetchr
     if ($adjacencyProteins{$smallerGroup}{$biggerGroup}) {
       @a = @{$adjacencyProteins{$smallerGroup}{$biggerGroup}};
     }
-print "pushing \"$protein\" and \"$lastGroupedProtein\"\n";
     push (@a, $protein);
     push (@a, $lastGroupedProtein);
     $adjacencyProteins{$smallerGroup}{$biggerGroup} = \@a;
@@ -207,8 +205,8 @@ if ($lastTaxon) {
     $groupedSequenceTotal += $sequenceCount;
   }
 
-  print "$allTaxonCount taxa, each comprising $allGeneMin to $allGeneMax genes and $allSequenceMin to $allSequenceMax sequences, for a total of $allGeneTotal genes and $allSequenceTotal sequences.\n";
-  print "Considering only taxa with at least one ortholog-group assignment, $groupedTaxonCount taxa, each comprising $groupedGeneMin to $groupedGeneMax genes and $groupedSequenceMin to $groupedSequenceMax sequences, for a total of $groupedGeneTotal genes and $groupedSequenceTotal sequences.\n";
+  print "Processed $allTaxonCount taxa, each comprising $allGeneMin to $allGeneMax genes and $allSequenceMin to $allSequenceMax sequences, for a total of $allGeneTotal genes and $allSequenceTotal sequences.\n";
+  print "Considering only taxa with at least one ortholog-group assignment, processed $groupedTaxonCount taxa, each comprising $groupedGeneMin to $groupedGeneMax genes and $groupedSequenceMin to $groupedSequenceMax sequences, for a total of $groupedGeneTotal genes and $groupedSequenceTotal sequences.\n";
 }
 
 # print "finishing geneQuery at " . `date`;
@@ -282,15 +280,14 @@ if ($verbose) {
 }
 
 # store synteny score by protein ID
-if ($proteinScoreTable) {
+if ($proteinScoreFile) {
 
-  my $insert = $dbh->prepare(<<SQL);
-     insert into $proteinScoreTable (protein_id, score) values (?, ?)
-SQL
+  open(my $ps, ">", $proteinScoreFile);
 
   foreach my $protein (sort keys %proteinSyntenicity) {
-    $insert->execute($protein, $proteinSyntenicity{$protein});
+    print $ps "$protein " . $proteinSyntenicity{$protein} . "\n";
   }
+  close($ps);
 }
 
 $dbh->disconnect();
@@ -343,22 +340,19 @@ sub getDbHandle {
 sub usage {
 
   print STDERR "
-
 For an OrthoMCL groups file, compute a score for each protein, and an overall
 score, based on how frequently pairs of ortholog groups are adjacent to each
 other at multiple points (either within a single genome or between genomes).
 
-usage: syntenicity <groupsFile> [ -verbose ] [ -testQuery ] [ -proteinScoreTable <table> ]
+usage: syntenicity <groupsFile> [ -verbose ] [ -testQuery ] [ -proteinScoreFile <table> ]
 
 where:
 <groupsFile>       path of the ortholog-groups file, in the format that's standard for OrthoMCL
 -verbose           (boolean) Whether to create more-voluminous and -informative output
 -testQuery         (boolean) Whether to use the genomic-location query that returns
                    the small test data set, instead of the EuPathDB genomic data
--proteinScoreTable table to which to write (protein, score) pairs for per-protein
-                   scores. The table must have a varchar column named PROTEIN_ID
-                   and a number column named SCORE. If no table name is supplied,
-                   per-protein scores are not stored.
+-proteinScoreFile  file to which to write per-protein scores.
+
 ";
   exit(1);
 }
