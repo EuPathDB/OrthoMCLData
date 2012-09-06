@@ -25,6 +25,7 @@ GetOptions("verbose!" => \$verbose,
            "proteinScoreFile=s" => \$proteinScoreFile,
 	  );
 
+my %proteinSyntenicity;
 print "reading orthomclGroups.txt into hash at " . `date` if $verbose;
 open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
 while (<F>) {
@@ -32,7 +33,7 @@ while (<F>) {
     my $groupName = $a[0];
     $groupName =~ s/:$//;
     shift(@a);
-    map {$group{$_} = $groupName} @a;
+    map {$group{$_} = $groupName; $proteinSyntenicity{$_} = 0;} @a;
 }
 close(F);
 
@@ -216,7 +217,6 @@ $geneQuery->finish();
 print "$divider\nOrtholog-group adjacencies:\n\n" if $verbose;
 my %orthologousSynteny; # indexed by two taxon abbrevs, stores a count of syntenies between the two
 my %paralogousSynteny; # indexed by one taxon abbrev, stores a count of paralogous synteny for that taxon
-my %proteinSyntenicity;
 
 foreach my $smallerGroup (sort keys %synteny)  {
   foreach my $biggerGroup (sort keys %{$synteny{$smallerGroup}}) {
