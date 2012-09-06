@@ -5,6 +5,7 @@
 column protein_id format a12
 column sequence_id format a12
 column species format a12
+set pagesize 50000
 
 drop table SynTest;
 
