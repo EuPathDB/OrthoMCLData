@@ -17,7 +17,10 @@ my %group;
 my $dbh = getDbHandle();
 
 my $groupsFile = $ARGV[0];
+my $singletonsFile = $ARGV[1];
 &usage unless $groupsFile;
+die "groupsFile '$groupsFile' does not exist" unless -e $groupsFile;
+die "singletonsFile '$singletonsFile' does not exist" unless -e $singletonsFile;
 shift(@ARGV);
 my ($verbose, $testQuery, $proteinScoreFile);
 GetOptions("verbose!" => \$verbose,
@@ -282,11 +285,17 @@ if ($verbose) {
 # store synteny score by protein ID
 if ($proteinScoreFile) {
 
-  open(my $ps, ">", $proteinScoreFile);
+  open(my $ps, ">", $proteinScoreFile)  || die "Can't open proteinScoreFile file '$proteinScoreFile'\n";;
 
   foreach my $protein (sort keys %proteinSyntenicity) {
     print $ps "$protein " . $proteinSyntenicity{$protein} . "\n";
   }
+  open(S, $singletonsFile) || die "Can't open singletons file '$singletonsFile'\n";
+  while(<S>) {
+    chomp;
+    print $ps "$_ 0\n";
+  }
+  close(S);
   close($ps);
 }
 
@@ -344,10 +353,12 @@ For an OrthoMCL groups file, compute a score for each protein, and an overall
 score, based on how frequently pairs of ortholog groups are adjacent to each
 other at multiple points (either within a single genome or between genomes).
 
-usage: syntenicity <groupsFile> [ -verbose ] [ -testQuery ] [ -proteinScoreFile <table> ]
+usage: syntenicity <groupsFile> <singletonsFile> [ -verbose ] [ -testQuery ] [ -proteinScoreFile <table> ]
 
 where:
 <groupsFile>       path of the ortholog-groups file, in the format that's standard for OrthoMCL
+<singletonsFile>   path of singletons file, a list of all protein IDs not found in the groupsFile.
+                   These are added to the proteinScoreFile with a 0 score.
 -verbose           (boolean) Whether to create more-voluminous and -informative output
 -testQuery         (boolean) Whether to use the genomic-location query that returns
                    the small test data set, instead of the EuPathDB genomic data
