@@ -42,15 +42,20 @@ close(F);
 
 print "preparing query for gene locations at " . `date` if $verbose;
 my $euPathSql = <<SQL;
-       select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
-              as taxon,
-              lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
-              || '|' || source_id as protein_id,
-              project_id || '-' || sequence_id || '-' || na_sequence_id as sequence_id,
-              start_min as location,
-              species
-       from ApidbTuning.GeneAttributes\@eupaan
-       order by project_id, organism, species, sequence_id, na_sequence_id, start_min
+     with GeneQuery as (
+            select lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
+                   as taxon,
+                   lower(substr(organism, 1, 1)) || substr(organism, instr(organism, ' ') + 1, 3)
+                   || '|' || source_id as protein_id,
+                   project_id || '-' || sequence_id || '-' || na_sequence_id as sequence_id,
+                   start_min as location,
+                   species
+            from ApidbTuning.GeneAttributes\@eupaan ga)
+     select gq.taxon, coalesce(gr.orthomcl_id, gq.protein_id) as protein_id,
+            gq.sequence_id, gq.location, gq.species
+     from GeneQuery gq, apidb.GeneRename\@eupaan gr
+     where gq.protein_id = gr.eupath_id(+)
+     order by species, sequence_id, sequence_id, location
 SQL
 
 my $testSql = <<SQL;
