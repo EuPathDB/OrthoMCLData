@@ -51,9 +51,9 @@ my $fetchSql = "select ot.three_letter_abbrev || '|' || x.source_id,sequence fro
 
 &copyFilesToComputeCluster($mgr,"Proteome.fsa","seqfiles");
 
-&startProteinBlastOnComputeCluster($mgr,"Proteome","ProteinSeqs","apidb");
+&startProteinBlastOnComputeCluster($mgr,"Proteome","ProteinSeqs","pe.q");
 
-&startProteinBlastOnComputeCluster($mgr,"Proteome","Proteome","apidb");
+&startProteinBlastOnComputeCluster($mgr,"Proteome","Proteome","pe.q");
 
 $mgr->waitForCluster("Proteome-ProteinSeqs blast similarity", "waitProteome-ProteinSeqs");
 
