@@ -9,17 +9,20 @@ my $dbh;
 my $residualsFile = "/eupath/data/EuPathDB/devWorkflows/OrthoMCL/testdata/planBResiduals.fasta";
 
 print STDERR "Tier 1: running ortholog-groups workflow on representatives\n";
-# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB1 -r");
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier1 -r");
 
 # copy group file (which includes singletons -- that's a switch in the OrthoMCL workflow) to data directory
-system("cp /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB1/data/repGroups/orthomclGroups.txt /home/iodice/groupFiles/tier1GroupsAndSingletons.txt");
+system("cp /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier1/data/repGroups/orthomclGroups.txt /home/iodice/groupFiles/tier1GroupsAndSingletons.txt");
 
 # for each non-representative protein, find its best match among representative proteins, and add it
 # to that group. Proteins with no match become "residuals"
 print STDERR "calling augmentRepresentativeGroups to find a representative protein for each secondary protein\n";
 system("augmentRepresentativeGroups /home/iodice/groupFiles/tier1GroupsAndSingletons.txt /home/iodice/groupFiles/augmentedOrthologGroups.txt /home/iodice/groupFiles/residuals.fasta");
 
+# not done here: augment residuals.fasta with genes that didn't get included because they aren't similar to anything.
+# these are destined to be singletons, but they deserve inclusion
+
 # run ortholog-groups workflow on residuals
-# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB2 -r");
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier2 -r");
 
 
