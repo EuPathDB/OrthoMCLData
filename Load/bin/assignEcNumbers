@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use strict;
+# use lib "$ENV{GUS_HOME}/lib/perl";
+# use CBIL::Util::PropertySet;
+# use DBI;
+
+
+# Download UniProt data, in XML format, for proteins that have EC numbers assigned.
+# This command line shows how to wget them. The resulting file must be given a better name
+# wget 'http://www.uniprot.org/uniprot/?query=reviewed%3ayes+AND+ec%3a*&sort=score&format=xml'
+
+# extract useful attributes from XML, and save in FASTA format for consumption by BLAST
+# uniprotXmlToFasta < smallUniprot.xml > smallUniprot.fasta
+
+# run BLAST to match up UniProt and OrthoMCL protein sequences
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier1 -r");
+
+# process BLAST output to create protein ID / EC number pairs
+
+# load EC number assignments
+# ga GUS::Community::Plugin::InsertECMapping --ECMappingFile /dev/null --evidenceCode '' --aaSeqLocusTagMappingSql ''
