@@ -7,11 +7,11 @@ use strict;
 
 
 # Download UniProt data, in XML format, for proteins that have EC numbers assigned.
-# This command line shows how to wget them. The resulting file must be given a better name
-# wget 'http://www.uniprot.org/uniprot/?query=reviewed%3ayes+AND+ec%3a*&sort=score&format=xml'
+# This command line shows how to wget them.
+# wget -O uniprot.xml 'http://www.uniprot.org/uniprot/?query=reviewed%3ayes+AND+ec%3a*&sort=score&format=xml'
 
 # extract useful attributes from XML, and save in FASTA format for consumption by BLAST
-# uniprotXmlToFasta < smallUniprot.xml > smallUniprot.fasta
+# uniprotXmlToFasta < uniprot.xml > uniprot.fasta
 
 # run BLAST to match up UniProt and OrthoMCL protein sequences
 # system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier1 -r");
