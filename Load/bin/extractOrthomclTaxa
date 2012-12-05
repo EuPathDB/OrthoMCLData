@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+# make a list of NCBI taxon IDs that are of the same species as an OrthoMCL taxon
+
+use strict;
+use Getopt::Long;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+my ($sample,$verbose,$gusConfigFile,$commit);
+&GetOptions("verbose|v!"=> \$verbose,
+            "gusConfigFile|c=s" => \$gusConfigFile,
+            "commit!" => \$commit,
+           );
+
+my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        $verbose,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+my $queryHandle = $dbh->prepare(<<SQL) or die $dbh->errstr;
+        with OrthomclSpecies as
+        (select species.taxon_id
+         from sres.Taxon species,
+              (select taxon_id from sres.taxon
+               connect by taxon_id = prior parent_id and prior rank != 'species'
+               start with taxon_id in (select taxon_id from apidb.OrthomclTaxon)) speciesOrLess
+         where species.taxon_id = speciesOrLess.taxon_id
+          and species.rank = 'species'),
+        SpeciesAndSubspecies as
+        (select taxon_id from sres.taxon
+               connect by parent_id = prior taxon_id
+               start with taxon_id in (select taxon_id from OrthomclSpecies))
+        select t.ncbi_tax_id
+        from SpeciesAndSubspecies os, sres.Taxon t
+        where os.taxon_id = t.taxon_id
+        order by t.ncbi_tax_id
+SQL
+
+$queryHandle->execute() or die $dbh->errstr;
+
+while (my ($ncbiTaxId) = $queryHandle->fetchrow_array()) {
+
+  print "$ncbiTaxId\n";
+}
+
+$queryHandle->finish();
+
