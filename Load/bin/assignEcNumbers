@@ -14,7 +14,7 @@ use strict;
 # uniprotXmlToFasta < uniprot.xml > uniprot.fasta
 
 # run BLAST to match up UniProt and OrthoMCL protein sequences
-# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/planB_tier1 -r");
+# system("workflow -h /eupath/data/EuPathDB/devWorkflows/OrthoMCL/ecNumbers -r");
 
 # process BLAST output to create protein ID / EC number pairs
 
