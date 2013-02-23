@@ -24,6 +24,9 @@ PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
 update apidb.orthologgroup average percent identity,average percent match, average mantissa, average exponent, average connectivity, number match pairs and apidb.orthologgroupaasequence.connectivity.
+
+Avg connectivity is the connectivity of each sequence divivided by the group size.  A sequence connectivity is the total number of seqs it has a similarity to.
+(NOTE: this should probably normalize by the size of the group, ie, divide each seqs score by N choose 2)
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
