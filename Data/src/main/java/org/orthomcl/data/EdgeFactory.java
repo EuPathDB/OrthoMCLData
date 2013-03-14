@@ -6,8 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import oracle.jdbc.internal.OraclePreparedStatement;
-
 import org.orthomcl.common.BlastScore;
 import org.orthomcl.common.EdgeType;
 import org.orthomcl.common.GenePair;
@@ -38,16 +36,16 @@ public class EdgeFactory {
                 + " FROM ApiDB.SimilarSequences ss, Sequences s1, Sequences s2"
                 + " WHERE ss.query_id = s1.source_id "
                 + "   AND ss.subject_id = s2.source_id");
-        ((OraclePreparedStatement) psBlast).setRowPrefetch(5000);
+        psBlast.setFetchSize(5000);
 
         psOrtholog = connection.prepareStatement(makeTypeSql("Ortholog"));
-        ((OraclePreparedStatement) psOrtholog).setRowPrefetch(5000);
+        psOrtholog.setFetchSize(5000);
 
         psCoortholog = connection.prepareStatement(makeTypeSql("Coortholog"));
-        ((OraclePreparedStatement) psCoortholog).setRowPrefetch(5000);
+        psCoortholog.setFetchSize(5000);
 
         psInparalog = connection.prepareStatement(makeTypeSql("Inparalog"));
-        ((OraclePreparedStatement) psInparalog).setRowPrefetch(5000);
+        psInparalog.setFetchSize(5000);
 
         psUpdate = connection.prepareStatement("UPDATE ApiDB.OrthologGroup "
                 + " SET layout_content = ? WHERE ortholog_group_id = ? ");

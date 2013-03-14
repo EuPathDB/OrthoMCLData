@@ -5,8 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import oracle.jdbc.internal.OraclePreparedStatement;
-
 public class GroupFactory {
 
     private final Connection connection;
@@ -28,7 +26,7 @@ public class GroupFactory {
                 + "   AND og.layout_content IS NULL "
                 + "   AND og.ortholog_group_id = ogs.ortholog_group_id "
                 + " ORDER BY og.ortholog_group_id ASC");
-        ((OraclePreparedStatement) psGroupGene).setRowPrefetch(5000);
+        psGroupGene.setFetchSize(5000);
     }
 
     public void close() throws SQLException {

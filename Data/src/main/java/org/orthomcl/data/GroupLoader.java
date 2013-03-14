@@ -9,8 +9,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import oracle.jdbc.internal.OraclePreparedStatement;
-
 import org.apache.log4j.Logger;
 
 public class GroupLoader {
@@ -29,12 +27,12 @@ public class GroupLoader {
         psOrganism = connection.prepareStatement("SELECT taxon_id, name, "
                 + "      three_letter_abbrev "
                 + " FROM ApiDB.OrthoMCLTaxon WHERE is_species = 1");
-        ((OraclePreparedStatement) psOrganism).setRowPrefetch(200);
+        psOrganism.setFetchSize(200);
 
         psGroup = connection.prepareStatement("SELECT ortholog_group_id, "
                 + "      name, number_of_members, layout_content "
                 + " FROM ApiDB.OrthologGroup WHERE name = ?");
-        ((OraclePreparedStatement) psGroup).setRowPrefetch(1);
+        psGroup.setFetchSize(1);
 
         psGene = connection.prepareStatement("SELECT ogs.aa_sequence_id, "
                 + "   eas.source_id, eas.taxon_id, eas.length, eas.description"
@@ -42,7 +40,7 @@ public class GroupLoader {
                 + "      ApiDB.OrthologGroupAASequence ogs "
                 + " WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
                 + "   AND ogs.ortholog_group_id = ?");
-        ((OraclePreparedStatement) psGene).setRowPrefetch(500);
+        psGene.setFetchSize(500);
     }
 
     public void close() throws SQLException {
