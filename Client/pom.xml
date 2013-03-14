@@ -4,19 +4,19 @@
 
   <parent>
     <groupId>org.orthomcl</groupId>
-    <artifactId>orthomcl-webservice</artifactId>
+    <artifactId>orthomcl-data</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
   
-  <name>OrthoMCL Client</name>
-  <artifactId>orthomcl-client</artifactId>
+  <name>OrthoMCL Data: Client</name>
+  <artifactId>orthomcl-data-client</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
   
     <dependency>
       <groupId>org.orthomcl</groupId>
-      <artifactId>orthomcl-common</artifactId>
+      <artifactId>orthomcl-data-common</artifactId>
     </dependency>
     
     <dependency>

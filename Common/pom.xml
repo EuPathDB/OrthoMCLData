@@ -4,12 +4,12 @@
   
   <parent>
     <groupId>org.orthomcl</groupId>
-    <artifactId>orthomcl-webservice</artifactId>
+    <artifactId>orthomcl-data</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
   
-  <name>OrthoMCL Common</name>
-  <artifactId>orthomcl-common</artifactId>
+  <name>OrthoMCL Data: Common</name>
+  <artifactId>orthomcl-data-common</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>

@@ -4,19 +4,19 @@
 
   <parent>
     <groupId>org.orthomcl</groupId>
-    <artifactId>orthomcl-webservice</artifactId>
+    <artifactId>orthomcl-data</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
   
-  <name>OrthoMCL Data</name>
-  <artifactId>orthomcl-data</artifactId>
+  <name>OrthoMCL Data: Data</name>
+  <artifactId>orthomcl-data-data</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
   
     <dependency>
       <groupId>org.orthomcl</groupId>
-      <artifactId>orthomcl-common</artifactId>
+      <artifactId>orthomcl-data-common</artifactId>
     </dependency>
     
     <dependency>
@@ -45,6 +45,12 @@
       <groupId>net.lliira.common</groupId>
       <artifactId>lliira-common-graphics</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.gusdb</groupId>
+      <artifactId>fgputil-util</artifactId>
+      <scope>test</scope>
+    </dependency>
     
   </dependencies>
 
@@ -58,7 +64,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>org.orthomcl.data.layout.LayoutGenerator</mainClass>
+              <mainClass>org.orthomcl.data.LayoutGenerator</mainClass>
             </manifest>
           </archive>
         </configuration>

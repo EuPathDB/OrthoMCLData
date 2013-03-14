@@ -6,13 +6,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import javax.sql.DataSource;
+
 import junit.framework.Assert;
+import oracle.jdbc.pool.OracleDataSource;
 
 import org.apache.log4j.Logger;
+import org.gusdb.fgputil.TestUtil;
+import org.gusdb.fgputil.runtime.GusHome;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -20,38 +25,22 @@ import org.junit.Test;
  */
 public class GroupLoaderTest {
 
-    private static final Logger logger = Logger.getLogger(GroupLoaderTest.class);
+    private static final Logger logger = Logger.getLogger(GroupLoaderTest.class.getName());
 
-    private final GroupLoader loader;
+    private static final String DB_CREATION_SCRIPT = "org/orthomcl/data/buildTestDb.sql";
+    private static final String DB_DELETION_SCRIPT = "org/orthomcl/data/destroyTestDb.sql";
 
-    public GroupLoaderTest() throws SQLException, ClassNotFoundException,
-            IOException {
-        Class.forName("oracle.jdbc.OracleDriver");
-        Connection connection = createConnection();
-        loader = new GroupLoader(connection);
+    private static final boolean RUN_AGAINST_LIVE_DB = false;
+    
+    private DataSource testDb;
+    private GroupLoader loader;
+
+    @Before
+    public void setUpTest() throws Exception {
+        testDb = (RUN_AGAINST_LIVE_DB ? getLiveDataSource() : getTestDataSource());
+        loader = new GroupLoader(testDb.getConnection());
     }
-
-    private Connection createConnection() throws IOException, SQLException {
-    	String gusHome = System.getenv("GUS_HOME");
-    	logger.debug("Found GUS home: " + gusHome);
-        File configFile = new File(gusHome + "/config/OrthoMCL/model-config.xml");
-        logger.debug("Config File: " + configFile.getAbsolutePath());
-        byte[] buffer = new byte[(int) configFile.length()];
-        InputStream input = new FileInputStream(configFile);
-        input.read(buffer, 0, buffer.length);
-        String content = new String(buffer);
-        int pos = content.indexOf("<appDb");
-        content = content.substring(pos + 6, content.indexOf("/>", pos + 1));
-        String[] parts = content.trim().split("\\s*['\"]\\s*");
-        String url = null, login = null, password = null;
-        for (int i = 0; i < parts.length - 1; i += 2) {
-            if (parts[i].equals("connectionUrl=")) url = parts[i + 1];
-            else if (parts[i].equals("login=")) login = parts[i + 1];
-            else if (parts[i].equals("password=")) password = parts[i + 1];
-        }
-        return DriverManager.getConnection(url, login, password);
-    }
-
+    
     @Test
     public void testLoadGroup() throws SQLException, OrthoMCLDataException, IOException {
         //testLoadGroup("OG5_210000", 2, 1);
@@ -63,7 +52,7 @@ public class GroupLoaderTest {
     }
 
     @SuppressWarnings("unused")
-	private void testLoadGroup(String name, int geneCount, int scoreCount)
+    private void testLoadGroup(String name, int geneCount, int scoreCount)
             throws SQLException, OrthoMCLDataException, IOException {
         long start = System.currentTimeMillis();
         byte[] group = loader.getGroupData(name);
@@ -86,6 +75,55 @@ public class GroupLoaderTest {
         byte[] organisms = loader.getOrganismsData();
         DataInputStream input = new DataInputStream(new ByteArrayInputStream(organisms));
         int count = input.readInt();
-        Assert.assertEquals(150, count);
+        Assert.assertEquals(0, count);
+        //Assert.assertEquals(150, count);
     }
+    
+    @After
+    public void cleanDb() throws Exception {
+      TestUtil.runSqlScript(testDb, DB_DELETION_SCRIPT);
+    }
+    
+    private static class AppDbProperties {
+      public String url, login, password;
+    }
+    
+    private static DataSource getLiveDataSource() throws IOException, SQLException, ClassNotFoundException {
+        Class.forName("oracle.jdbc.OracleDriver");
+        String gusHome = GusHome.getGusHome();
+        logger.debug("Found GUS home: " + gusHome);
+        File configFile = new File(gusHome + "/config/OrthoMCL/model-config.xml");
+        logger.debug("Config File: " + configFile.getAbsolutePath());
+        AppDbProperties dbProps = parseAppDbProperties(configFile);
+        OracleDataSource ds = new OracleDataSource();
+        ds.setURL(dbProps.url);
+        ds.setUser(dbProps.login);
+        ds.setPassword(dbProps.password);
+        return ds;
+        //return DriverManager.getConnection(dbProps.url, dbProps.login, dbProps.password);
+    }
+    
+    private static AppDbProperties parseAppDbProperties(File modelConfigFile) throws IOException {
+      byte[] buffer = new byte[(int) modelConfigFile.length()];
+      InputStream input = new FileInputStream(modelConfigFile);
+      input.read(buffer, 0, buffer.length);
+      String content = new String(buffer);
+      int pos = content.indexOf("<appDb");
+      content = content.substring(pos + 6, content.indexOf("/>", pos + 1));
+      String[] parts = content.trim().split("\\s*['\"]\\s*");
+      AppDbProperties props = new AppDbProperties();
+      for (int i = 0; i < parts.length - 1; i += 2) {
+          if (parts[i].equals("connectionUrl=")) props.url = parts[i + 1];
+          else if (parts[i].equals("login=")) props.login = parts[i + 1];
+          else if (parts[i].equals("password=")) props.password = parts[i + 1];
+      }
+      return props;
+    }
+    
+    private static DataSource getTestDataSource() throws SQLException, IOException {
+      DataSource ds = TestUtil.getTestDataSource("myinmemdb");
+      TestUtil.runSqlScript(ds, DB_CREATION_SCRIPT);
+      return ds;
+    }
+    
 }
