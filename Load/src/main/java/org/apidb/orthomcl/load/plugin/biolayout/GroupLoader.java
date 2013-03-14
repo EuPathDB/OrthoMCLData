@@ -8,8 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import oracle.jdbc.OraclePreparedStatement;
-
 import org.apache.log4j.Logger;
 
 /**
@@ -47,16 +45,16 @@ public class GroupLoader {
                 + "WHERE ogs.aa_sequence_id = eas.aa_sequence_id "
                 + "  AND eas.taxon_id = t.taxon_id "
                 + "  AND ogs.ortholog_group_id = ? ");
-        ((OraclePreparedStatement) psSequence).setRowPrefetch(1000);
+        psSequence.setFetchSize(1000);
         psOrtholog = connection.prepareStatement(withClause + selectClause
                 + "FROM apidb.Ortholog o, ogs ogs1, ogs ogs2 " + whereClause);
-        ((OraclePreparedStatement) psOrtholog).setRowPrefetch(5000);
+        psOrtholog.setFetchSize(5000);
         psCoortholog = connection.prepareStatement(withClause + selectClause
                 + "FROM apidb.Coortholog o, ogs ogs1, ogs ogs2 " + whereClause);
-        ((OraclePreparedStatement) psCoortholog).setRowPrefetch(5000);
+        psCoortholog.setFetchSize(5000);
         psInparalog = connection.prepareStatement(withClause + selectClause
                 + "FROM apidb.Inparalog o, ogs ogs1, ogs ogs2 " + whereClause);
-        ((OraclePreparedStatement) psInparalog).setRowPrefetch(5000);
+        psInparalog.setFetchSize(5000);
         psSimilarity = connection.prepareStatement(withClause
                 + "SELECT ogs1.combine_id AS query_id, "
                 + "  ogs2.combine_id AS subject_id, "
@@ -65,7 +63,7 @@ public class GroupLoader {
                 + "WHERE o.query_id = ogs1.combine_id "
                 + "  AND o.subject_id = ogs2.combine_id "
                 + "  AND o.query_id < o.subject_id ");
-        ((OraclePreparedStatement) psSimilarity).setRowPrefetch(5000);
+        psSimilarity.setFetchSize(5000);
     }
 
     public void close() throws SQLException {
