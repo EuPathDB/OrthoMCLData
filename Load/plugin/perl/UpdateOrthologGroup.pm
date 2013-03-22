@@ -193,7 +193,7 @@ EOF
   my $sth = $dbh->prepare($sqlSelectSimSeqs);
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
-    for (my $j = $i + $1; $j < $grpSize ; $j++) {
+    for (my $j = $i + 1; $j < $grpSize ; $j++) {
       my @sequence1 = split (/,/, $seqIdArr->[$i]);
 
       my @sequence2 = split (/,/, $seqIdArr->[$j]);
@@ -205,8 +205,10 @@ EOF
 	$sumPercentMatch += $row[3];
 	$sumPercentIdentity += $row[2];
 	$sumEvalue +=  $row[0] . "e" . $row[1];
-	$connectivity{$seqIdArr->[$i]}++;
-	$connectivity{$seqIdArr->[$j]}++;
+        my $numCon = getConnectivity($sequence1[1], $sequence2[1]);
+	$connectivity{$seqIdArr->[$i]} += $numCount;
+	$connectivity{$seqIdArr->[$j]} += $numCount;
+
       }
     }
   }
@@ -216,6 +218,30 @@ EOF
 
   return ($groupsUpdated,$grpAaSeqUpdated);
 
+}
+
+sub getConnectivity {
+  my ($self,$seq1,$seq2) = = @_;
+
+  my $sqlCondition = "(sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
+and sequence_id_b = '$seq1')";
+
+  my $conCount = <<"EOF";
+     select count(*) from
+     (SELECT SELECT sequence_id_a FROM apidb.ortholog where $condition
+     UNION
+     SELECT SELECT sequence_id_a FROM apidb.cortholog where $condition
+     UNION
+     SELECT SELECT sequence_id_a FROM apidb.inparalog where $condition)
+EOF
+
+  my $dbh = $self->getQueryHandle();
+
+  my $sth = $dbh->prepareAndExecute($conCount);
+
+  my @row = $sth->fetchrow_array();
+
+  return $row[0];
 }
 
 sub updateOrthologGroup {
@@ -237,6 +263,8 @@ sub updateOrthologGroup {
 
   my($avgMant,$avgExp) = split(/e/,$fixedAvgEValue);
 
+  my $numMatchPairs = $pairCount / 2;
+
   $orthologGroup->retrieveFromDB();
 
   if ($orthologGroup->get('avg_percent_identity') != $avgPercentIdentity) {
@@ -251,8 +279,12 @@ sub updateOrthologGroup {
     $orthologGroup->set('avg_connectivity', $avgConnectivity);
   }
 
-  if ($orthologGroup->get('number_of_match_pairs') != $pairCount) {
-    $orthologGroup->set('number_of_match_pairs', $pairCount);
+  if ($orthologGroup->get('number_of_match_pairs') != $numMatchPairs) {
+    $orthologGroup->set('number_of_match_pairs', $numMatchPairs);
+  }
+
+  if ($orthologGroup->get('percent_match_pairs') != 100 * $numMatchPairs /($grpSize * ($grpSize -1)) ) {
+    $orthologGroup->set('number_of_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
   }
 
   if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
@@ -282,7 +314,10 @@ sub getAvgConnectivity {
 
   my $avgConnectivity = $totalConnectivity / $grpSize;
 
-  return $avgConnectivity;
+  my $percentAvgConnectivity = ($avgConnectivity / ($grpSize - 1)) * 100; 
+
+  #####return $avgConnectivity;
+  return $percentAvgConnectivity;
 }
 
 sub updateOrthologGroupAaSequences {
