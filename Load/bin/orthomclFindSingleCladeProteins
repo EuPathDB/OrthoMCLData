@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($repProteins, $tierOneGroupProteins, $outNonSingleClade, $outSingleClade) = @ARGV;
+
+usage() unless scalar(@ARGV) == 4;
+
+open(T, $tierOneGroupProteins) || die "can't open $tierOneGroupProteins";
+my %t1gp;
+while(<T>) {
+  chomp;
+  $t1gp{$_} = 1;
+}
+close(T);
+
+open(R, $repProteins) || die "can't open $repProteins";
+open(S, ">$outSingleClade") || die "can't open $outSingleClade for writing";
+open(N, ">$outNonSingleClade") || die "can't open $outNonSingleClade for writing";
+#scan through all rep proteins.   those that are in t1 groups are from non-single-clades, others are from single-clades
+while(<R>) {
+  chomp;
+  print N "$_\n" if $t1gp{$_};
+  print S "$_\n" unless $t1gp{$_};
+}
+
+sub usage {
+  die"
+usage: orthomclFindSingleCladeProteins repProteins tierOneGroupProteins outputNonSingleClade outputSingleClade
+";
+}

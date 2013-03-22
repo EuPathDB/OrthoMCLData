@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+
+use strict;
+
+&usage() unless scalar(@ARGV) == 3;
+
+# at risk of using too much memory.
+
+my $repGroupsFile = shift(@ARGV);
+my $targetGroupsFile = shift(@ARGV);
+my $secondaryGroupsDir = shift(@ARGV);
+
+my %repProtein2GroupId;
+
+# read representative groups file
+# make hash of repProtein-->groupId
+open(REP, $repGroupsFile) || die "Can't open repGroupsFile '$repGroupsFile'\n";
+while(<REP>) {
+  my @a = split(/\s+/);
+  my $groupId = shift(@a);
+  map  { $repProtein2GroupId{$_} = $groupId} @a;
+}
+close(REP);
+
+# initialize targetGroups file with rep groups
+system("cp $repGroupsFile $targetGroupsFile");
+
+my %groupId2SecondaryProteins;
+
+# process each secondaryGroupsFile
+opendir(DIR, $secondaryGroupsDir) || die "Can't open secondar groups directory '$secondaryGroupsDir'\n";
+my @files = readdir(DIR);
+closedir(DIR);
+die "Secondary groups directory $secondaryGroupsDir does not contain any files" unless scalar(@files);
+foreach my $secondaryGroupsFile (@files) {
+    next if /^\./;
+    $secondaryGroupsFile =~ /^([^_]+)/;
+    my $prefix = $1;
+    #  make hash of groupId-->secondaryGroupString
+    open(SEC, "$secondaryGroupsDir/$secondaryGroupsFile") || die "Can't open secondary groups file '$secondaryGroupsDir/$secondaryGroupsFile'";
+    while (<SEC>) {
+	chomp;
+	my @a = split(/\s+/);
+	my @b = map {"$prefix|$_"} @a;
+	my $rep = shift(@b);
+	my $groupId = $repProtein2GroupId{$rep};
+	push(@{$groupId2SecondaryProteins{$groupId}}, @b);
+    }
+    close(SEC);
+
+}
+
+# stream through target file, and cat secondary proteins to their group
+# write to tmp file, and move it back
+open(TARGET_TMP, ">$targetGroupsFile.tmp") || die "Can't open tmp target groups file '$targetGroupsFile.tmp' for writing";
+open(TARGET, $targetGroupsFile) || die "Can't open target groups file '$targetGroupsFile'";
+while (<TARGET>) {
+  chomp;
+  my @a = split(/\s+/);
+  my $groupId = $a[0];
+  my $secondaries = $groupId2SecondaryProteins{$groupId};
+  my $sec = " " . join(" ", @{$secondaries}) if ($secondaries);
+  print TARGET_TMP "$_$sec\n";
+}
+close(TARGET_TMP);
+rename("$targetGroupsFile.tmp", $targetGroupsFile) || die "Could not rename tmp target file to '$targetGroupsFile'";
+
+sub usage {
+    die "
+
+Merge secondary proteins into OrthoMCL groups.  The OrthoMCL groups are made from \"representative\" proteins.
+The secondary proteins are in groups where each group is associated with one representative protein.  
+Add the secondary proteins into the group that contains their representative.
+
+Usage: $0 rep_groups_file target_groups_file secondary_groups_file1, secondary_groups_file2, ...
+
+Where:
+  rep_groups_file:         a standard OrthoMCL groups file, but including singletons (each with a group ID).  space
+                           delimited, column contains group ID.  Contains representative proteins only.
+
+  target_groups_file:      the output file.  Contains the same groups as rep_groups_file, but now include the secondary
+                           proteins.  Singleton groups are removed.
+
+  secondary_groups_file:   contains groups from previous tier.  No group IDs.  First protein in the list is the representative
+";
+}
+

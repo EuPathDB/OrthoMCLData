@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+
+# convert the UniProt XML download format to a FASTA format suitable for BLAST,
+# so we can apply UniProt EC numbers to OrthoMCL proteins
+
+# if a taxon file is supplied, then only proteins whose NCBI taxon IDs appear in that file will be included
+
+use strict;
+
+use Data::Dumper;
+use XML::Simple;
+use Getopt::Long;
+
+my ($xmlFile, $taxonFile, $fastaFile, $ecMappingFile, $suffixTaxonFile);
+&GetOptions('xmlFile=s' => \$xmlFile,
+	    'taxonFile=s' => \$taxonFile,
+	    'fastaFile=s' => \$fastaFile,
+	    'ecMappingFile=s' => \$ecMappingFile,
+	    'suffixTaxonMapFile=s' => \$suffixTaxonFile,
+	   );
+
+&usage unless $xmlFile && $fastaFile && $ecMappingFile;
+
+my %taxonOfInterest;
+my %suffixTaxIdMap;
+
+loadTaxonList($taxonFile, \%taxonOfInterest)
+  if $taxonFile;
+
+my $simple = XML::Simple->new();
+my $xmlString;
+
+open(XML, $xmlFile) || die "Can't open XML file \"$xmlFile\"\n";
+open(FASTA, ">", $fastaFile) || die "Can't open FASTA file \"$fastaFile\" for writing.";
+open(EC, ">", $ecMappingFile) || die "Can't open output file \"$ecMappingFile\" forEC mappings.";
+
+my $entryInProgress;
+while (<XML>) {
+  $entryInProgress = 1 if /<entry/;
+
+  $xmlString .= $_ if $entryInProgress;
+
+  if (/<\/entry/) {
+    processEntry($xmlString, \%taxonOfInterest, \%suffixTaxIdMap);
+    $xmlString = "";
+    $entryInProgress = undef;
+  }
+}
+
+if ($suffixTaxonFile) {
+  open(TAXMAP, ">", $suffixTaxonFile) || die "Can't open output file \"$suffixTaxonFile\" forEC mappings.";
+  foreach my $suffix (sort keys %suffixTaxIdMap)  {
+    print TAXMAP "$suffix\t" . $suffixTaxIdMap{$suffix} . "\n";
+  }
+  close(TAXMAP);
+}
+
+close(FASTA);
+close(EC);
+
+sub processEntry {
+
+  my ($xmlString, $taxonHashRef, $suffixTaxMapRef) = @_;
+
+  my $entry = $simple->XMLin($xmlString, forcearray => 1, KeyAttr => [] );
+
+  # print "entry:\n" . Dumper($entry). "\n";
+  my $sequence = $entry->{sequence}->[0]->{content};
+  my $length = $entry->{sequence}->[0]->{length};
+  my $entryName = $entry->{name}->[0];
+
+  if (%{$taxonHashRef}) { # filtering by taxon
+    die "can't find NCBI taxonomy for entry $entryName"
+      unless $entry->{organism}->[0]->{dbReference}->[0]->{type} eq "NCBI Taxonomy";
+    my $taxonomyId = $entry->{organism}->[0]->{dbReference}->[0]->{id};
+    return unless $$taxonHashRef{$taxonomyId};
+
+    # update (protein ID suffix) -> (NCBI taxonomy ID) mapping (and check that it's a function)
+    my ($whatever, $suffix) = split(/_/, $entryName);
+    # print "taxon \"$taxonomyId\"; suffix \"$suffix\"; current mapping \"" . $$suffixTaxMapRef{$suffix} . "\"\n";
+    if ($$suffixTaxMapRef{$suffix}) {
+      die "ID suffix conflict: \"$suffix\" maps to $taxonomyId in $entryName, but to " . $$suffixTaxMapRef{$suffix} . " elsewhere"
+	if $$suffixTaxMapRef{$suffix} != $taxonomyId;
+    } else {
+      $$suffixTaxMapRef{$suffix} = $taxonomyId;
+    }
+  }
+
+  my @ecNumbers;
+  foreach my $dbRef (@{$entry->{dbReference}}) {
+    if ($dbRef->{type} eq 'EC') {
+      push (@ecNumbers, $dbRef->{id});
+    }
+  }
+  my $ecNumbers = join(",", @ecNumbers);
+
+  my $organism; # the string
+  my $organismElement; # the whole structure
+
+  $organismElement = $entry->{organism};
+  foreach my $taxonName (@{$organismElement->[0]->{name}}) {
+    $organism = $taxonName->{content}
+      if ($taxonName->{type} eq 'scientific');
+  }
+
+  print FASTA ">$entryName organism=\"$organism\" ecNumbers=\"$ecNumbers\" length=$length$sequence";
+  print EC "$entryName\t$ecNumbers\n";
+}
+
+sub loadTaxonList {
+  my ($taxonFile, $taxonHashRef) = @_;
+
+  open(T, $taxonFile) || die "Can't open taxon file '$taxonFile'\n";
+  while (<T>) {
+    my $tax = $_;
+    chomp($tax);
+    $$taxonHashRef{$tax} = 1;
+  }
+  close(T);
+}
+
+sub usage {
+
+  $0 =~ /([^\/]*)$/;
+
+my $programName = $1;
+
+  print "usage: $programName -xmlFile <filename> { -taxonFile <filename> } -fastaFile <filename> -ecMappingFile <filename>\n";
+  die;
+}

@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+use DBI;
+use strict;
+
+usage() unless scalar(@ARGV) == 3;
+
+my $changedGroupsFile = $ARGV[0];
+my $planLetter = $ARGV[1];
+my $changedInSingleCladeFile = $ARGV[2];
+
+my %singleCladeChange;
+open(S, $changedInSingleCladeFile) || die "can't open file $changedInSingleCladeFile\n";
+while(<S>) {
+    my @a = split(/:/);
+    $singleCladeChange{$a[0]} = 1;
+}
+close(S);
+
+my $dbh = DBI->connect("dbi:Oracle:orth500n", "sfischer", "",
+		    {PrintError => 0, RaiseError => 1}) or die DBI::errstr;
+
+my $stmt = $dbh->prepare("truncate table apidb.GroupsChangedInPlan$planLetter");
+$stmt->execute();
+
+my $sql = "
+insert into apidb.GroupsChangedInPlan$planLetter (group_id, min_score, max_score, sum_score, avg_score, single_clades_changed)
+values (?, ?, ?, ?, ?, ?)
+";
+
+open(F, $changedGroupsFile) || die "can't open file $changedGroupsFile\n";
+
+my $stmt = $dbh->prepare($sql);
+while(<F>) {
+    chomp;
+    s/\://;
+    my @a = split;
+    $stmt->execute(@a, $singleCladeChange{$a[0]});
+}
+
+$sql = "insert into APIDB.groupschangedinplan$planLetter (group_id)
+select name from apidb.orthologgroup
+minus select group_id from APIDB.groupschangedinplana";
+
+my $stmt = $dbh->prepare($sql);
+$stmt->execute();
+
+sub usage {
+die "
+ usage: orthomclLoadChangedGroups group_scores_file
+";
+}
+

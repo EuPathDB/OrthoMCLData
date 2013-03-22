@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+use strict;
+
+usage() unless scalar(@ARGV) == 3;
+
+my ($groupsFile, $proteinRelativeScoresFile, $fieldNum) = @ARGV;
+
+open(P, $proteinRelativeScoresFile) || die "Could not open file '$proteinRelativeScoresFile'\n";
+my %proteinScores;
+while(<P>) {
+  chomp;
+  my @p = split;
+  my $id = shift(@p);
+  $proteinScores{$id} = \@p;
+}
+close(P);
+
+open(G, $groupsFile) || die "Could not open file '$groupsFile'\n";
+
+while(<G>) {
+  chomp;
+
+  my @g = split;
+  my $id = shift @g;
+  my $maxScore = -1000000;
+  my $minScore = 10000000;
+  my $scoreSum;
+  foreach my $member (@g) {
+    next unless $proteinScores{$member};
+    my ($score, $avgScore) = @{$proteinScores{$member}};
+    my $s = $fieldNum == 1? $score: $avgScore;
+    $minScore = $s if $s < $minScore;
+    $maxScore = $s if $s > $maxScore;
+    $scoreSum += $s;
+  }
+  my $scoreDiv = $scoreSum / scalar(@g);
+  print sprintf("$id $minScore $maxScore $scoreSum %.4f\n", $scoreDiv);
+}
+
+
+sub usage {
+
+die "
+Make file showing relative protein scores for groups w/ changed proteins.
+
+usage:  orthomclMakeScoresFile groupsFile relative_protein_scores field_num
+
+field_num = 1 or 2 (1=score, 2=avgScore)
+
+output file has:
+group_id minProteinScore maxProteinScore summedProteinScores avgProteinScores
+";
+
+}

@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+
+use DBI;
+use strict;
+
+usage() unless scalar(@ARGV) == 4;
+
+my $groupFile = $ARGV[0];
+my $singletonsFile = $ARGV[1];
+my $groupScoresOutputFile = $ARGV[2];
+my $proteinScoresOutputFile = $ARGV[3];
+
+my $dbh = DBI->connect("dbi:Oracle:orth500n", "sfischer", "",
+		    {PrintError => 0, RaiseError => 1}) or die DBI::errstr;
+
+my $sql = "
+select TAXON_ID_A, TAXON_ID_B, NORMALIZING_DIVISOR
+from apidb.norm
+";
+
+my %norms;
+my $stmt = $dbh->prepare($sql);
+$stmt->execute();
+while(my ($a, $b, $d) = $stmt->fetchrow_array()) {
+  my $key = "${a}_$b";
+  $norms{$key} = $d;
+}
+
+$sql = "
+select evalue_exp
+from apidb.similarsequences
+where query_id = ?
+and subject_id = ?
+";
+my $stmt = $dbh->prepare($sql);
+open(G, $groupFile) || die "can't open $groupFile\n";
+open(GG, ">$groupScoresOutputFile") || die "can't open $groupScoresOutputFile\n";
+open(P, ">$proteinScoresOutputFile") || die "can't open $proteinScoresOutputFile\n";
+open(S, $singletonsFile) || die "could't open singletons file\n";
+while(<S>) {
+    print P;
+}
+close(S);
+
+my $totalScore;
+while(<G>){
+    chomp;
+    my @a = split(/ /);
+    my $groupId = shift(@a);
+    my $size = scalar(@a);
+    my $groupScore;
+    my %membersScore;
+    my $edgeCount;
+    print STDERR "." . scalar(@a);
+    foreach my $member1 (@a) {
+        my @b = split(/\|/, $member1);
+	my $taxon1 = shift(@b);
+	foreach my $member2 (@a) {
+	    next unless $member1 lt $member2;
+	    my @c = split(/\|/, $member2);
+	    my $taxon2 = shift(@c);
+	    $edgeCount++;
+	    my $pairScore = 0;
+	    if ($norms{"${taxon1}_$taxon2"}) {
+	      $pairScore =
+		(getPairScore($member1, $member2) + getPairScore($member2, $member1)) / (2 * $norms{"${taxon1}_$taxon2"});
+	    }
+	    $groupScore += $pairScore;
+	    $membersScore{$member1} += $pairScore;
+	    $membersScore{$member2} += $pairScore;
+	}
+    }
+    foreach my $member (@a) {
+      my $s1 = $membersScore{$member} / ($size - 1);
+      my $s = sprintf("%.2f %.3f", $membersScore{$member}, $s1);
+      print P "$member $s\n";
+    }
+    $groupScore /= $edgeCount;
+    $totalScore += $groupScore;
+    print GG sprintf("$groupId %.3f ($edgeCount)\n",$groupScore);
+}
+print GG sprintf("total score: %.3f\n", $totalScore);
+
+sub getPairScore {
+    my ($member1, $member2) = @_;
+    $stmt->execute($member1, $member2);
+    my $score = 0;
+    ($score) = $stmt->fetchrow_array();
+    return $score * -1;
+}
+
+sub usage {
+die "
+ usage: orthomclAssessGroups groups_file singletons_file output_groups_score_file output_proteins_score_file
+";
+}
+

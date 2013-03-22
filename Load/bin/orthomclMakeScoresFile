@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+use strict;
+
+usage() unless scalar(@ARGV) == 2;
+
+my ($newFile, $refFile) = @ARGV;
+
+open(N, $newFile) || die "Could not open file '$newFile'\n";
+my %proteinScores;
+
+while(<N>) {
+  chomp;
+
+  my @a = split;
+  my $id = shift @a;
+  $proteinScores{$id} = \@a;
+}
+close(N);
+
+open(R, $refFile) || die "Could not open file '$refFile'\n";
+
+while(<R>) {
+    chomp;
+    my @a = split;
+    my $id = shift @a;
+    my @newScores = @{$proteinScores{$id}};
+    my ($new, $newDiv) = @newScores;
+    my ($ref, $refDiv) = @a;
+    my $diff = $new - $ref;
+    my $diffDiv = $newDiv - $refDiv;
+    print "$id $diff $diffDiv\n";
+}
+
+sub usage {
+
+die "
+Make file showing changes in connectivity scores between two orthomcl builds. Substracts ref scores from new scores.
+
+usage:  orthomclMakeScoresFile new_file ref_file
+
+each file has three columns:
+  protein_id connectivity_score divided_connectivity_score
+
+if the scores are absent, they are treated as 0 (singletons)
+";
+
+}

@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+use strict;
+my ($groupsFile, $proteinsFile) = @ARGV;
+
+usage() unless scalar(@ARGV) == 2;
+
+open(P, $proteinsFile) || die "can't open file '$proteinsFile'\n";
+my %proteins;
+while(<P>){
+  chomp;
+  $proteins{$_} = 1;
+}
+close(P);
+
+open(G, $groupsFile) || die "can't open file '$groupsFile'\n";
+while(<G>) {
+  chomp;
+  my @a = split;
+  my $id = shift(@a);
+  my @b = map { if ($proteins{$_}) { $_; } else {}} @a;
+  print join(" ", $id, @b, "\n");
+}
+
+sub usage {
+
+  die "
+remove from a groups file all proteins not in the provided protein IDs file
+
+usage: orthomclFilterGroupProteins groups_file protein_ids_file
+
+output to stdout
+
+";
+
+}

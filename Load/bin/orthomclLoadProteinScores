@@ -1,0 +1,243 @@
+#!/usr/bin/perl
+
+use DBI;
+use strict;
+
+usage() unless scalar(@ARGV) == 5;
+
+my $newGroupsFile = $ARGV[0];
+my $proteinScoresFile = $ARGV[1];
+my $repProteinIDsFile = $ARGV[2];
+my $synScoresFile = $ARGV[3];
+my $planLetter = $ARGV[4];
+
+die "plan_letter arg '$planLetter' must be A or B" unless $planLetter eq 'A' || $planLetter eq 'B';
+
+my %cladeHash = makeCladeHash();
+my %tierOneClades;
+my %tmpHash;
+foreach my $genusId (values(%cladeHash)) {
+    $tierOneClades{$genusId} = $genusId if $tmpHash{$genusId};
+    $tmpHash{$genusId} = 1;
+}
+
+open(N, $newGroupsFile) || die "Could not open file '$newGroupsFile'\n";
+my %proteinNewGroup;
+my %groupsizes;
+
+while(<N>) {
+  chomp;
+  my @a = split;
+  my $id = shift @a;
+  $id =~ s/\://;
+  my $groupSize = scalar(@a);
+  map { $proteinNewGroup{$_} = $id; $groupsizes{$_} = $groupSize} @a;
+}
+close(N);
+
+my %repProteins;
+open(R, $repProteinIDsFile) || die "can't open file '$repProteinIDsFile'\n";
+while(<R>) {
+    chomp;
+    $repProteins{$_} = 1;
+}
+
+open(F, $proteinScoresFile) || die "can't open file $proteinScoresFile\n";
+my %proteinConnScores;
+while(<F>) {
+    chomp;
+    my @a = split;
+    my $id = shift @a;
+    $proteinConnScores{$id} = \@a;
+}
+close(F);
+
+my $dbh = DBI->connect("dbi:Oracle:orth500n", "sfischer", "",
+		    {PrintError => 0, RaiseError => 1}) or die DBI::errstr;
+
+my $sql = "
+insert into apidb.ProteinToPlan${planLetter}GroupId (protein_id, plan_${planLetter}_group_id, score, avg_score, syn_score, is_rep, grp_sz, tierOneClade)
+values (?, ?, ?, ?, ?, ?, ?, ?)
+";
+
+
+my $stmt = $dbh->prepare("truncate table apidb.ProteinToPlan${planLetter}GroupId");
+$stmt->execute();
+
+$stmt = $dbh->prepare($sql);
+open(S, $synScoresFile) || die "can't open file '$synScoresFile'\n";
+while(<S>) {
+    chomp;
+    my @a = split;
+    my ($id, $syn_score) = @a;
+    my ($taxonAbbrev, $dontcare) = split(/\|/, $id);
+    my ($summed_conn_score, $avg_conn_score);
+    ($summed_conn_score, $avg_conn_score) = @{$proteinConnScores{$id}} if $proteinConnScores{$id};
+    my $isRep = 0;
+    $isRep = 1 if $repProteins{$id};
+    my $tierOneClade = $tierOneClades{$cladeHash{$taxonAbbrev}};
+    $stmt->execute($id, $proteinNewGroup{$id}, $summed_conn_score, $avg_conn_score, $syn_score, $isRep, $groupsizes{$id}, $tierOneClade);
+}
+
+sub makeCladeHash {
+  my %cladeHash = (
+	    'apis',   7028, # Acyrthosiphon pisum
+	    'aaeg',   7158, # Aedes aegypti
+	    'atum',    357, # Agrobacterium tumefaciens str. C58
+	    'agam',   7164, # Anopheles gambiae str. PEST
+	    'amel',   7459, # Apis mellifera
+	    'aaeo',   2713, # Aquifex aeolicus VF5
+	    'atha',   3701, # Arabidopsis thaliana
+	    'aful',   2233, # Archaeoglobus fulgidus DSM 4304
+	    'afum',  36629, # Aspergillus fumigatus Af293
+	    'aory',   5052, # Aspergillus oryzae RIB40
+	    'bbov',   5864, # Babesia bovis T2Bo
+	    'bant',   1386, # Bacillus anthracis str. 'Ames Ancestor'
+	    'bmor',   7090, # Bombyx mori
+	    'bsui',    234, # Brucella suis 1330
+	    'bmaa',   6278, # Brugia malayi
+	    'bmal',  32008, # Burkholderia mallei ATCC 23344
+	    'bpse',  32008, # Burkholderia pseudomallei 1710b
+	    'cbri',   6237, # Caenorhabditis briggsae AF16
+	    'cele',   6237, # Caenorhabditis elegans
+	    'cmaq',  76886, # Caldivirga maquilingensis IC-167
+	    'cjej',    194, # Campylobacter jejuni subsp. jejuni NCTC 11168
+	    'calb',   5475, # Candida albicans
+	    'cgla', 374468, # Candida glabrata CBS 138
+	    'ckor', 498845, # Candidatus Korarchaeum cryptofilum OPF8
+	    'clup',   9611, # Canis lupus familiaris
+	    'crei',   3052, # Chlamydomonas reinhardtii
+	    'cpne',  83553, # Chlamydophila pneumoniae CWL029
+	    'ctep', 256319, # Chlorobium tepidum TLS
+	    'cint',   7718, # Ciona intestinalis
+	    'cbot',   1485, # Clostridium botulinum A3 str. Loch Maree
+	    'cper',   1485, # Clostridium perfringens str. 13
+	    'cimm',   5500, # Coccidioides immitis RS
+	    'cpos',   5500, # Coccidioides posadasii RMSCC 3488
+	    'cbur',    776, # Coxiella burnetii RSA 493
+	    'cneo',   5206, # Cryptococcus bacillisporus
+	    'cneg',   5206, # Cryptococcus neoformans var. grubii H99
+	    'chom',   5806, # Cryptosporidium hominis TU502
+	    'cmur',   5806, # Cryptosporidium muris RN66
+	    'cpar',   5806, # Cryptosporidium parvum Iowa II
+	    'cpip',   7174, # Culex pipiens
+	    'cmer',  45156, # Cyanidioschyzon merolae strain 10D
+	    'drer',   7954, # Danio rerio
+	    'dhan',   4958, # Debaryomyces hansenii CBS767
+	    'deth',  61434, # Dehalococcoides ethenogenes 195
+	    'drad',   1298, # Deinococcus radiodurans R1
+	    'ddis',   5782, # Dictyostelium discoideum AX4
+	    'dmel',   7215, # Drosophila melanogaster
+	    'anid',   5071, # Emericella nidulans
+	    'ecun',   6033, # Encephalitozoon cuniculi GB-M1
+	    'eint',   6033, # Encephalitozoon intestinalis
+	    'edis',   5758, # Entamoeba dispar SAW760
+	    'ehis',   5758, # Entamoeba histolytica HM-1:IMSS
+	    'einv',   5758, # Entamoeba invadens IP1
+	    'ebie',  27971, # Enterocytozoon bieneusi
+	    'ecab',   9789, # Equus caballus
+	    'egos',  33170, # Eremothecium gossypii
+	    'ecol',    561, # Escherichia coli str. K-12 substr. W3110
+	    'ftul',    262, # Francisella tularensis subsp. tularensis SCHU S4
+	    'ggal',   9030, # Gallus gallus
+	    'gsul',  28231, # Geobacter sulfurreducens PCA
+	    'glab',   5740, # Giardia intestinalis ATCC 50581
+	    'glam',   5740, # Giardia lamblia ATCC 50803
+	    'glae',   5740, # Giardia lamblia P15
+	    'gzea',   5126, # Gibberella zeae PH-1
+	    'gthe',  55528, # Guillardia theta
+	    'halo',   2239, # Halobacterium sp. NRC-1
+	    'hwal', 293431, # Haloquadratum walsbyi DSM 16790
+	    'hsap',   9605, # Homo sapiens
+	    'hbut',  54247, # Hyperthermus butylicus DSM 5456
+	    'ihos',  54258, # Ignicoccus hospitalis KIN4/I
+	    'isca',   6944, # Ixodes scapularis
+	    'klac',   4910, # Kluyveromyces lactis NRRL Y-1140
+	    'lbic',  29882, # Laccaria bicolor S238N-H82
+	    'lbra',   5658, # Leishmania braziliensis
+	    'linf',   5658, # Leishmania infantum
+	    'lmaj',   5658, # Leishmania major strain Friedlin
+	    'lmex',   5658, # Leishmania mexicana
+	    'lmon',   1637, # Listeria monocytogenes EGD-e
+	    'mmul',   9539, # Macaca mulatta
+	    'mgri', 148303, # Magnaporthe oryzae 70-15
+	    'msed',  41980, # Metallosphaera sedula DSM 5348
+	    'msmi',   2172, # Methanobrevibacter smithii ATCC 35061
+	    'mjan', 196118, # Methanocaldococcus jannaschii DSM 2661
+	    'mmar',   2184, # Methanococcus maripaludis S2
+	    'micr',  38832, # Micromonas sp. RCC299
+	    'mdom',  13615, # Monodelphis domestica
+	    'mbre',  81525, # Monosiga brevicollis MX1
+	    'mmus',  10088, # Mus musculus
+	    'mlep',   1763, # Mycobacterium leprae Br4923
+	    'mtub',   1763, # Mycobacterium tuberculosis H37Rv
+	    'nequ', 193568, # Nanoarchaeum equitans Kin4-M
+	    'nvec',  45350, # Nematostella vectensis
+	    'ncan',  29175, # Neospora caninum
+	    'ncra',   5140, # Neurospora crassa OR74A
+	    'nmar', 338191, # Nitrosopumilus maritimus SCM1
+	    'oana',   9257, # Ornithorhynchus anatinus
+	    'osat',   4527, # Oryza sativa Japonica Group
+	    'otau',  70447, # Ostreococcus tauri
+	    'ptro',   9596, # Pan troglodytes
+	    'phum', 121222, # Pediculus humanus
+	    'pchr',   5305, # Phanerochaete chrysosporium
+	    'ppat',   3217, # Physcomitrella patens subsp. patens
+	    'pram',   4783, # Phytophthora ramorum
+	    'pber',   5820, # Plasmodium berghei str. ANKA
+	    'pcha',   5820, # Plasmodium chabaudi chabaudi
+	    'pfal',   5820, # Plasmodium falciparum 3D7
+	    'pkno',   5820, # Plasmodium knowlesi strain H
+	    'pviv',   5820, # Plasmodium vivax SaI-1
+	    'pyoe',   5820, # Plasmodium yoelii yoelii str. 17XNL
+	    'rsol',  48736, # Ralstonia solanacearum GMI1000
+	    'rnor',  10114, # Rattus norvegicus
+	    'rbal', 265488, # Rhodopirellula baltica SH 1
+	    'rcom',   3987, # Ricinus communis
+	    'rpro',    780, # Rickettsia prowazekii str. Madrid E
+	    'rtyp',    780, # Rickettsia typhi str. Wilmington
+	    'scer',   4930, # Saccharomyces cerevisiae S288c
+	    'sent',    590, # Salmonella enterica subsp. enterica serovar Typhi str. CT18
+	    'psti', 766733, # Scheffersomyces stipitis CBS 6054
+	    'sman',   6181, # Schistosoma mansoni
+	    'spom',   4895, # Schizosaccharomyces pombe
+	    'sfle',    620, # Shigella flexneri 2a str. 301
+	    'saur',   1279, # Staphylococcus aureus subsp. aureus Mu50
+	    'smar',   2279, # Staphylothermus marinus F1
+	    'spne',   1301, # Streptococcus pneumoniae TIGR4
+	    'ssol',   2284, # Sulfolobus solfataricus P2
+	    'syne',   1129, # Synechococcus sp. WH 8102
+	    'trub',  31032, # Takifugu rubripes
+	    'tthe',   5890, # Tetrahymena thermophila SB210
+	    'tnig',  47144, # Tetraodon nigroviridis
+	    'tpse',  35127, # Thalassiosira pseudonana CCMP1335
+	    'tann',   5873, # Theileria annulata strain Ankara
+	    'tpar',   5873, # Theileria parva strain Muguga
+	    'tvol',   2302, # Thermoplasma volcanium GSS1
+	    'tmar',   2335, # Thermotoga maritima MSB8
+	    'tgon',   5810, # Toxoplasma gondii
+	    'tpal',    157, # Treponema pallidum subsp. pallidum str. Nichols
+	    'tvag',   5721, # Trichomonas vaginalis G3
+	    'tadh',  10227, # Trichoplax adhaerens
+	    'tbru',   5690, # Trypanosoma brucei
+	    'tbrg',   5690, # Trypanosoma brucei gambiense
+	    'tcon',   5690, # Trypanosoma congolense
+	    'tcru',   5693, # Trypanosoma cruzi strain CL Brener  -- species level for this special case
+	    'tviv',   5690, # Trypanosoma vivax
+	    'vcho',    662, # Vibrio cholerae O1 biovar El Tor str. N16961
+	    'vcar',   3066, # Volvox carteri f. nagariensis
+	    'wend',    953, # Wolbachia endosymbiont of Culex quinquefasciatus Pel
+	    'wsuc',    843, # Wolinella succinogenes DSM 1740
+	    'ylip',   4951, # Yarrowia lipolytica CLIB122
+	    'yent',    629, # Yersinia enterocolitica subsp. enterocolitica 8081
+	    'ypes',    629, # Yersinia pestis CO92
+	   );
+  return %cladeHash;
+}
+sub usage {
+
+die "
+ usage: orthomclLoadProteinScores new_groups_file scores_file
+";
+}
+

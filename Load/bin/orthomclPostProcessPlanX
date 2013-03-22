@@ -1,0 +1,129 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($outputDir, $planLetter, $refProteinsFile, $refGroupsFile, $newGroupsFile, $repProteinsFile, $singleCladeProteinsFile) = @ARGV;
+
+usage() unless scalar(@ARGV) >= 5;
+
+die "dir $outputDir does not exist" unless -d $outputDir;
+die "file $refProteinsFile does not exist" unless -e $refProteinsFile;
+die "file $refGroupsFile does not exist" unless -e $refGroupsFile;
+die "file $newGroupsFile does not exist" unless -e $newGroupsFile;
+die "file $repProteinsFile does not exist" unless -e "$repProteinsFile";
+die "plan letter '$planLetter' must be A or B" unless $planLetter eq 'A' || $planLetter eq 'B';
+
+my $refDir = "$outputDir/ref";
+my $newDir = "$outputDir/new";
+my $compareDir = $outputDir;
+
+mkdir($refDir);
+mkdir($newDir);
+
+my $cmdCount = 0;
+
+print STDERR "\n=== Stage 1 - new ===";
+stage1($newDir, $newGroupsFile, $refProteinsFile, $singleCladeProteinsFile);
+
+print STDERR "\n=== Stage 1 - ref ===";
+stage1($refDir, $refGroupsFile, $refProteinsFile, $singleCladeProteinsFile);
+
+
+print STDERR "\n=== Stage 2 - new ===";
+stage2($newDir, $refDir, $singleCladeProteinsFile);
+
+print STDERR "\n=== Stage 2 - ref ===";
+stage2($refDir, $newDir, $singleCladeProteinsFile);
+
+
+print STDERR "\n=== Stage 3 - new ===";
+stage3($newDir, $refDir);
+
+print STDERR "\n=== Stage 3 - ref ===";
+stage3($refDir, $newDir);
+
+
+print STDERR "\n=== Stage 4 - compare ===\n";
+# find protein connectivity score deltas (new minus ref)
+runCmd("orthomclMakeScoresFile $newDir/protein_conn_scores $refDir/protein_conn_scores  > $compareDir/protein_conn_scores_delta");
+
+# find protein synteny score deltas (new minus ref)
+runCmd("orthomclMakeScoresFile $newDir/protein_syn_scores $refDir/protein_syn_scores  > $compareDir/protein_syn_scores_delta");
+
+# find group connectivity deltas
+runCmd("orthomclMakeGroupScoresFile $refDir/different_groups $compareDir/protein_conn_scores_delta 2 > $compareDir/group_conn_scores_delta");
+
+# find group synteny deltas
+runCmd("orthomclMakeGroupScoresFile $refDir/different_groups $compareDir/protein_syn_scores_delta 1 > $compareDir/group_syn_scores_delta");
+
+# load PlanX proteins table
+runCmd("orthomclLoadProteinScores $newGroupsFile $compareDir/protein_conn_scores_delta $repProteinsFile $compareDir/protein_syn_scores_delta $planLetter");
+
+# load PlanX groups table
+runCmd("orthomclLoadChangedGroups  $compareDir/group_conn_scores_delta $planLetter $refDir/different_singleclade_groups");
+
+
+#################################################################################################
+
+
+sub stage1 {
+  my ($dir, $groupsFile, $proteinIDsFile, $singleCladeProteinsFile) = @_;
+
+  # remove singleton groups
+  &runCmd("cat $groupsFile | perl -e 'while(<>) { \@a = split; print if scalar(\@a) > 2;}' > $dir/groups_no_singletons");
+
+  # make group_proteins_sorted (protein IDs found in groups, sorted)
+  &runCmd("orthomclExtractProteinIdsFromGroupsFile $dir/groups_no_singletons | sort > $dir/group_proteins_sorted");
+
+  # us it to find singletons, sort them
+  &runCmd("diff $proteinIDsFile $dir/group_proteins_sorted | grep \\<| cut -d \" \" -f2|sort > $dir/singletons_sorted");
+
+  # make groups file including only single-clade proteins
+  &runCmd("orthomclFilterGroupProteins $dir/groups_no_singletons $singleCladeProteinsFile > $dir/groups_singleclade_only") if $singleCladeProteinsFile;
+
+  # find synteny scores
+  &runCmd("syntenicity $dir/groups_no_singletons $dir/singletons_sorted --proteinScoreFile $dir/protein_syn_scores > $dir/syntenicity.out");
+
+}
+
+sub stage2 {
+  my ($dir, $otherDir, $singleCladeProteinsFile) = @_;
+
+  # find non-identical groups
+  runCmd("orthomclRemoveIdenticalGroups $dir/groups_no_singletons $otherDir/groups_no_singletons > $dir/different_groups");
+
+  # find non-identical single-clade groups
+  if ($singleCladeProteinsFile) {
+    runCmd("orthomclRemoveIdenticalGroups $dir/groups_singleclade_only $otherDir/groups_singleclade_only > $dir/different_singleclade_groups");
+  }
+
+  # find different singletons (singletons here but not in other)
+  runCmd("diff $dir/singletons_sorted $otherDir/singletons_sorted | grep \\<| cut -d \" \" -f2 > $dir/different_singletons");
+
+  # find protein and group connectivity scores
+  &runCmd("orthomclAssessGroups $dir/different_groups $dir/different_singletons $dir/group_conn_scores $dir/protein_conn_scores");
+
+  # find pairs in non-identical groups
+  &runCmd("orthomclExtractProteinPairsFromGroupsFile $dir/different_groups | sort > $dir/pairs_sorted");
+}
+
+sub stage3 {
+  my ($dir, $otherDir) = @_;
+
+  # find missing pairs (pairs in other but not found here)
+  runCmd("diff $dir/pairs_sorted $otherDir/pairs_sorted | grep \\> | cut -d \" \" -f2,3 > $dir/missing_pairs");
+
+}
+
+sub runCmd {
+  my ($cmd) = @_;
+  $cmdCount++;
+  print STDERR "\n$cmdCount running: $cmd\n";
+  system($cmd) && die "failed";
+}
+
+sub usage {
+  die "
+usage: orthomclPostProcessPlanX outputDir planLetter refProteinsFile refGroupsFile newGroupsFile [repProteinsFile singleCladeProteinsFile]
+";
+}

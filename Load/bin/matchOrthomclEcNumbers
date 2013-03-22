@@ -1,0 +1,156 @@
+#!/usr/bin/perl
+
+# read BLAST results to find high-identity matches,
+# use separate input file of query-protein ID / EC-number pairs
+# to create output of subject-protein ID / EC-number pairs.
+
+# this is used to implement Li Li's technique for assigning EC numbers to OrthoMCL
+# proteins by downloading Uniprot proteins that have EC-number assignments and BLASTing them against the set of OrthoMCL proteins.
+
+use strict;
+
+use Data::Dumper;
+use Getopt::Long;
+use DBI;
+use CBIL::Util::PropertySet;
+
+my ($blastFile, $uniprotEcMappingFile, $uniprotTaxonMappingFile, $outputEcMappingFile, $insertSequenceEcNumber);
+&GetOptions('blastFile=s' => \$blastFile,
+	    'uniprotEcMappingFile=s' => \$uniprotEcMappingFile,
+	    'uniprotTaxonMappingFile=s' => \$uniprotTaxonMappingFile,
+	    'outputEcMappingFile=s' => \$outputEcMappingFile,
+	    'insertSequenceEcNumber!' => \$insertSequenceEcNumber,
+	   );
+
+&usage unless $blastFile && $uniprotEcMappingFile && $outputEcMappingFile;
+
+open(BLAST, $blastFile) || die "Can't open BLAST file \"$blastFile\"\n";
+open(TAXMAP, $uniprotTaxonMappingFile) if $uniprotTaxonMappingFile;
+open(OUT, ">", $outputEcMappingFile) || die "Can't open output file \"$outputEcMappingFile\".";
+
+my %ecMapping;
+loadEcMappings($uniprotEcMappingFile, \%ecMapping);
+
+my %taxonMapping;
+loadTaxonMappings($uniprotTaxonMappingFile, \%taxonMapping)
+  if $uniprotTaxonMappingFile;
+
+# prepare insert for mapping, if we're doing that
+my $dbh;
+my $insertStmt;
+if ($insertSequenceEcNumber) {
+  $dbh = getDbHandle();
+  $insertStmt = $dbh->prepare(<<SQL);
+       insert into apidb.SequenceEcNumber
+                     (orthomcl_id, orthomcl_taxon_id, uniprot_id, uniprot_ncbi_tax_id, ec_number)
+                   values (?, (select taxon_id
+                               from apidb.OrthomclTaxon
+                               where three_letter_abbrev = substr(?, 1, 4)),
+                           ?, ?, ?)
+SQL
+}
+
+# three hashes indexed by OrthoMCL ID:
+my %uniprotRep; # best-hitting Uniprot ID.
+my %evalueMant; # evalue mantissa for that hit
+my %evalueExp;  # evalue exponent
+
+# iterate through BLAST results, keeping best hit (by e-value) for each OrthoMCL (i.e. subject) protein
+my $outRecordCount;
+while (<BLAST>) {
+
+  chomp;
+  my ($queryId, $subjectId, $queryTaxonId, $subjectTaxonId, $evalueMant, $evalueExp, $percentIdentity, $percentMatch)
+    = split / /;
+
+  # apply Li's 98% guideline
+  next unless $percentIdentity >= 98 && $percentMatch >= 98;
+
+  # have we already seen a better hit on this subject?
+  next if $uniprotRep{$subjectId}
+          && ($evalueExp{$subjectId} < $evalueExp
+              || ($evalueExp{$subjectId} == $evalueExp && $evalueMant{$subjectId} < $evalueMant));
+
+  $uniprotRep{$subjectId} = $queryId;
+  $evalueMant{$subjectId}= $evalueMant;
+  $evalueExp{$subjectId}= $evalueExp;
+}
+
+# iterate through accumulated best hits
+foreach my $subjectId (sort keys %uniprotRep)  {
+  my $queryId = $uniprotRep{$subjectId};
+  my $ecList = $ecMapping{$queryId};
+  die "Can't find query protein \"$queryId\" in EC mapping file $uniprotEcMappingFile"
+    unless $ecList;
+
+  my ($uniprot_protein, $uniprot_suffix) = split /_/, $queryId;
+  foreach my $ecNum (split(/,/, $ecList)) {
+    # print "result line: \"$subjectId\t$ecNum\"\n";
+    print OUT "$subjectId\t$ecNum\n";
+    insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt)
+      if $insertSequenceEcNumber;
+
+    $outRecordCount++;
+    $dbh->commit() unless $outRecordCount % 1000;
+  }
+}
+
+close(OUT);
+$dbh->commit();
+
+
+sub loadEcMappings {
+  my ($uniprotEcMappingFile, $ecHashRef) = @_;
+
+  open(ECIN, $uniprotEcMappingFile) || die "Can't open input file \"$uniprotEcMappingFile\" forEC mappings.";
+  while (<ECIN>) {
+    my ($protein, $ec) = split /\t/;
+    chomp($ec);
+    $$ecHashRef{$protein} = $ec;
+  }
+  close(ECIN);
+}
+
+sub loadTaxonMappings {
+  my ($uniprotTaxonMappingFile, $taxonHashRef) = @_;
+
+  open(TAXMAP, $uniprotTaxonMappingFile) || die "Can't open input file \"$uniprotTaxonMappingFile\" forTAXON mappings.";
+  while (<TAXMAP>) {
+    my ($protein, $taxon) = split /\t/;
+    chomp($taxon);
+    $$taxonHashRef{$protein} = $taxon;
+  }
+  close(TAXMAP);
+}
+
+sub insertMapping {
+  my ($uniprotId, $orthomclId, $uniprotNcbiTaxId, $ecNumber, $insertStmt) = @_;
+  $insertStmt->execute($orthomclId, $orthomclId, $uniprotId, $uniprotNcbiTaxId, $ecNumber) or die DBI::errstr;
+}
+
+sub getDbHandle {
+
+  my $gusConfigFile = $ENV{GUS_HOME} . "/config/gus.config";
+  my @properties = ();
+  my $gusconfig = CBIL::Util::PropertySet->new($gusConfigFile, \@properties, 1);
+
+  my $u = $gusconfig->{props}->{databaseLogin};
+  my $pw = $gusconfig->{props}->{databasePassword};
+  my $dsn = $gusconfig->{props}->{dbiDsn};
+
+  my $dbh = DBI->connect($dsn, $u, $pw) or die DBI::errstr;
+  $dbh->{RaiseError} = 1;
+  $dbh->{AutoCommit} = 0;
+
+  return $dbh;
+}
+
+sub usage {
+
+  # dollar-zero is my full pathname, so the program name is the part after the last slash
+  $0 =~ /([^\/]*)$/;
+  my $programName = $1;
+
+  print "usage: $programName -blastFile <filename> -uniprotEcMappingFile <filename> { -uniprotTaxonMappingFile <filename> } -outputEcMappingFile <filename> { -insertSequenceEcNumber }\n";
+  die;
+}

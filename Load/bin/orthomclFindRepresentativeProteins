@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+
+use strict;
+
+&usage() unless scalar(@ARGV) == 5;
+
+my $inputGroupsDir = shift(@ARGV);
+my $inputProteinsFile = shift(@ARGV);
+my $outputRepresentativeProteinsFile = shift(@ARGV);
+my $outputGroupsFile = shift(@ARGV);
+my $proteinIdPrefix = shift(@ARGV);
+
+my $groupsFile = "$inputGroupsDir/orthomclGroups.txt";
+my $orthologPairsFile = "$inputGroupsDir/pairs/orthologs.txt";
+my $paralogPairsFile = "$inputGroupsDir/pairs/inparalogs.txt";
+my $coorthologPairsFile = "$inputGroupsDir/pairs/coorthologs.txt";
+
+die "groups dir '' does not exist" unless -e $inputGroupsDir;
+die "proteins file '$inputProteinsFile' does not exist" unless -e $inputProteinsFile;
+die "groups file '$groupsFile' does not exist" unless -e $groupsFile;
+die "ortholog pairs file '$orthologPairsFile' does not exist" unless -e $orthologPairsFile;
+die "paralog pairs file '$paralogPairsFile' does not exist" unless -e $paralogPairsFile;
+die "coortholog pairs file '$coorthologPairsFile' does not exist" unless -e $coorthologPairsFile;
+
+# pass through groups, making hash of protein-->group and list of proteins/group for all those that are in groups > 3
+my %representativeProteins;
+my %protein2group;
+my @bigGroups;  # groups that contain more than 2 proteins
+open(INGROUPS, $groupsFile)  || die "Can't open groups file '$groupsFile' for reading";
+open(OUTGROUPS, ">$outputGroupsFile")  || die "Can't open output groups file '$outputGroupsFile' for writing";
+while (<INGROUPS>) {
+  my @group = split(/\s+/, $_);
+  my $groupId = shift @group;
+  if (scalar(@group) == 1) {
+    $representativeProteins{$group[0]} = 1;
+    print OUTGROUPS "$group[0]\n";
+  } elsif (scalar(@group) == 2) {
+    $representativeProteins{$group[0]} = 1;
+    print OUTGROUPS "$group[0] $group[1]\n";
+  } else {
+    push(@bigGroups, \@group);
+    foreach my $protein (@group) {
+      $protein2group{$protein} = $groupId;
+    }
+  }
+}
+close(INGROUPS);
+close(OUTGROUPS);
+
+# iterate through score pairs (from ortholog, paralog and coortholog files)
+# for each pair whose proteins are in the same group, add the score to each proteins' sum
+my %protein2scoreSum;  # protein --> its score sum
+addScoresToProteins(\%protein2scoreSum, $orthologPairsFile, \%protein2group);
+addScoresToProteins(\%protein2scoreSum, $paralogPairsFile, \%protein2group);
+addScoresToProteins(\%protein2scoreSum, $coorthologPairsFile, \%protein2group);
+
+# iterate through big groups.  for each, iterate through proteins, and choose that with highest score
+# put those into repProteins hash
+open(OUTGROUPS, ">>$outputGroupsFile")  || die "Can't open output groups file '$outputGroupsFile' for writing";
+foreach my $bigGroup (@bigGroups) {
+  my $repProtein;
+  my $repProteinScore = 0;
+  my %bigGroupHash;
+  foreach my $protein (@$bigGroup) {
+    $bigGroupHash{$protein} = 1;
+    if ($protein2scoreSum{$protein} > $repProteinScore) {
+      $repProtein = $protein;
+      $repProteinScore = $protein2scoreSum{$protein};
+    }
+  }
+  delete $bigGroupHash{$repProtein};
+  $representativeProteins{$repProtein} = 1;
+  print OUTGROUPS "$repProtein " . join(" ", keys(%bigGroupHash)) . "\n";
+}
+
+# scan input proteins fasta file, writing only those that are found in repProteins hash
+open(INPUT, $inputProteinsFile) || die "can't open proteins file '$inputProteinsFile' for reading";
+open(REPS, ">$outputRepresentativeProteinsFile") || die "can't open rep proteins file '$inputProteinsFile' for writing";
+my $thisSeqIsRep;
+while (<INPUT>) {
+  if (/>(\S+)/) {
+    $thisSeqIsRep = $representativeProteins{$1};
+    s/^>/>$proteinIdPrefix|/;
+  }
+  print REPS $_ if $thisSeqIsRep;
+}
+
+#######################################################################################
+
+# iterate through score pairs (from pairs file)
+# for each pair whose proteins are in the same group, add the score to each proteins' sum
+sub addScoresToProteins {
+  my ($protein2scoreSum, $pairsFile, $protein2group) = @_;
+
+  open(PAIRS, $pairsFile) || die "can't open pairs file '$pairsFile'";
+  while(<PAIRS>) {
+    my @a = split(/\s+/);
+    my $protein1 = $a[0];
+    my $protein2 = $a[1];
+    my $score = $a[2];
+    if ($protein2group->{$protein1} eq $protein2group->{$protein2}) {
+      $protein2scoreSum->{$protein1} += $score;
+      $protein2scoreSum->{$protein2} += $score;
+    }
+  }
+  close(PAIRS);
+}
+
+sub usage {
+  die "
+Post-process an orthomcl groups file to find one representative protein from each group.  Choose the most 'central' protein
+from each group.  For each group compute each protein's centrality score by summing its edge scores with the other proteins
+in the group.
+
+Usage: orthomclFindRepresentativeProteins groups_dir proteins_file output_fasta_file output_groups_file protein_id_prefix
+
+Input:
+ - groups_dir: a directory containing these files:
+    groups.txt
+    orthologs.txt
+    paralogs.txt
+    coorthologs.txt
+
+- proteins_file: a fasta file containing all proteins processed by orthomcl.
+
+- protein_id_prefix: optional.  prepend this prefix to the defline of the output proteins
+
+Output:
+ - output_fasta_file: a FASTA file containing the representative proteins.
+ - output_groups_file: one line per group, comma delimited, with the rep protein in first column
+
+";
+
+}
