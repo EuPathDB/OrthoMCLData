@@ -205,11 +205,12 @@ EOF
 	$sumPercentMatch += $row[3];
 	$sumPercentIdentity += $row[2];
 	$sumEvalue +=  $row[0] . "e" . $row[1];
-        my $numCon = getConnectivity($sequence1[1], $sequence2[1]);
-	$connectivity{$seqIdArr->[$i]} += $numCount;
-	$connectivity{$seqIdArr->[$j]} += $numCount;
-
       }
+
+      my $isConnected = getPairIsConnected($sequence1[1], $sequence2[1]);
+      $connectivity{$seqIdArr->[$i]} += $isConnected;
+      $connectivity{$seqIdArr->[$j]} += $isConnected;
+
     }
   }
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($seqIdArr, \%connectivity);
@@ -220,7 +221,7 @@ EOF
 
 }
 
-sub getConnectivity {
+sub getPairIsConnected {
   my ($self,$seq1,$seq2) = = @_;
 
   my $sqlCondition = "(sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
@@ -284,7 +285,7 @@ sub updateOrthologGroup {
   }
 
   if ($orthologGroup->get('percent_match_pairs') != 100 * $numMatchPairs /($grpSize * ($grpSize -1)) ) {
-    $orthologGroup->set('number_of_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
+    $orthologGroup->set('percent_of_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
   }
 
   if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
