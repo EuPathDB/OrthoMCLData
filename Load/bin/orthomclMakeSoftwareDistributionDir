@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+  echo "Make the software distribution dir in apiSiteFiles from a gus_home that contains *only* the OrthoMCLEngine software."
+  echo
+  echo "Usage: orthomclMakeSoftwareDistributionDir gusAppDir version"
+  echo
+  echo "Where:"
+  echo " gusAppDir: is a dir containing gus_home and project_home"
+  echo " version:   eg, 2.0.7"
+  exit 1
+fi
+
+gusAppDir=$1
+version=$2
+
+set -e
+set -x verbose
+
+cd ${gusAppDir}
+tmpSoftwareDir=tmp$BASHPID
+mkdir ${tmpSoftwareDir}
+cp gus_home/doc/OrthoMCLEngine/Main/releaseNotes.txt ${tmpSoftwareDir}
+cp gus_home/doc/OrthoMCLEngine/Main/UserGuide.txt ${tmpSoftwareDir}
+cp gus_home/doc/OrthoMCLEngine/Main/SoftwareLicense.txt ${tmpSoftwareDir}
+
+name=orthomclSoftware-v${version}
+target=${tmpSoftwareDir}/${name}
+mkdir ${target}
+cp -r gus_home/* ${target}
+cd ${tmpSoftwareDir}
+tar -czf ${name}.tar.gz ${name}
+rm -r ${name}
+cd ..
+rm  -r /eupath/data/apiSiteFiles/downloadSite/OrthoMCL/software/v2.0
+mv ${tmpSoftwareDir} /eupath/data/apiSiteFiles/downloadSite/OrthoMCL/software/v2.0
