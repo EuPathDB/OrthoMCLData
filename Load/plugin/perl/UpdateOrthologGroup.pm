@@ -194,14 +194,12 @@ sub processSeqsInGroup {
 
   my $conCount = <<"EOF";
      select count(*) from
-     (SELECT SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
+     (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
 and sequence_id_b = ?)
      UNION
-     SELECT SELECT sequence_id_a FROM apidb.cortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
-and sequence_id_b = ?)
+     SELECT sequence_id_a FROM apidb.cortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
      UNION
-     SELECT SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ?
-and sequence_id_b = ?))
+     SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
 
   my $sth2 = $dbh->prepare($conCount);
