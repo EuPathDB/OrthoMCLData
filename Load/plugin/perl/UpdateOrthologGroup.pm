@@ -170,7 +170,7 @@ sub processSeqsInGroup {
 
   $self->log ("Processing $num seqs in $groupId\n");
 
-  my $pairCount = 0;
+  my $similarityCount = 0;
   my $sumPercentIdentity = 0;
   my $sumPercentMatch = 0;
   my $sumEvalue = 0;
@@ -181,14 +181,14 @@ sub processSeqsInGroup {
 
   my $dbh = $self->getQueryHandle();
 
-  my $sqlSelectSimSeqs = <<"EOF";
+  my $sqlSelectSimSeqs = ";
      SELECT
        s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
      FROM apidb.SimilarSequences s
      WHERE (s.query_id = ? AND s.subject_id = ?)
             OR (s.subject_id = ? AND s.query_id = ?)
-EOF
+";
 
   my $sth = $dbh->prepare($sqlSelectSimSeqs);
 
@@ -201,7 +201,7 @@ EOF
       $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
       while (my @row = $sth->fetchrow_array()) {
-	$pairCount++;
+	$similarityCount++;
 	$sumPercentMatch += $row[3];
 	$sumPercentIdentity += $row[2];
 	$sumEvalue +=  $row[0] . "e" . $row[1];
@@ -215,7 +215,7 @@ EOF
   }
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($seqIdArr, \%connectivity);
 
-  my $groupsUpdated += $self->updateOrthologGroup($groupId, $pairCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
+  my $groupsUpdated += $self->updateOrthologGroup($groupId, $similarityCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
 
   return ($groupsUpdated,$grpAaSeqUpdated);
 
@@ -246,17 +246,17 @@ EOF
 }
 
 sub updateOrthologGroup {
-  my ($self, $groupId, $pairCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
+  my ($self, $groupId, $similarityCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
-  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$pairCount);
+  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$similarityCount);
 
-  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$pairCount);
+  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$similarityCount);
 
   my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
-  my $avgEvalue = $sumEvalue/$pairCount;
+  my $avgEvalue = $sumEvalue/$similarityCount;
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
 
@@ -264,7 +264,7 @@ sub updateOrthologGroup {
 
   my($avgMant,$avgExp) = split(/e/,$fixedAvgEValue);
 
-  my $numMatchPairs = $pairCount / 2;
+  my $numMatchPairs = $similarityCount / 2;
 
   $orthologGroup->retrieveFromDB();
 
