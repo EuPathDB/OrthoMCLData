@@ -192,6 +192,20 @@ sub processSeqsInGroup {
 
   my $sth = $dbh->prepare($sqlSelectSimSeqs);
 
+  my $conCount = <<"EOF";
+     select count(*) from
+     (SELECT SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
+and sequence_id_b = '$seq1')
+     UNION
+     SELECT SELECT sequence_id_a FROM apidb.cortholog where (sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
+and sequence_id_b = '$seq1')
+     UNION
+     SELECT SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
+and sequence_id_b = '$seq1'))
+EOF
+
+  my $sth2 = $dbh->prepare($conCount);
+
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + 1; $j < $grpSize ; $j++) {
       my @sequence1 = split (/,/, $seqIdArr->[$i]);
@@ -207,7 +221,8 @@ sub processSeqsInGroup {
 	$sumEvalue +=  $row[0] . "e" . $row[1];
       }
 
-      my $isConnected = getPairIsConnected($sequence1[1], $sequence2[1]);
+
+      my $isConnected = getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
       $connectivity{$seqIdArr->[$i]} += $isConnected;
       $connectivity{$seqIdArr->[$j]} += $isConnected;
 
@@ -222,23 +237,9 @@ sub processSeqsInGroup {
 }
 
 sub getPairIsConnected {
-  my ($self,$seq1,$seq2) = = @_;
+  my ($self,$seq1,$seq2,$sth) = = @_;
 
-  my $sqlCondition = "(sequence_id_a = '$seq1' and sequence_id_b = '$seq2') or (sequence_id_a = '$seq2' 
-and sequence_id_b = '$seq1')";
-
-  my $conCount = <<"EOF";
-     select count(*) from
-     (SELECT SELECT sequence_id_a FROM apidb.ortholog where $condition
-     UNION
-     SELECT SELECT sequence_id_a FROM apidb.cortholog where $condition
-     UNION
-     SELECT SELECT sequence_id_a FROM apidb.inparalog where $condition)
-EOF
-
-  my $dbh = $self->getQueryHandle();
-
-  my $sth = $dbh->prepareAndExecute($conCount);
+  $sth ->execute($seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1);
 
   my @row = $sth->fetchrow_array();
 
