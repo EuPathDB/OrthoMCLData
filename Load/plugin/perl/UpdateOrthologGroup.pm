@@ -237,7 +237,7 @@ EOF
 }
 
 sub getPairIsConnected {
-  my ($self,$seq1,$seq2,$sth) = = @_;
+  my ($self,$seq1,$seq2,$sth) = @_;
 
   $sth ->execute($seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1);
 
