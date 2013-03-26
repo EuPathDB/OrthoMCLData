@@ -13,7 +13,7 @@ use GUS::Model::ApiDB::OrthologGroupAaSequence;
 use GUS::Model::SRes::ExternalDatabase;
 use GUS::Model::SRes::ExternalDatabaseRelease;
 
-use ApiCommonData::Load::Util;
+#use ApiCommonData::Load::Util;
 
 my $argsDeclaration =
 [];
