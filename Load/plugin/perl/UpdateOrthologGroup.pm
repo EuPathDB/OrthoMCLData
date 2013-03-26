@@ -181,7 +181,7 @@ sub processSeqsInGroup {
 
   my $dbh = $self->getQueryHandle();
 
-  my $sqlSelectSimSeqs = ";
+  my $sqlSelectSimSeqs = "
      SELECT
        s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
@@ -220,7 +220,7 @@ EOF
       }
 
 
-      my $isConnected = getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
+      my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
       $connectivity{$seqIdArr->[$i]} += $isConnected;
       $connectivity{$seqIdArr->[$j]} += $isConnected;
 
@@ -284,7 +284,7 @@ sub updateOrthologGroup {
   }
 
   if ($orthologGroup->get('percent_match_pairs') != 100 * $numMatchPairs /($grpSize * ($grpSize -1)) ) {
-    $orthologGroup->set('percent_of_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
+    $orthologGroup->set('percent_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
   }
 
   if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
