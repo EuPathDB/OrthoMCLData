@@ -197,7 +197,7 @@ sub processSeqsInGroup {
      (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
 and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.cortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+     SELECT sequence_id_a FROM apidb.coortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
      UNION
      SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
