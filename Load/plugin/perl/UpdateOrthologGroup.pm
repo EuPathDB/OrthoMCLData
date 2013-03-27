@@ -138,6 +138,30 @@ EOF
 
   my $sth = $dbh->prepare($sqlSelectOrthGrpAASeq);
 
+  my $sqlSelectSimSeqs = "
+     SELECT
+       s.evalue_mant, s.evalue_exp,
+       s.percent_identity, s.percent_match
+     FROM apidb.SimilarSequences s
+     WHERE (s.query_id = ? AND s.subject_id = ?)
+            OR (s.subject_id = ? AND s.query_id = ?)
+";
+
+  my $sth2 = $dbh->prepare($sqlSelectSimSeqs);
+
+  my $conCount = <<"EOF";
+     select count(*) from
+     (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
+and sequence_id_b = ?)
+     UNION
+     SELECT sequence_id_a FROM apidb.coortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+     UNION
+     SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+EOF
+
+  my $sth3 = $dbh->prepare($conCount);
+
+
   foreach my $groupId (@{$unfinished}) {
     $self->log ("Processing group_id: $groupId\n");
 
@@ -150,7 +174,7 @@ EOF
       my $sourceId = $row[1];
       push (@seqIdArr, "${seqId},$sourceId");
     }
-    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId);
+    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3);
 
     $updatedGrps += $grps;
 
@@ -164,7 +188,7 @@ EOF
 }
 
 sub processSeqsInGroup {
-  my ($self,$seqIdArr, $groupId) = @_;
+  my ($self,$seqIdArr, $groupId, $sth, $sth2) = @_;
 
   my $num = @{$seqIdArr};
 
@@ -178,31 +202,6 @@ sub processSeqsInGroup {
   my %lengthHsh;
 
   my $grpSize = @{$seqIdArr};
-
-  my $dbh = $self->getQueryHandle();
-
-  my $sqlSelectSimSeqs = "
-     SELECT
-       s.evalue_mant, s.evalue_exp,
-       s.percent_identity, s.percent_match
-     FROM apidb.SimilarSequences s
-     WHERE (s.query_id = ? AND s.subject_id = ?)
-            OR (s.subject_id = ? AND s.query_id = ?)
-";
-
-  my $sth = $dbh->prepare($sqlSelectSimSeqs);
-
-  my $conCount = <<"EOF";
-     select count(*) from
-     (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
-and sequence_id_b = ?)
-     UNION
-     SELECT sequence_id_a FROM apidb.coortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
-     UNION
-     SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
-EOF
-
-  my $sth2 = $dbh->prepare($conCount);
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + 1; $j < $grpSize ; $j++) {
