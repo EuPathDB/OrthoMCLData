@@ -44,6 +44,7 @@ gaInsert a mapping from old orthomcl sequence IDs to new ones.
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
+Scan the provided old FASTA file to get mapping from old taxon to old IDs.  For each taxon, query db to get new IDs.  Compare these lists to find old IDs not in the new release.  And find new IDs not in old list (these are candidates for mapping to old IDs). For each candidate ID, make a hash from sequence to candidate IDs. Scan old FASTA file again and build hash from missing old ID to sequence.  For each old ID insert a mapping.  If it matches a new ID insert that.  Else if its sequence matches a new sequence, insert all new IDs that match.
 NOTES
 
 my $tablesAffected = <<TABLES_AFFECTED;
@@ -111,11 +112,15 @@ sub run {
     my $newTaxon = $taxonMap->{$oldTaxon};
     my $newIDsHash = $self->getNewIDs($newTaxon); # from db
 
-    my $missingIDsHash = $self->subtract("old IDs from new IDs", $oldIDs, $newIDsHash);
+    my $missingIDsHash = $self->subtract("old IDs minus new IDs", $oldIDs, $newIDsHash);
 
+    # hash from old ID to its old sequence
     my $missingSeqHash = $self->getMissingSeqHash($oldTaxon, $missingIDsHash, $oldIDsFastaFile);
 
-    my $candidateIDsHash = $self->subtract("new IDs from old IDs", $newIDsHash, $oldIDs);
+    # new IDs that are candidates to be mapped to an old ID
+    my $candidateIDsHash = $self->subtract("new IDs minus old IDs", $newIDsHash, $oldIDs);
+
+    # map from sequences in new release to matching candidate IDs
     my $candidateSeqHash = $self->getCandSeqHash($newTaxon, $candidateIDsHash);
 
     my $idMappedCount = 0;
@@ -256,6 +261,7 @@ sub getMissingSeqHash {
     return $missingSeqHash;
 }
 
+# a mapping from sequences in the current release to IDs 
 sub getCandSeqHash {
     my ($self, $taxonAbbrev, $candidateIDsHash) = @_;
     $self->log("   getting candidate seqs hash");
