@@ -1,0 +1,46 @@
+#/usr/bin/perl
+
+use strict;
+
+my ($fromDir, $targetDir) = @ARGV;
+usage() unless scalar(@ARGV) == 2;
+
+chdir $fromDir || die("can't chdir to '$fromDir' \n $?");
+my @files = <*/*.fasta.gz>;
+die("Can't find previous release fasta files") unless scalar(@files) > 3;
+foreach my $file (@files) {
+  $file =~ /(\d+)\.fasta\.gz/ || $self->error("Fasta file '$fromDir/$file' does not conform to the pattern \\d+.fasta.gz");
+  my $version = $1;
+  print STDERR "\nProcessing release $version\n";
+  $self->runCmd(0, "mkdir $targetDir/$version");
+  open(IN, "zcat $fromDir/$file |") || die("Can't open file '$fromDir/$file'");
+  open(OUT, '/dev/null');
+  my $currentAbbrev;
+  while (<IN>) {
+    if (/\>(\w+)\|/) {
+      $abbrev = $1;
+      if ($abbrev ne $currentAbbrev) {
+	close(OUT);
+	my $cmd = gzip "$targetDir/$version/$currentAbbrev";
+	system($cmd) && die "Failed running cmd '$cmd'\n $?" if $currentAbbrev;
+	$currentAbbrev = $abbrev;
+	open(OUT, "$targetDir/$version/$currentAbbrev.fasta");
+	print STDERR "$currentAbbrev, ";
+      }
+    }
+    print OUT;
+  }
+  close(OUT);
+}
+
+sub usage() {
+die "
+Unpack all OrthoMCL-DB previous release sequence fasta files into a structured directory for workflow consumption.
+
+Usage:  getOrthomclOldRlsSeqFiles fromDir toDir
+
+Where:
+  fromDir - the download site dir in which to find */*.fasta.gz files.  The files must be of the form 5.fasta.gz
+  toDir - where to put the results.  Each release gets a dir, eg /5 and inside it is one file per taxon (named abbrev.fasta.gz)
+";
+}
