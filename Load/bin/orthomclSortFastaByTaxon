@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+use strict;
+
+my ($inputFasta) = @ARGV;
+
+usage() unless $inputFasta;
+
+my $h;
+my $curSeq;
+my $curAbbrev;
+my $open = ($inputFasta =~ /\.gz$/)? "zcat $inputFasta|" : $inputFasta;
+open(IN, $open) || die "Can't open input file '$inputFasta'";
+
+while(<IN>) {
+  if (/\>(\w+)/) {
+    push(@{$h->{$curAbbrev}}, $curSeq) if $curSeq;
+    $curSeq = $_;
+    $curAbbrev = $1;
+  } else {
+    $curSeq .= $_;
+  }
+}
+push(@{$h->{$curAbbrev}}, $curSeq) if $curSeq;
+
+
+foreach my $abbrev (keys(%$h)) {
+  foreach my $seq (@{$h->{$abbrev}}) {
+    print $seq;
+  }
+}
+
+sub usage {
+die "
+Sort an orthomcl fasta file into a similar file in which the seqs from each taxon are together, rather than interspersed.
+
+Usage: orthomclSortFastaByTaxon input_file
+
+Where:
+  input file - an orthomcl fasta file (can be .gz)
+
+Writes sorted file to stdout.
+";
+}
