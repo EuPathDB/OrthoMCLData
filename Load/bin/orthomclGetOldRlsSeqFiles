@@ -7,13 +7,21 @@ usage() unless scalar(@ARGV) == 2;
 
 chdir $fromDir || die("can't chdir to '$fromDir' \n $?");
 my @files = <*/*.fasta.gz>;
-die("Can't find previous release fasta files") unless scalar(@files) > 3;
+die("$fromDir does not seem to be the OrthoMCL download site\n") unless scalar(@files) > 1;
+
+die "Target dir $targetDir already exists\n" if -e $targetDir;
+system("mkdir -p $targetDir") && die "Can't mkdir $targetDir. \n $?\n";
+
 foreach my $file (@files) {
   $file =~ /(\d+)\.fasta\.gz/ || die("Fasta file '$fromDir/$file' does not conform to the pattern \\d+.fasta.gz");
   my $version = $1;
   print STDERR "\nProcessing release $version\n";
-  mkdir "$targetDir/$version" || die "Can't mkdir $targetDir/$version";
-  open(IN, "zcat $fromDir/$file |") || die("Can't open file '$fromDir/$file'");
+  system("mkdir $targetDir/$version") && die "Can't mkdir $targetDir/$version. \n $?\n";
+
+  # release 2-5 did not sort the download file by taxon.  compensate by sorting here.
+  my $cmd = ($version >=2 && $version <=5)? "orthomclSortFastaByTaxon" : "zcat";
+
+  open(IN, "$cmd $fromDir/$file |") || die("Can't open file '$fromDir/$file'");
   open(OUT, '/dev/null');
   my $currentAbbrev;
   while (<IN>) {
@@ -21,16 +29,19 @@ foreach my $file (@files) {
       my $abbrev = $1;
       if ($abbrev ne $currentAbbrev) {
 	close(OUT);
-	my $cmd = "gzip $targetDir/$version/$currentAbbrev";
-	system($cmd) && die "Failed running cmd '$cmd'\n $?" if $currentAbbrev;
+	my $cmd = "gzip $targetDir/$version/$currentAbbrev.fasta";
+	(system($cmd) && die "Failed running cmd '$cmd'\n $?") if $currentAbbrev;
 	$currentAbbrev = $abbrev;
-	open(OUT, "$targetDir/$version/$currentAbbrev.fasta");
+	open(OUT, ">$targetDir/$version/$currentAbbrev.fasta") || die("Can't open $targetDir/$version/$currentAbbrev.fasta\n");
 	print STDERR "$currentAbbrev, ";
       }
     }
     print OUT;
   }
   close(OUT);
+  my $cmd = "gzip $targetDir/$version/$currentAbbrev.fasta";
+  system($cmd) && die "Failed running cmd '$cmd'\n $?" if $currentAbbrev;
+
 }
 
 sub usage() {
@@ -42,5 +53,7 @@ Usage:  getOrthomclOldRlsSeqFiles fromDir toDir
 Where:
   fromDir - the download site dir in which to find */*.fasta.gz files.  The files must be of the form 5.fasta.gz
   toDir - where to put the results.  Each release gets a dir, eg /5 and inside it is one file per taxon (named abbrev.fasta.gz)
+
+Note: with the exception of releases 2-5, the sequences in the download site fasta files are expected to be sorted by taxon.
 ";
 }
