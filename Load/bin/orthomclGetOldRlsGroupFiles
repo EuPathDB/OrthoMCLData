@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+
+use strict;
+use File::Copy;
+
+my ($fromDir, $targetDir) = @ARGV;
+usage() unless scalar(@ARGV) == 2;
+
+die "Target dir $targetDir already exists\n" if -e $targetDir;
+system("mkdir -p $targetDir") && die "Can't mkdir $targetDir. \n $?\n";
+
+copy("$fromDir/1.0/orthomclGroups.txt.gz","$targetDir/groups_OrthoMCL-1.txt.gz") or die "Can't copy $fromDir/1.0/orthomclGroups.txt to $targetDir/groups_OrthoMCL-1.txt.gz\n";
+copy("$fromDir/2/groups_orthomcl-2.txt.gz","$targetDir/groups_OrthoMCL-2.txt") or die "Can't copy $fromDir/2/groups_orthomcl-2.txt.gz to $targetDir/groups_OrthoMCL-2.txt.gz\n";
+
+chdir $fromDir || die("can't chdir to '$fromDir' \n $?");
+my @files = <*/groups_OrthoMCL-*.txt.gz>;
+foreach my $file (@files) {
+  copy("$fromDir/$file", $targetDir) || die "Can't copy $fromDir/$file to $targetDir\n";
+}
+
+sub usage() {
+die "
+Copy all orthomcl previous release groups file into a target dir, ensuring that all are named using the same format, eg groups_OrthoMCL-2.txt.
+
+Usage:  getOrthomclOldRlsGroupFiles fromDir toDir
+
+Where:
+  fromDir - the download site dir
+  toDir - where to put the results.
+
+";
+}
