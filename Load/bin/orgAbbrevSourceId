@@ -1,0 +1,30 @@
+#! /usr/bin/perl
+
+#####################################################################################################################
+### script to append the orthomcl abbrev with a pipe to the source_id in the proteome file
+#####################################################################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+
+my ($inputFile,$outputFile, $abbrev, $verbose);
+&GetOptions("abbrev=s" => \$abbrev,
+            "outputFile=s" => \$outputFile,
+	    "inputFile=s" => \$inputFile,
+            "verbose!" => \$verbose);
+
+print STDERR "orgAbbrevSourceId --inputFile --abbrev --outputFile --log --verbose\n" unless ($inputFile && $abbrev && $outputFile);
+
+
+open(IN, $inputFile) || die "Can't open input file '$inputFile'";
+open(OUT, ">$outputFile") || die "Can't open output file '$outputFile'";
+
+while (<IN>) {
+  s/^>(\S+)/>${abbrev}|$1/;
+  print OUT $_;
+}
+
+
+
