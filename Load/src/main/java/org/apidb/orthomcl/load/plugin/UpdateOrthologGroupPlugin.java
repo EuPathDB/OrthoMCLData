@@ -1,6 +1,5 @@
 package org.apidb.orthomcl.load.plugin;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -60,6 +59,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
+    @Override
     public void invoke() throws OrthoMCLException {
         try {
             PreparedStatement psSelectSimilarity = connection.prepareStatement("SELECT"
@@ -120,8 +120,6 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             logger.info("Total " + groupCount + " ortholog groups updated.");
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
-        } catch (IOException ex) {
-            throw new OrthoMCLException(ex);
         }
     }
 
@@ -130,6 +128,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
+    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
         if (args.length != 4) {
@@ -155,7 +154,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             PreparedStatement psSelectSequence,
             PreparedStatement psUpdateGroup,
             PreparedStatement psUpdateSequence, Map<Integer, Integer> lengthMap)
-            throws SQLException, IOException {
+            throws SQLException {
         // get the sequences in the group
         psSelectSequence.setInt(1, orthologGroupId);
         ResultSet rsSequences = psSelectSequence.executeQuery();

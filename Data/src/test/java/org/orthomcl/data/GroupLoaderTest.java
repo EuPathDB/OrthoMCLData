@@ -42,7 +42,7 @@ public class GroupLoaderTest {
     }
     
     @Test
-    public void testLoadGroup() throws SQLException, OrthoMCLDataException, IOException {
+    public void testLoadGroup() {
         //testLoadGroup("OG5_210000", 2, 1);
         //testLoadGroup("OG5_200000", 3, 3);
         //testLoadGroup("OG5_180000", 4, 6);

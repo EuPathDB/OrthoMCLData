@@ -71,6 +71,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
+    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         if (args.length != 3) {
             throw new OrthoMCLException("The args should be: "
@@ -89,8 +90,6 @@ public class GenerateBioLayoutPlugin implements Plugin {
             loader = new GroupLoader(connection);
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
-        } catch (ClassNotFoundException ex) {
-            throw new OrthoMCLException(ex);
         }
     }
 
@@ -99,6 +98,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
+    @Override
     public void invoke() throws Exception {
         // prepare sqls
         prepareQueries();

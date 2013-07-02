@@ -25,8 +25,7 @@ public class GroupLoader {
     private PreparedStatement psInparalog;
     private PreparedStatement psSimilarity;
 
-    public GroupLoader(Connection connection) throws ClassNotFoundException,
-            SQLException {
+    public GroupLoader(Connection connection) throws SQLException {
         String withClause = "WITH ogs AS "
                 + "(SELECT eas.secondary_identifier AS combine_id "
                 + "FROM apidb.OrthologGroupAaSequence ogs, "

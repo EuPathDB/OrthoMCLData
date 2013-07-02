@@ -38,6 +38,7 @@ public class LoadMsaPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
+    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
         if (args.length != 4) {
@@ -68,6 +69,7 @@ public class LoadMsaPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
+    @Override
     public void invoke() throws OrthoMCLException {
         logger.info("Making connections...");
         try {

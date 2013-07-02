@@ -1,6 +1,5 @@
 package org.orthomcl.data;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -9,8 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import net.lliira.common.graphics.GraphicsException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -41,8 +38,7 @@ public class LayoutGenerator {
 
     private static final Logger logger = Logger.getLogger(LayoutGenerator.class);
 
-    public static void main(String[] args) throws IOException,
-            GraphicsException, ClassNotFoundException, SQLException {
+    public static void main(String[] args) throws ClassNotFoundException, SQLException {
         Options options = prepareOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -94,8 +90,7 @@ public class LayoutGenerator {
     private final int maxMember;
     private final int taskCount;
 
-    public LayoutGenerator(CommandLine commandLine) throws IOException,
-            ClassNotFoundException, SQLException {
+    public LayoutGenerator(CommandLine commandLine) throws ClassNotFoundException {
         logger.info("Initializing Layout Generator...");
 
         this.commandLine = commandLine;
@@ -107,7 +102,7 @@ public class LayoutGenerator {
     }
 
     private Connection openConnection(CommandLine commandLine)
-            throws IOException, ClassNotFoundException, SQLException {
+            throws SQLException {
         String dbConnection = commandLine.getOptionValue(ARG_DB_CONNECTION);
         String dbLogin = commandLine.getOptionValue(ARG_DB_LOGIN);
         String dbPassword = commandLine.getOptionValue(ARG_DB_PASSWORD);
@@ -117,8 +112,7 @@ public class LayoutGenerator {
         return connection;
     }
 
-    public void process() throws SQLException, ClassNotFoundException,
-            IOException {
+    public void process() throws SQLException {
         logger.info("Start processing... Max Member = " + maxMember
                 + ", tasks = " + taskCount);
         Queue<Group> groups = new ConcurrentLinkedQueue<Group>();

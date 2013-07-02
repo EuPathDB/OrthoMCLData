@@ -36,6 +36,7 @@ public class BlastScore extends GenePair implements Edge {
         this.evalueExp = evalueExp;
     }
 
+    @Override
     public double getWeight() {
         return weight;
     }

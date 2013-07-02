@@ -78,6 +78,7 @@ public class UpdateSimilarityPlugin implements Plugin {
          * 
          * @see java.lang.Comparable#compareTo(java.lang.Object)
          */
+        @Override
         public int compareTo(Segment o) {
             int startDiff = this.Start - o.Start;
             return (startDiff == 0) ? (o.Length - this.Length) : startDiff;
@@ -95,6 +96,7 @@ public class UpdateSimilarityPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
      */
+    @Override
     public void invoke() throws OrthoMCLException {
         // prepare the statement
         try {
@@ -198,6 +200,7 @@ public class UpdateSimilarityPlugin implements Plugin {
      * 
      * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
      */
+    @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
         if (args.length != 5) {
