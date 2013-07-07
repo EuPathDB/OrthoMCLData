@@ -7,19 +7,11 @@ import org.apache.log4j.Logger;
 
 /**
  * @author xingao
- * 
  */
 public class PluginLoader {
 
     private static final Logger logger = Logger.getLogger(PluginLoader.class);
 
-    /**
-     * @param args
-     * @throws ClassNotFoundException
-     * @throws IllegalAccessException
-     * @throws InstantiationException
-     * @throws OrthoMCLException
-     */
     public static void main(String[] args) throws Exception {
         // validate the input
         if (args.length < 1) {
@@ -35,14 +27,6 @@ public class PluginLoader {
         System.exit(0);
     }
 
-    /**
-     * @param pluginClassName
-     * @param pluginArgs
-     * @throws ClassNotFoundException
-     * @throws InstantiationException
-     * @throws IllegalAccessException
-     * @throws OrthoMCLException
-     */
     public static void invokePlugin(String pluginClassName, String[] pluginArgs)
             throws Exception {
         logger.info("Invoking plugin " + pluginClassName + "...");

@@ -18,10 +18,6 @@ import java.util.List;
 @Deprecated
 public class ChangeGroupName {
 
-    /**
-     * @param args
-     * @throws Exception 
-     */
     public static void main(String[] args) throws Exception {
       if (args.length != 3) {
         System.out.println("changeGroupName <connection_string> <login> <password>");

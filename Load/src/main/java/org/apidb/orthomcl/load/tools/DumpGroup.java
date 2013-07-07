@@ -26,12 +26,6 @@ public class DumpGroup {
 
     private static final Logger logger = Logger.getLogger(DumpGroup.class);
 
-    /**
-     * @param args
-     * @throws ClassNotFoundException 
-     * @throws SQLException 
-     * @throws IOException 
-     */
     public static void main(String[] args) throws ClassNotFoundException,
             SQLException, IOException {
         
