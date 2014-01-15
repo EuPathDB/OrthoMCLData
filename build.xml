@@ -4,11 +4,18 @@
   <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <target name="ApiCommonData-Installation">
-    <ant antfile="../ApiCommonData/build.xml" target="ApiCommonData-Installation">
-      <property name="project" value="ApiCommonData"/>
-      <property name="version" value="api-august-2006"/>
-    </ant>
+  <import file="${projectsDir}/ApiCommonData/build.xml" />
+  <import file="${projectsDir}/OrthoMCLShared/build.xml" />
+
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo    Checkout    oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <target name="OrthoMCLData-ChildCheckout">
+    <available file="../ApiCommonData" type="dir"  property="ApiCommonData.present" />
+    <antcall target="ApiCommonData-Checkout"/>
+    <available file="../OrthoMCLShared" type="dir"  property="OrthoMCLShared.present" />
+    <antcall target="OrthoMCLShared-Checkout"/>
   </target>
 
   <target name="ApiCommonData-Checkout" unless="ApiCommonData.present">
@@ -19,13 +26,6 @@
     </ant>
   </target>
   
-  <target name="OrthoMCLShared-Installation">
-    <ant antfile="../OrthoMCLShared/build.xml" target="OrthoMCLShared-Installation">
-      <property name="project" value="OrthoMCLShared"/>
-      <property name="version" value="api-august-2006"/>
-    </ant>
-  </target>
-
   <target name="OrthoMCLShared-Checkout" unless="OrthoMCLShared.present">
     <ant target="defaultProjectCheckout" inheritAll="false">
       <property name="svnurl" value="https://www.cbil.upenn.edu/svn/apidb/OrthoMCLShared"/>
@@ -33,16 +33,7 @@
       <property name="version" value="api-august-2006"/>
     </ant>
   </target>
-  
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooo    Checkout    oooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <target name="OrthoMCLData-ChildCheckout">
-    <available file="../ApiCommonData" type="dir"  property="ApiCommonData.present" />
-    <antcall target="ApiCommonData-Checkout"/>
-    <available file="../OrthoMCLShared" type="dir"  property="OrthoMCLShared.present" />
-    <antcall target="OrthoMCLShared-Checkout"/>
-  </target>
+
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo    Update    oooooooooooooooooooooooooo -->
@@ -62,18 +53,26 @@
                                                     OrthoMCLData-MavenInstallation,
                                                     OrthoMCLShared-Installation,
                                                     OrthoMCLData/Load-Installation">
-    <ant target="defaultProjectInstall"/>
+    <ant target="defaultProjectInstall">
+      <property name="project" value="OrthoMCLData"/>
+    </ant>
   </target>  
 
   <target name="OrthoMCLData-MavenInstallation">
-    <ant target="mavenCleanInstall"/>
+    <ant target="mavenCleanInstall">
+      <property name="project" value="OrthoMCLData"/>
+    </ant>
+
     <ant target="deployMavenArtifacts">
+      <property name="project" value="OrthoMCLData"/>
       <property name="module" value="Common"/>
     </ant>
     <ant target="deployMavenArtifacts">
+      <property name="project" value="OrthoMCLData"/>
       <property name="module" value="Data"/>
     </ant>
     <ant target="deployMavenArtifacts">
+      <property name="project" value="OrthoMCLData"/>
       <property name="module" value="Client"/>
     </ant>
   </target>
