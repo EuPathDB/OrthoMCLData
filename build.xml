@@ -65,15 +65,15 @@
 
     <ant target="deployMavenArtifacts">
       <property name="project" value="OrthoMCLData"/>
-      <property name="module" value="Common"/>
+      <property name="component" value="Common"/>
     </ant>
     <ant target="deployMavenArtifacts">
       <property name="project" value="OrthoMCLData"/>
-      <property name="module" value="Data"/>
+      <property name="component" value="Data"/>
     </ant>
     <ant target="deployMavenArtifacts">
       <property name="project" value="OrthoMCLData"/>
-      <property name="module" value="Client"/>
+      <property name="component" value="Client"/>
     </ant>
   </target>
     
