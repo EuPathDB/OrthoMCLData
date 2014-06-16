@@ -10,17 +10,16 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.zip.Deflater;
 
-import net.lliira.common.graphics.GraphicsException;
-import net.lliira.common.graphics.layout.Graph;
-import net.lliira.common.graphics.layout.LayoutObserver;
-import net.lliira.common.graphics.layout.SpringLayout;
-import net.lliira.common.graphics.layout.Vector;
-
 import org.apache.log4j.Logger;
-import org.orthomcl.common.BlastScore;
-import org.orthomcl.common.EdgeType;
-import org.orthomcl.common.Gene;
-import org.orthomcl.common.Group;
+import org.orthomcl.data.BlastScore;
+import org.orthomcl.data.EdgeType;
+import org.orthomcl.data.Gene;
+import org.orthomcl.data.Group;
+import org.orthomcl.data.layout.Graph;
+import org.orthomcl.data.layout.GraphicsException;
+import org.orthomcl.data.layout.LayoutObserver;
+import org.orthomcl.data.layout.SpringLayout;
+import org.orthomcl.data.layout.Vector;
 
 public class LayoutTask implements Runnable, LayoutObserver {
 

@@ -6,10 +6,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.orthomcl.common.BlastScore;
-import org.orthomcl.common.EdgeType;
-import org.orthomcl.common.GenePair;
-import org.orthomcl.common.Group;
+import org.orthomcl.data.BlastScore;
+import org.orthomcl.data.EdgeType;
+import org.orthomcl.data.GenePair;
+import org.orthomcl.data.Group;
 
 public class EdgeFactory {
 

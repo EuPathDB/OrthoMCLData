@@ -18,8 +18,9 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
-import org.orthomcl.common.Gene;
-import org.orthomcl.common.Group;
+import org.orthomcl.data.Gene;
+import org.orthomcl.data.Group;
+import org.orthomcl.data.layout.GraphicsException;
 
 /**
  * Hello world!
@@ -27,9 +28,7 @@ import org.orthomcl.common.Group;
  */
 public class LayoutGenerator {
 
-    private static final char ARG_DB_CONNECTION = 'd';
-    private static final char ARG_DB_LOGIN = 'l';
-    private static final char ARG_DB_PASSWORD = 'p';
+    private static final char ARG_DESTINATION = 'd';
     private static final char ARG_MAX_MEMBER = 'm';
     private static final char ARG_TASK_COUNT = 't';
 
@@ -48,7 +47,7 @@ public class LayoutGenerator {
         } catch (ParseException ex) {
             System.err.println(ex);
             HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("biolayout", options);
+            formatter.printHelp("orthoGenerateLayout -d \"ApiDB.GroupLayout\" [-m "+DEFAULT_MAX_MEMBER+"] [-t "+DEFAULT_TASK_COUNT+"]", options);
             System.exit(-1);
         }
     }
@@ -57,20 +56,12 @@ public class LayoutGenerator {
     private static Options prepareOptions() {
         Options options = new Options();
 
-        Option dbConnection = OptionBuilder.withArgName("connection_string").withDescription(
-                "Oracle JDBC connection string").isRequired().hasArg().create(
-                ARG_DB_CONNECTION);
-        options.addOption(dbConnection);
-
-        Option dbLogin = OptionBuilder.withArgName("login_name").withDescription(
-                "Database login user").isRequired().hasArg().create(
-                ARG_DB_LOGIN);
-        options.addOption(dbLogin);
-
-        Option dbPassword = OptionBuilder.withArgName("password").withDescription(
-                "Database login password").isRequired().hasArg().create(
-                ARG_DB_PASSWORD);
-        options.addOption(dbPassword);
+        Option destination = OptionBuilder.withArgName("destination").withDescription(
+                "The destination table where the layout data will be stored. " +
+                "The table should have exactly two columns: " +
+                "ortholog_group_id, layout_content").isRequired().hasArg().create(
+                ARG_DESTINATION);
+        options.addOption(destination);
 
         Option maxMember = OptionBuilder.withArgName("number").withDescription(
                 "Only process groups with number of members up to the given "
@@ -103,7 +94,7 @@ public class LayoutGenerator {
 
     private Connection openConnection(CommandLine commandLine)
             throws SQLException {
-        String dbConnection = commandLine.getOptionValue(ARG_DB_CONNECTION);
+        String dbConnection = commandLine.getOptionValue(ARG_DESTINATION);
         String dbLogin = commandLine.getOptionValue(ARG_DB_LOGIN);
         String dbPassword = commandLine.getOptionValue(ARG_DB_PASSWORD);
 
@@ -115,6 +106,10 @@ public class LayoutGenerator {
     public void process() throws SQLException {
         logger.info("Start processing... Max Member = " + maxMember
                 + ", tasks = " + taskCount);
+        
+        // get destination table
+        String destination = commandLine.getOptionValue(ARG_DESTINATION);
+        
         Queue<Group> groups = new ConcurrentLinkedQueue<Group>();
         List<LayoutTask> tasks = new ArrayList<LayoutTask>();
         GroupFactory groupFactory = null;
