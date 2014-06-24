@@ -40,7 +40,7 @@ close(R);
 open(A,$allProteinsFasta) || die "Can't open fasta file '$allProteinsFasta'\n";
 while(<A>) {
   if (/>(\S+)/) {
-    if (!$knownIds{$1}) print O "$1\n";
+    print O "$1\n" if (!$knownIds{$1});
   }
 }
 
