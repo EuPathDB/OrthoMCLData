@@ -125,6 +125,6 @@ sub usage {
 
 my $programName = $1;
 
-  print "usage: $programName -xmlFile <filename> { -taxonFile <filename> } -fastaFile <filename> -ecMappingFile <filename>\n";
+  print "usage: $programName -inputXmlFile <filename> { -taxonFile <filename> } -outputFastaFile <filename> -outputEcMappingFile <filename>\n";
   die;
 }
