@@ -18,8 +18,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
-import org.orthomcl.data.Gene;
-import org.orthomcl.data.Group;
+import org.orthomcl.data.core.Gene;
+import org.orthomcl.data.core.Group;
 import org.orthomcl.data.layout.GraphicsException;
 
 /**

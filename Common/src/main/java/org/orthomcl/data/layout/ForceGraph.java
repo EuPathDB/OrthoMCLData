@@ -53,4 +53,5 @@ public class ForceGraph implements Graph {
   public int getNodeCount() {
     return nodes.size();
   }
+
 }

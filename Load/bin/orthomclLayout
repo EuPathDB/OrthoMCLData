@@ -20,7 +20,7 @@ my $login = $gusConfig->getDatabaseLogin();
 my $password = $gusConfig->getDatabasePassword();
 
 
-my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.LayoutGenerator $args -d $connString -l $login -p $password";
+my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.load.LayoutGenerator $args;
 
 print STDERR $cmd;
 system($cmd);

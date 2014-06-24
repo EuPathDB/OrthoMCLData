@@ -11,10 +11,10 @@ import java.util.Random;
 import java.util.zip.Deflater;
 
 import org.apache.log4j.Logger;
-import org.orthomcl.data.BlastScore;
-import org.orthomcl.data.EdgeType;
-import org.orthomcl.data.Gene;
-import org.orthomcl.data.Group;
+import org.orthomcl.data.core.BlastScore;
+import org.orthomcl.data.core.EdgeType;
+import org.orthomcl.data.core.Gene;
+import org.orthomcl.data.core.Group;
 import org.orthomcl.data.layout.Graph;
 import org.orthomcl.data.layout.GraphicsException;
 import org.orthomcl.data.layout.LayoutObserver;

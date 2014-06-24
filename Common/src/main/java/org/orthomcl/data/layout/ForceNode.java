@@ -8,18 +8,14 @@ public class ForceNode implements Node {
 
   private final int id;
   private final Node node;
-  private final Vector force;
   private final Map<Integer, ForceEdge> neighbours;
-
-  private double stress;
 
   public ForceNode(final Node node, final int id) throws GraphicsException {
     if (node == null)
       throw new GraphicsException("node cannot be null");
     this.node = node;
     this.id = id;
-    this.force = new Vector();
-    this.neighbours = new HashMap<Integer, ForceEdge>();
+    this.neighbours = new HashMap<>();
   }
 
   /**
@@ -41,10 +37,6 @@ public class ForceNode implements Node {
    */
   public Node getNode() {
     return node;
-  }
-
-  public Vector getForce() {
-    return force;
   }
 
   public void addNeighbour(int nodeId, ForceEdge edge) {
@@ -73,23 +65,8 @@ public class ForceNode implements Node {
     return weight / neighbours.size();
   }
 
-  /**
-   * @return the stress
-   */
-  public double getStress() {
-    return stress;
-  }
-
-  /**
-   * @param stress
-   *          the stress to set
-   */
-  public void setStress(double stress) {
-    this.stress = stress;
-  }
-
   @Override
   public String toString() {
-    return id + "(" + getPoint().x + "," + getPoint().y + ")";
+    return id + " point=" + node.getPoint();
   }
 }

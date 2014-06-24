@@ -82,7 +82,7 @@ public class ForceEdge implements Edge {
   }
 
   public double getStress() {
-    return Math.abs(length - weight);
+    return Math.abs(length - weight) / weight;
   }
 
   public Vector getMedian() {

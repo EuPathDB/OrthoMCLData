@@ -1,4 +1,4 @@
-package org.orthomcl.data;
+package org.orthomcl.data.core;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -20,9 +20,11 @@ public class Group implements Graph {
 
   private final int id;
   private final String name;
-  private final Map<Integer, Gene> genes;
+  private final Map<String, Gene> genes;
   private final Map<GenePair, BlastScore> scores;
-  
+
+  private String layout;
+
   public Group(int id, String name) {
     this.id = id;
     this.name = name;
@@ -39,14 +41,15 @@ public class Group implements Graph {
     for (int i = 0; i < jsGenes.length(); i++) {
       JSONObject jsGene = jsGenes.getJSONObject(i);
       Gene gene = new Gene(jsGene);
-      genes.put(gene.getId(), gene);
+      genes.put(gene.getSourceId(), gene);
     }
 
     scores = new LinkedHashMap<GenePair, BlastScore>();
     JSONArray jsScores = jsGroup.getJSONArray("scores");
     for (int i = 0; i < jsScores.length(); i++) {
       JSONObject jsScore = jsScores.getJSONObject(i);
-      BlastScore score = new BlastScore(this, jsScore);
+      BlastScore score = new BlastScore(jsScore);
+      score.setGroup(this);
       scores.put(score, score);
     }
   }
@@ -62,7 +65,22 @@ public class Group implements Graph {
     return name;
   }
 
-  public Map<Integer, Gene> getGenes() {
+  /**
+   * @return the layout
+   */
+  public String getLayout() {
+    return layout;
+  }
+
+  /**
+   * @param layout
+   *          the layout to set
+   */
+  public void setLayout(String layout) {
+    this.layout = layout;
+  }
+
+  public Map<String, Gene> getGenes() {
     return genes;
   }
 
@@ -99,17 +117,22 @@ public class Group implements Graph {
   public Collection<? extends Node> getNodes() {
     return genes.values();
   }
-  
+
   public void addGene(Gene gene) {
-    genes.put(gene.getId(), gene);
+    genes.put(gene.getSourceId(), gene);
   }
-  
-  public void addBlastScore(BlastScore blastScore) {
-    scores.put(blastScore, blastScore);
+
+  public void addBlastScore(BlastScore score) {
+    double weight = BlastScore.MAX_WEIGHT + (Math.log10(score.getEvalueMant()) + score.getEvalueExp());
+    if (scores.containsKey(score)) { // duplicate score, compute the average log(evalue) as weight
+      BlastScore oldScore = scores.get(score);
+      oldScore.setWeight((oldScore.getWeight() + weight) / 2);
+      oldScore.setEvalue2(score.getEvalueMant(), score.getEvalueExp());
+    }
+    else { // new score, compute log(evalue) as weight
+      score.setWeight(weight);
+      scores.put(score, score);
+    }
   }
-  
-  public String getLayout() {
-    
-  }
-  
+
 }

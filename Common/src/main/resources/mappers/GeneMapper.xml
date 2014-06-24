@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.orthomcl.data.load.mapper.GeneMapper">
+
+	<resultMap type="Gene" id="GeneMap">
+		<constructor>
+      <idArg column="source_id" javaType="string" />
+		</constructor>
+    <result column="taxon_id" property="taxonId" />
+	</resultMap>
+
+  <resultMap type="GenePair" id="GenePairMap">
+    <constructor>
+      <idArg column="query_id" javaType="string" />
+      <idArg column="subject_id" javaType="string" />
+    </constructor>
+  </resultMap>
+
+  <resultMap type="BlastScore" id="BlastScoreMap" extends="GenePairMap">
+    <constructor>
+      <idArg column="query_id" javaType="string" />
+      <idArg column="subject_id" javaType="string" />
+    </constructor>
+    <result column="evalue_mant" property="evalueMant" />
+    <result column="evalue_exp" property="evalueExp" />
+  </resultMap>
+
+	<select id="selectGenes" parameterType="Group" resultMap="GeneMap">
+    <![CDATA[
+      SELECT eas.secondary_identifier AS source_id, eas.taxon_id
+      FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
+      WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+        AND ogs.ortholog_group_id = #{id}
+    ]]>
+	</select>
+
+  <select id="selectBlastScores" parameterType="Group" resultMap="BlastScoreMap" fetchSize="5000">
+<!-- 
+    <![CDATA[
+      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
+                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
+                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+                            AND ogs.ortholog_group_id = #{id})
+      SELECT query_id, subject_id, evalue_mant, evalue_exp
+      FROM apidb.SimilarSequences
+      WHERE query_id IN (SELECT source_id FROM sequences)
+        AND subject_id IN (SELECT source_id FROM sequences)
+    ]]>
+ -->
+    <![CDATA[
+      SELECT query_id, subject_id, evalue_mant, evalue_exp
+      FROM ${apidb-schema}SimilarSequencesGroup
+      WHERE ortholog_group_id = #{id}
+    ]]>
+  </select>
+  
+  <select id="selectOrthologs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
+    <![CDATA[
+      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
+                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
+                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+                            AND ogs.ortholog_group_id = #{id})
+      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
+      FROM apidb.Ortholog
+      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
+        AND sequence_id_b IN (SELECT source_id FROM sequences)
+    ]]>
+  </select>
+  
+  <select id="selectCoorthologs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
+    <![CDATA[
+      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
+                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
+                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+                            AND ogs.ortholog_group_id = #{id})
+      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
+      FROM apidb.Coortholog
+      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
+        AND sequence_id_b IN (SELECT source_id FROM sequences)
+    ]]>
+  </select>
+  
+  <select id="selectInparalogs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
+    <![CDATA[
+      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
+                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
+                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
+                            AND ogs.ortholog_group_id = #{id})
+      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
+      FROM apidb.Inparalog
+      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
+        AND sequence_id_b IN (SELECT source_id FROM sequences)
+    ]]>
+  </select>
+
+</mapper>

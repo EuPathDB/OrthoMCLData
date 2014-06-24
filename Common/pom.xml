@@ -30,6 +30,13 @@
       <groupId>org.gusdb</groupId>
       <artifactId>fgputil-util</artifactId>
     </dependency>
+    
+    <dependency>
+        <groupId>com.oracle</groupId>
+        <artifactId>ojdbc5</artifactId>
+        <scope>provided</scope>
+    </dependency>
+ 
   </dependencies>
 
   <build>
