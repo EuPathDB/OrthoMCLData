@@ -49,7 +49,7 @@ die "
 Find proteins that are in the all_proteins file but are not in the provided groups and residuals files.
 Add them as residuals.
 
-Usage: orthomclAddOrphansToResiduals input_groups_file input_residuals_file input_all_proteins_fasta_file output_residuals_file
+Usage: addOrphansToResiduals input_groups_file input_residuals_file input_all_proteins_fasta_file output_residuals_file
 
 ";
 }
