@@ -111,14 +111,14 @@ public class GroupLayoutPanel extends JPanel implements LayoutObserver, Componen
     Map<ForceNode, Vector> nodes = LayoutUtility.scale(inNodes, 10, 20, width - MARGIN, height - 10);
     // draw edges
     for (ForceEdge edge : edges) {
-      double weight = edge.getEdge().getWeight();
-      g.setColor(getEdgeColor(weight));
+      double preferredLength = edge.getEdge().getPreferredLength();
+      g.setColor(getEdgeColor(preferredLength));
       Point2D.Double pa = nodes.get(edge.getNodeA());
       Point2D.Double pb = nodes.get(edge.getNodeB());
       g.draw(new Line2D.Double(pa, pb));
       if (showScoreInfo) {
         int mx = (int) ((pa.x + pb.x) / 2), my = (int) ((pa.y + pb.y) / 2);
-        g.drawString(edge.getEdge().toString(), mx, my);
+        g.drawString(edge.toString(), mx, my);
         // g.drawString("S:" + format.format(stress), mx, my + 10);
       }
     }
@@ -148,8 +148,8 @@ public class GroupLayoutPanel extends JPanel implements LayoutObserver, Componen
     repaint();
   }
 
-  private Color getEdgeColor(double weight) {
-    int scale = (int) Math.round(255 * (weight - MIN_WEIGHT) / (MAX_WEIGHT - MIN_WEIGHT));
+  private Color getEdgeColor(double preferredLength) {
+    int scale = (int) Math.round(255 * (preferredLength - MIN_WEIGHT) / (MAX_WEIGHT - MIN_WEIGHT));
     if (scale < 0)
       scale = 0;
     else if (scale > 255)

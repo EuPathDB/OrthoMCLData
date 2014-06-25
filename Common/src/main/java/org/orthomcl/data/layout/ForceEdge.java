@@ -1,16 +1,18 @@
 package org.orthomcl.data.layout;
 
 import java.awt.geom.Line2D;
+import java.text.DecimalFormat;
 
 public class ForceEdge implements Edge {
+
+  private static final DecimalFormat FORMAT = new DecimalFormat("0.00");
 
   private final Edge edge;
   private final ForceNode nodeA;
   private final ForceNode nodeB;
 
-  private double weight;
+  private double preferredLength;
   private int crossings;
-  private double length;
 
   public ForceEdge(Edge edge, ForceNode nodeA, ForceNode nodeB) throws GraphicsException {
     if (edge == null)
@@ -22,19 +24,19 @@ public class ForceEdge implements Edge {
     this.edge = edge;
     this.nodeA = nodeA;
     this.nodeB = nodeB;
-    this.weight = edge.getWeight();
+    this.preferredLength = edge.getPreferredLength();
   }
 
   public Edge getEdge() {
     return edge;
   }
 
-  public double getWeight() {
-    return weight;
+  public double getPreferredLength() {
+    return preferredLength;
   }
 
   public void setWeight(double weight) {
-    this.weight = weight;
+    this.preferredLength = weight;
   }
 
   @Override
@@ -70,19 +72,13 @@ public class ForceEdge implements Edge {
    * @return the length
    */
   public double getLength() {
-    return length;
-  }
-
-  /**
-   * @param length
-   *          the length to set
-   */
-  public void setLength(double length) {
-    this.length = length;
+    double dx = nodeB.getPoint().x - nodeA.getPoint().x;
+    double dy = nodeB.getPoint().y - nodeA.getPoint().y;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   public double getStress() {
-    return Math.abs(length - weight) / weight;
+    return Math.abs(getLength() - preferredLength) / preferredLength;
   }
 
   public Vector getMedian() {
@@ -92,5 +88,10 @@ public class ForceEdge implements Edge {
 
   public Line2D getLine() {
     return new Line2D.Double(nodeA.getPoint(), nodeB.getPoint());
+  }
+  
+  @Override
+  public String toString() {
+    return edge.toString() + " L=" + FORMAT.format(getLength());
   }
 }

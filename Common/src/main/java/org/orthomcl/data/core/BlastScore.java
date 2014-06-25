@@ -9,16 +9,16 @@ import org.orthomcl.data.layout.Node;
 
 public class BlastScore extends GenePair implements Edge {
 
-  public static final float MAX_WEIGHT = 190;
-  
   private static final DecimalFormat FORMAT = new DecimalFormat("0.00");
-  
+
+  private static final String EVALUE_DIVIDER = "/";
+
   private Group group;
   private float evalueMant;
   private int evalueExp;
   private float evalueMant2;
   private int evalueExp2;
-  private double weight = 0;
+  private double preferredLength;
   private EdgeType type = EdgeType.Normal;
 
   public BlastScore(String queryId, String subjectId) {
@@ -26,10 +26,16 @@ public class BlastScore extends GenePair implements Edge {
   }
 
   public BlastScore(JSONObject jsScore) throws JSONException {
-    this(jsScore.getString("queryId"), jsScore.getString("subjectId"));
-    String[] evalue = jsScore.getString("evalue").split("E");
+    this(jsScore.getString("Q"), jsScore.getString("S"));
+    String[] evalues = jsScore.getString("E").split(EVALUE_DIVIDER);
+    String[] evalue = evalues[0].split("[eE]");
     evalueMant = Float.valueOf(evalue[0]);
     evalueExp = Integer.valueOf(evalue[1]);
+    if (evalues.length == 2) {
+      String[] evalue2 = evalues[1].split("[eE]");
+      evalueMant2 = Float.valueOf(evalue2[0]);
+      evalueExp2 = Integer.valueOf(evalue2[1]);
+    }
   }
 
   /**
@@ -52,7 +58,8 @@ public class BlastScore extends GenePair implements Edge {
   }
 
   public void setEvalueMant(float evalueMant) {
-    if (evalueMant == 0) evalueMant = 1;
+    if (evalueMant == 0)
+      evalueMant = 1;
     this.evalueMant = evalueMant;
   }
 
@@ -69,31 +76,33 @@ public class BlastScore extends GenePair implements Edge {
   }
 
   public void setEvalue(float mant, int exp) {
-    if (mant == 0) mant = 1;
+    if (mant == 0)
+      mant = 1;
     this.evalueMant = mant;
     this.evalueExp = exp;
   }
-  
+
   public void setEvalue2(float mant, int exp) {
-    if (mant == 0) mant = 1;
+    if (mant == 0)
+      mant = 1;
     this.evalueMant2 = mant;
     this.evalueExp2 = exp;
   }
-  
+
   public String getEvalue() {
     String evalue = evalueMant + "E" + evalueExp;
     if (evalueMant != evalueMant2 || evalueExp != evalueExp2)
-      evalue += "/" + evalueMant2 + "E" + evalueExp2;
+      evalue += EVALUE_DIVIDER + evalueMant2 + "E" + evalueExp2;
     return evalue;
   }
 
   @Override
-  public double getWeight() {
-    return weight;
+  public double getPreferredLength() {
+    return preferredLength;
   }
 
-  public void setWeight(double weight) {
-    this.weight = weight;
+  public void setPreferredLength(double preferredLength) {
+    this.preferredLength = preferredLength;
   }
 
   public EdgeType getType() {
@@ -122,9 +131,9 @@ public class BlastScore extends GenePair implements Edge {
   public Node getNodeB() {
     return group.getGenes().get(subjectId);
   }
-  
+
   @Override
   public String toString() {
-    return type.getCode() + " E=" + getEvalue() + " W=" + FORMAT.format(weight);
+    return type.getCode() + " E=" + getEvalue() + " PL=" + FORMAT.format(preferredLength);
   }
 }

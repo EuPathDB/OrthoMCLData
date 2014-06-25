@@ -2,6 +2,7 @@ package org.orthomcl.data.layout;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -14,16 +15,10 @@ public class SpringLayout implements Layout {
 
   private static final Logger LOG = Logger.getLogger(SpringLayout.class);
 
-  public static final double SCALE = 100;
-  public static final double NON_DEGE_SCALE = SCALE * 1.01;
-
-  private final Graph graph;
-  private final ForceGraph forceGraph;
+  private final ForceGraph graph;
 
   private final Random random;
 
-  private double maxWeight = -Double.MAX_VALUE;
-  private double minWeight = Double.MAX_VALUE;
   private double minMoves = 0.01;
   private long maxIterations = 20000;
   private boolean canceled = false;
@@ -34,34 +29,8 @@ public class SpringLayout implements Layout {
   }
 
   public SpringLayout(Graph graph, Random random) throws GraphicsException {
-    this.graph = graph;
-    this.forceGraph = new ForceGraph(graph);
+    this.graph = new ForceGraph(graph);
     this.random = random;
-
-    for (Edge edge : forceGraph.getEdges()) {
-      double weight = edge.getWeight();
-      if (weight <= 0)
-        throw new GraphicsException("Weight must be positive: " + weight);
-      if (maxWeight < weight)
-        maxWeight = weight;
-      if (minWeight > weight)
-        minWeight = weight;
-    }
-  }
-
-  /**
-   * @return the maxWeight
-   */
-  double getMaxWeight() {
-    return maxWeight;
-  }
-
-  /**
-   * @param maxWeight
-   *          the maxWeight to set
-   */
-  void setMaxWeight(double maxWeight) {
-    this.maxWeight = maxWeight;
   }
 
   /**
@@ -119,9 +88,11 @@ public class SpringLayout implements Layout {
     canceled = false;
     stopped = false;
     initialize();
-    double globalStress = computeGlobalStress();
-    LOG.debug("Initial: global stress=" + globalStress);
-    observer.step(forceGraph, iteration, globalStress);
+    if (observer != null) {
+      double globalStress = computeGlobalStress();
+      LOG.debug("Initial: global stress=" + globalStress);
+      observer.step(graph, iteration, globalStress);
+    }
 
     while (iteration < maxIterations) {
       if (stopped || canceled)
@@ -135,15 +106,15 @@ public class SpringLayout implements Layout {
 
       // notify the observer of the initial state;
       if (observer != null) {
-        globalStress = computeGlobalStress();
-        observer.step(forceGraph, iteration, globalStress);
+        double globalStress = computeGlobalStress();
+        observer.step(graph, iteration, globalStress);
       }
     }
     stopped = true;
     // notify the observer of the final state
     if (observer != null) {
-      globalStress = computeGlobalStress();
-      observer.finish(forceGraph, iteration, globalStress);
+      double globalStress = computeGlobalStress();
+      observer.finish(graph, iteration, globalStress);
     }
   }
 
@@ -151,15 +122,24 @@ public class SpringLayout implements Layout {
    * @return the minimal allowed distance
    */
   private void initialize() {
-    // compute size
-    double range = maxWeight * (Math.ceil(Math.sqrt(forceGraph.getNodeCount())) - 1);
-    for (ForceNode node : forceGraph.getNodes()) {
-      node.getPoint().setLocation(random.nextDouble() * range, random.nextDouble() * range);
+    Collection<ForceNode> nodes = graph.getNodes();
+    if (nodes.size() <= 2) {
+      Iterator<ForceNode> it = nodes.iterator();
+      // only need to set one node, the other use the default (0, 0)
+      ForceNode node = it.next();
+      node.getPoint().setLocation(0, graph.getMaxPreferredLength());
+    }
+    else {
+      // compute size
+      double range = graph.getMaxPreferredLength() * (Math.ceil(Math.sqrt(nodes.size())) - 1);
+      for (ForceNode node : nodes) {
+        node.getPoint().setLocation(random.nextDouble() * range, random.nextDouble() * range);
+      }
     }
   }
 
   private double computeGlobalStress() {
-    List<ForceNode> nodes = new ArrayList<>(forceGraph.getNodes());
+    List<ForceNode> nodes = new ArrayList<>(graph.getNodes());
     double globalStress = 0;
     for (int i = 0; i < nodes.size() - 1; i++) {
       ForceNode nodeA = nodes.get(i);
@@ -174,13 +154,14 @@ public class SpringLayout implements Layout {
         double dy = nodeB.getPoint().y - nodeA.getPoint().y;
 
         // skip unlinked distant nodes
-        if (edge == null && (Math.abs(dx) > maxWeight || Math.abs(dy) > maxWeight))
+        double maxLength = graph.getMaxPreferredLength();
+        if (edge == null && (Math.abs(dx) > maxLength || Math.abs(dy) > maxLength))
           continue;
 
         // compute stress
-        double weight = (edge != null) ? edge.getWeight() : maxWeight;
+        double preferredLength = (edge != null) ? edge.getPreferredLength() : maxLength;
         double dist = Math.sqrt(dx * dx + dy * dy);
-        globalStress += Math.abs(dist - weight);
+        globalStress += Math.abs(dist - preferredLength);
       }
     }
     return globalStress;
@@ -194,7 +175,8 @@ public class SpringLayout implements Layout {
     double dy = nodeB.getPoint().y - nodeA.getPoint().y;
 
     // skip unlinked distant nodes
-    if (edge == null && (Math.abs(dx) > maxWeight || Math.abs(dy) > maxWeight))
+    double maxLength = graph.getMaxPreferredLength();
+    if (edge == null && (Math.abs(dx) > maxLength || Math.abs(dy) > maxLength))
       return null;
 
     if (dx == 0 && dy == 0) {
@@ -204,12 +186,12 @@ public class SpringLayout implements Layout {
     double dist = Math.sqrt(dx * dx + dy * dy);
 
     // if there is no edge between the nodes, no upper boundary
-    if (edge == null && dist > maxWeight)
+    if (edge == null && dist > maxLength)
       return null;
 
-    double weight = (edge != null) ? edge.getWeight() : maxWeight;
+    double preferredLength = (edge != null) ? edge.getPreferredLength() : maxLength;
 
-    double factor = (dist - weight) / Math.max(1, dist);
+    double factor = (dist - preferredLength) / Math.max(1, dist);
     Vector force = new Vector(factor * dx, factor * dy);
     return force;
   }
@@ -220,7 +202,7 @@ public class SpringLayout implements Layout {
    * @return return true is the graph can still be moved; false if the graph cannot be moved any further.
    */
   private boolean move() {
-    Collection<ForceNode> nodes = forceGraph.getNodes();
+    Collection<ForceNode> nodes = graph.getNodes();
     double maxMove = 0;
     for (ForceNode currentNode : nodes) {
       // compute the overall force of the current node;

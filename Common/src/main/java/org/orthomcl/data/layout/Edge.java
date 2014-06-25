@@ -2,7 +2,7 @@ package org.orthomcl.data.layout;
 
 public interface Edge {
 
-  double getWeight();
+  double getPreferredLength();
 
   Node getNodeA();
 

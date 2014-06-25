@@ -18,6 +18,8 @@ import org.orthomcl.data.layout.Node;
  */
 public class Group implements Graph {
 
+  public static final double MAX_PREFERRED_LENGTH = 230;
+
   private final int id;
   private final String name;
   private final Map<String, Gene> genes;
@@ -63,6 +65,11 @@ public class Group implements Graph {
 
   public String getName() {
     return name;
+  }
+
+  @Override
+  public double getMaxPreferredLength() {
+    return MAX_PREFERRED_LENGTH;
   }
 
   /**
@@ -123,16 +130,16 @@ public class Group implements Graph {
   }
 
   public void addBlastScore(BlastScore score) {
-    double weight = BlastScore.MAX_WEIGHT + (Math.log10(score.getEvalueMant()) + score.getEvalueExp());
+    // convert evalue into preferred length.
+    double length = getMaxPreferredLength() + (Math.log10(score.getEvalueMant()) + score.getEvalueExp());
     if (scores.containsKey(score)) { // duplicate score, compute the average log(evalue) as weight
       BlastScore oldScore = scores.get(score);
-      oldScore.setWeight((oldScore.getWeight() + weight) / 2);
+      oldScore.setPreferredLength((oldScore.getPreferredLength() + length) / 2);
       oldScore.setEvalue2(score.getEvalueMant(), score.getEvalueExp());
     }
     else { // new score, compute log(evalue) as weight
-      score.setWeight(weight);
+      score.setPreferredLength(length);
       scores.put(score, score);
     }
   }
-
 }

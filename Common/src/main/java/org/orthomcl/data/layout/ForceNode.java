@@ -55,16 +55,6 @@ public class ForceNode implements Node {
     return neighbours.get(nodeId);
   }
 
-  public double getAverageWeight() {
-    double weight = 0;
-    if (neighbours.size() == 0)
-      return weight;
-    for (ForceEdge edge : neighbours.values()) {
-      weight += edge.getWeight();
-    }
-    return weight / neighbours.size();
-  }
-
   @Override
   public String toString() {
     return id + " point=" + node.getPoint();

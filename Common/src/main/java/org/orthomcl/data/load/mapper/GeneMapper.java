@@ -12,6 +12,8 @@ public interface GeneMapper {
   List<Gene> selectGenes(Group group);
 
   List<BlastScore> selectBlastScores(Group group);
+  
+  List<BlastScore> selectBlastScoresEx(Group group);
 
   List<GenePair> selectOrthologs(Group group);
 

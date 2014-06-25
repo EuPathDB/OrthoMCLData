@@ -29,11 +29,16 @@ public class ForceGraph implements Graph {
       ForceNode nodeA = nodes.get(nodeMap.get(edge.getNodeA()));
       ForceNode nodeB = nodes.get(nodeMap.get(edge.getNodeB()));
       ForceEdge inEdge = new ForceEdge(edge, nodeA, nodeB);
-      inEdge.setWeight(edge.getWeight());
+      inEdge.setWeight(edge.getPreferredLength());
       edges.add(inEdge);
       nodeA.addNeighbour(nodeB.getId(), inEdge);
       nodeB.addNeighbour(nodeA.getId(), inEdge);
     }
+  }
+  
+  @Override
+  public double getMaxPreferredLength() {
+    return graph.getMaxPreferredLength();
   }
 
   public Graph getGraph() {

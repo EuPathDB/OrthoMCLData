@@ -37,7 +37,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	</select>
 
   <select id="selectBlastScores" parameterType="Group" resultMap="BlastScoreMap" fetchSize="5000">
-<!-- 
     <![CDATA[
       WITH sequences AS (SELECT eas.secondary_identifier AS source_id
                          FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
@@ -48,7 +47,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
       WHERE query_id IN (SELECT source_id FROM sequences)
         AND subject_id IN (SELECT source_id FROM sequences)
     ]]>
- -->
+  </select>
+
+  <select id="selectBlastScoresEx" parameterType="Group" resultMap="BlastScoreMap" fetchSize="5000">
     <![CDATA[
       SELECT query_id, subject_id, evalue_mant, evalue_exp
       FROM ${apidb-schema}SimilarSequencesGroup

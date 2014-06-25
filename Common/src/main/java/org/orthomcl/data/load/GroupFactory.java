@@ -3,6 +3,7 @@ package org.orthomcl.data.load;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -121,7 +122,7 @@ public class GroupFactory {
     }
 
     // load blast scores
-    List<BlastScore> scores = mapper.selectBlastScores(group);
+    List<BlastScore> scores = mapper.selectBlastScoresEx(group);
     for (BlastScore score : scores) {
       score.setGroup(group);
       group.addBlastScore(score);
@@ -147,18 +148,29 @@ public class GroupFactory {
   public void saveLayout(Group group, SqlSession session) throws OrthoMCLDataException {
     JSONObject jsLayout = new JSONObject();
 
+    Map<String, Integer> genes = new HashMap<>();
     try {
       // output genes
       JSONArray jsGenes = new JSONArray();
+      int i = 0;
       for (Gene gene : group.getGenes().values()) {
-        jsGenes.put(gene.toJSON());
+        JSONObject jsGene = gene.toJSON();
+        jsGene.put("i", i);   // store index of the gene
+        jsGenes.put(jsGene);
+        genes.put(gene.getSourceId(), i);
+        i++;
       }
       jsLayout.put("N", jsGenes);
 
       // output scores
       JSONArray jsScores = new JSONArray();
       for (BlastScore score : group.getScores().values()) {
-        jsScores.put(score.toJSON());
+        // use gene index instead of sourceId to save space.
+        JSONObject jsScore = score.toJSON();
+        jsScore.put("Q", genes.get(score.getQueryId()));
+        jsScore.put("S", genes.get(score.getSubjectId()));
+        
+        jsScores.put(jsScore);
       }
       jsLayout.put("E", jsScores);
       group.setLayout(jsLayout.toString());

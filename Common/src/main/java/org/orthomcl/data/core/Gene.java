@@ -22,7 +22,7 @@ public class Gene implements Node {
   }
 
   public Gene(JSONObject jsGene) throws JSONException {
-    this.sourceId = jsGene.getString("sourceId");
+    this.sourceId = jsGene.getString("id");
     double x = jsGene.getDouble("x");
     double y = jsGene.getDouble("y");
     this.point = new Vector(x, y);
