@@ -2,9 +2,9 @@
 
 use strict;
 
-my ($peripheralsFastaFile, $referenceGroupsFile, $similarSequencesFile, $outputGroupsFile, $outputResidualsFile) = @ARGV;
+my ($peripheralsFastaFile, $referenceGroupsFile, $similarSequencesFile, $outputGroupsFile, $outputResidualsFile, $threshold, $minPercentMatch) = @ARGV;
 
-usage() unless scalar(@ARGV) == 5;
+usage() unless scalar(@ARGV) == 7;
 
 # read groups file into protein->group hash and group->protein hash
 my %group2proteins;
@@ -49,7 +49,7 @@ close(S);
 # write out new groups file
 open(N, ">$outputGroupsFile") || die "can't open groups file '$outputGroupsFile' for writing\n";
 foreach my $groupId (keys(%group2proteins)) {
-  print N "$groupId " . join(" ", @{%group2proteins{$groupId}}) . "\n";
+  print N "$groupId " . join(" ", @{$group2proteins{$groupId}}) . "\n";
 }
 close(N);
 
@@ -57,18 +57,18 @@ close(N);
 open(F, $peripheralsFastaFile) || die "Can't open fasta file '$peripheralsFastaFile'";
 open(R, ">$outputResidualsFile") || die "Can't open fasta file '$outputResidualsFile' for writing";
 
-my $currId;
+my $curId;
 my $curSeq;
 while(<F>) {
   if (/\>(\S+)/) {
-    print R "$curSeq\n" if ($currId && $residuals{$currId});
+    print R "$curSeq\n" if ($curId && $residuals{$curId});
     $curSeq = $_;
     $curId = $1;
   } else {
     $curSeq .= $_;
   }
 }
-  print R "$curSeq\n" if ($currId && $residuals{$currId});
+  print R "$curSeq\n" if ($curId && $residuals{$curId});
 
 
 
@@ -77,7 +77,7 @@ sub usage {
 
 Map peripheral proteins into reference groups based on best similarity.
 
-Usage: mapPeripheralsToReferenceGroups peripherals_fasta_file reference_groups_file similar_sequences_file output_groups_file output_residuals_file
+Usage: mapPeripheralsToReferenceGroups peripherals_fasta_file reference_groups_file similar_sequences_file output_groups_file output_residuals_file threshold min_percent_match
 
 Where:
   - peripherals_fasta_file: fasta file of proteins to map
@@ -85,6 +85,8 @@ Where:
   - similar_sequences_file: similarities of peripheral proteins to reference proteins
   - output_groups_file:     the same set of groups as input, but augmented with mapped proteins
   - output_residuals_file:  a fasta file of the unmapped proteins
+  - threshold:              e-value exponent must be less than or equal to this
+  - min_percent_match       percent match must be greater than or equal to this
 ";
 
 }
