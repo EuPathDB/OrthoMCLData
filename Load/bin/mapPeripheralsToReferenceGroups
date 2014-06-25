@@ -1,0 +1,90 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($peripheralsFastaFile, $referenceGroupsFile, $similarSequencesFile, $outputGroupsFile, $outputResidualsFile) = @ARGV;
+
+usage() unless scalar(@ARGV) == 5;
+
+# read groups file into protein->group hash and group->protein hash
+my %group2proteins;
+my %proteinId2group;
+
+open(G, $referenceGroupsFile) || die "can't open groups file '$referenceGroupsFile'\n";
+while (<G>) {
+  chomp;
+  my @g = split(/\s/);
+  my $grpId = shift(@g);
+  $group2proteins{$grpId} = \@g;
+  foreach my $prot (@g) {
+    $proteinId2group{$prot} = $grpId;
+  }
+}
+close(G);
+
+# scan through similarities file, finding best match for each protein, add to group->protein hash.  save nonmatches into hash
+open(S, $similarSequencesFile) || die "can't open groups file '$similarSequencesFile'\n";
+my $prevQueryId = "";
+my %residuals;
+while(<S>) {
+  chomp;
+  my ($q_id, $s_id, $q_taxon, $s_taxon, $evalue_mant, $evalue_exp, $pctIdent, $pctMatch) = split(/\s/);
+
+  next if $q_id eq $s_id;
+  $evalue_exp = -181 unless $evalue_exp;
+
+  # for now, use simple algorithm:  assign ortholog group based on best hit.
+  if ($q_id ne $prevQueryId) {
+    if ($evalue_exp <= $threshold && $pctMatch >= $minPercentMatch) {
+      $prevQueryId = $q_id;
+      my $grp = $proteinId2group{$s_id};
+      push(@{$group2proteins{$s_id}}, $q_id);
+    } else {
+      $residuals{$q_id} = 1;
+    }
+  }
+}
+close(S);
+
+# write out new groups file
+open(N, ">$outputGroupsFile") || die "can't open groups file '$outputGroupsFile' for writing\n";
+foreach my $groupId (keys(%group2proteins)) {
+  print N "$groupId " . join(" ", @{%group2proteins{$groupId}}) . "\n";
+}
+close(N);
+
+# scan through fasta file and output any nonmatching sequence into residuals file.
+open(F, $peripheralsFastaFile) || die "Can't open fasta file '$peripheralsFastaFile'";
+open(R, ">$outputResidualsFile") || die "Can't open fasta file '$outputResidualsFile' for writing";
+
+my $currId;
+my $curSeq;
+while(<F>) {
+  if (/\>(\S+)/) {
+    print R "$curSeq\n" if ($currId && $residuals{$currId});
+    $curSeq = $_;
+    $curId = $1;
+  } else {
+    $curSeq .= $_;
+  }
+}
+  print R "$curSeq\n" if ($currId && $residuals{$currId});
+
+
+
+sub usage {
+  die "
+
+Map peripheral proteins into reference groups based on best similarity.
+
+Usage: mapPeripheralsToReferenceGroups peripherals_fasta_file reference_groups_file similar_sequences_file output_groups_file output_residuals_file
+
+Where:
+  - peripherals_fasta_file: fasta file of proteins to map
+  - reference_groups_file:  groups to map to
+  - similar_sequences_file: similarities of peripheral proteins to reference proteins
+  - output_groups_file:     the same set of groups as input, but augmented with mapped proteins
+  - output_residuals_file:  a fasta file of the unmapped proteins
+";
+
+}
