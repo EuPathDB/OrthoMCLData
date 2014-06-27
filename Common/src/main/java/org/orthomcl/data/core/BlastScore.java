@@ -29,8 +29,8 @@ public class BlastScore extends GenePair implements Edge {
     this(jsScore.getString("Q"), jsScore.getString("S"));
     String[] evalues = jsScore.getString("E").split(EVALUE_DIVIDER);
     String[] evalue = evalues[0].split("[eE]");
-    evalueMant = Float.valueOf(evalue[0]);
-    evalueExp = Integer.valueOf(evalue[1]);
+    evalueMant= evalueMant2 = Float.valueOf(evalue[0]);
+    evalueExp = evalueExp2 = Integer.valueOf(evalue[1]);
     if (evalues.length == 2) {
       String[] evalue2 = evalues[1].split("[eE]");
       evalueMant2 = Float.valueOf(evalue2[0]);
@@ -60,7 +60,7 @@ public class BlastScore extends GenePair implements Edge {
   public void setEvalueMant(float evalueMant) {
     if (evalueMant == 0)
       evalueMant = 1;
-    this.evalueMant = evalueMant;
+    this.evalueMant = this.evalueMant2 = evalueMant;
   }
 
   public int getEvalueExp() {
@@ -72,14 +72,14 @@ public class BlastScore extends GenePair implements Edge {
    *          the evalueExp to set
    */
   public void setEvalueExp(int evalueExp) {
-    this.evalueExp = evalueExp;
+    this.evalueExp = this.evalueExp2 = evalueExp;
   }
 
   public void setEvalue(float mant, int exp) {
     if (mant == 0)
       mant = 1;
-    this.evalueMant = mant;
-    this.evalueExp = exp;
+    this.evalueMant = this.evalueMant2 = mant;
+    this.evalueExp = this.evalueExp2 = exp;
   }
 
   public void setEvalue2(float mant, int exp) {
