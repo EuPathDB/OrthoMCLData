@@ -10,7 +10,7 @@ use FileHandle;
 
 use GUS::Model::ApiDB::OrthomclGroupKeyword;
 
-use ApiCommonData::Load::Util;
+#use ApiCommonData::Load::Util;
 use Data::Dumper;
 
 require Exporter;
