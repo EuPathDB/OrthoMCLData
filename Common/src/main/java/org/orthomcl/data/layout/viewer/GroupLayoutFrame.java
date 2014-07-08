@@ -34,11 +34,11 @@ public class GroupLayoutFrame extends JFrame {
 	 */
   private static final long serialVersionUID = 4560519543039322235L;
 
-  public static final String[] TEST_GROUPS = { "OG5_207718", "OG5_185763", "OG5_174529", "OG5_167974",
-      "OG5_162535", "OG5_154921", "OG5_149247", "OG5_139903", "OG5_136751", "OG5_134904", "OG5_133605",
-      "OG5_131930", "OG5_130815", "OG5_129994", "OG5_129355", "OG5_128858", "OG5_128437", "OG5_128022",
-      "OG5_127358", "OG5_127033", "OG5_126848", "OG5_126741", "OG5_126646", "OG5_126625", "OG5_126612",
-      "OG5_126600", "OG5_126589", "OG5_126585" };
+  public static final String[] TEST_GROUPS = { "OG5_127788", "OG5_207718", "OG5_185763", "OG5_174529",
+      "OG5_167974", "OG5_162535", "OG5_154921", "OG5_149247", "OG5_139903", "OG5_136751", "OG5_134904",
+      "OG5_133605", "OG5_131930", "OG5_130815", "OG5_129994", "OG5_129355", "OG5_128858", "OG5_128437",
+      "OG5_128022", "OG5_127358", "OG5_127033", "OG5_126848", "OG5_126741", "OG5_126646", "OG5_126625",
+      "OG5_126612", "OG5_126600", "OG5_126589", "OG5_126585" };
 
   private static final Logger LOG = Logger.getLogger(GroupLayoutFrame.class);
 

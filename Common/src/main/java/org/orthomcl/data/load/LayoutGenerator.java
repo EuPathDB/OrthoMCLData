@@ -25,6 +25,7 @@ public class LayoutGenerator {
 
   private static final String ARG_MAX_MEMBER = "max";
   private static final String ARG_TASK_COUNT = "task";
+  private static final String ARG_UNDO = "undo";
 
   public static final String DEFAULT_MAX_MEMBER = "500";
   public static final String DEFAULT_TASK_COUNT = "4";
@@ -41,7 +42,12 @@ public class LayoutGenerator {
     try {
       CommandLine commandLine = parser.parse(options, args);
       LayoutGenerator generator = new LayoutGenerator(commandLine);
-      generator.process();
+      if (commandLine.hasOption(ARG_UNDO)) {
+        generator.undo();
+      }
+      else {
+        generator.process();
+      }
     }
     catch (ParseException ex) {
       System.err.println(ex);
@@ -66,6 +72,10 @@ public class LayoutGenerator {
         ARG_TASK_COUNT);
     options.addOption(taskCount);
 
+    Option undo = OptionBuilder.withArgName(ARG_UNDO).withDescription(
+        "Remove all generated layouts from database.").hasArg(false).create(ARG_UNDO);
+    options.addOption(undo);
+
     return options;
   }
 
@@ -80,6 +90,14 @@ public class LayoutGenerator {
     taskCount = Integer.valueOf(commandLine.getOptionValue(ARG_TASK_COUNT, DEFAULT_TASK_COUNT));
 
     this.groupFactory = new GroupFactory(taskCount);
+  }
+
+  public void undo() {
+    LOG.info("Undo previous layouts...");
+
+    int count = groupFactory.removeLayouts();
+
+    LOG.info("Done. " + count + " layouts deleted.");
   }
 
   public void process() throws OrthoMCLDataException {

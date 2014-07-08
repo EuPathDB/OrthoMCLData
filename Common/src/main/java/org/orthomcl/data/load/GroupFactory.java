@@ -1,15 +1,13 @@
 package org.orthomcl.data.load;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.ExecutorType;
@@ -28,10 +26,6 @@ import org.orthomcl.data.core.GenePair;
 import org.orthomcl.data.core.Group;
 import org.orthomcl.data.load.mapper.GeneMapper;
 import org.orthomcl.data.load.mapper.GroupMapper;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 public class GroupFactory {
 
@@ -46,7 +40,7 @@ public class GroupFactory {
   private final SqlSessionFactory sessionFactory;
 
   public GroupFactory(int poolSize) throws OrthoMCLDataException {
-    Properties properties = loadModelConfig(poolSize);
+    Properties properties = loadConfig(poolSize);
 
     // create sessionFactory
     try {
@@ -59,33 +53,30 @@ public class GroupFactory {
     LOG.debug("GroupFactory initialized.");
   }
 
-  private Properties loadModelConfig(int poolSize) throws OrthoMCLDataException {
+  private Properties loadConfig(int poolSize) throws OrthoMCLDataException {
     // get the model config file, and extract the connection information from it.
     String gusHome = GusHome.getGusHome();
-    File configFile = new File(gusHome + "/config/OrthoMCL/model-config.xml");
+    File configFile = new File(gusHome + "/config/gus.config");
     if (!configFile.exists())
-      throw new OrthoMCLDataException("Model config file is missing: " + configFile.getAbsolutePath());
+      throw new OrthoMCLDataException("Config file is missing: " + configFile.getAbsolutePath());
 
     LOG.info("Loading connection info from: " + configFile.getAbsolutePath());
 
-    // parse the model-config.xml, and get the connection info
-    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     try {
-      Document document = factory.newDocumentBuilder().parse(configFile);
-      NodeList list = document.getElementsByTagName("appDb");
-      Element appDb = (Element) list.item(0);
-
       // prepare properties
+      Properties config = new Properties();
+      config.load(new FileReader(configFile));
+
       Properties properties = System.getProperties();
-      properties.put(PROP_DB_URL, appDb.getAttribute("connectionUrl"));
-      properties.put(PROP_DB_LOGIN, appDb.getAttribute("login"));
-      properties.put(PROP_DB_PASSWORD, appDb.getAttribute("password"));
+      properties.put(PROP_DB_URL, config.getProperty("jdbcDsn"));
+      properties.put(PROP_DB_LOGIN, config.getProperty("databaseLogin"));
+      properties.put(PROP_DB_PASSWORD, config.getProperty("databasePassword"));
       properties.put(PROP_DB_POOL_ACTIVE, Integer.toString(poolSize));
       properties.put(PROP_DB_POOL_IDLE, Integer.toString(poolSize));
 
       return properties;
     }
-    catch (SAXException | IOException | ParserConfigurationException ex) {
+    catch (IOException ex) {
       throw new OrthoMCLDataException(ex);
     }
   }
@@ -155,7 +146,7 @@ public class GroupFactory {
       int i = 0;
       for (Gene gene : group.getGenes().values()) {
         JSONObject jsGene = gene.toJSON();
-        jsGene.put("i", i);   // store index of the gene
+        jsGene.put("i", i); // store index of the gene
         jsGenes.put(jsGene);
         genes.put(gene.getSourceId(), i);
         i++;
@@ -169,7 +160,7 @@ public class GroupFactory {
         JSONObject jsScore = score.toJSON();
         jsScore.put("Q", genes.get(score.getQueryId()));
         jsScore.put("S", genes.get(score.getSubjectId()));
-        
+
         jsScores.put(jsScore);
       }
       jsLayout.put("E", jsScores);
@@ -182,6 +173,19 @@ public class GroupFactory {
     }
     catch (JSONException ex) {
       throw new OrthoMCLDataException(ex);
+    }
+  }
+
+  public int removeLayouts() {
+    SqlSession session = sessionFactory.openSession();
+    try {
+      GroupMapper mapper = session.getMapper(GroupMapper.class);
+      int count = mapper.deleteLayouts();
+      session.commit();
+      return count;
+    }
+    finally {
+      session.close();
     }
   }
 }
