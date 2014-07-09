@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+
+usage() unless scalar(@ARGV) == 4;
+
+my ($groupsFile, $allProteinsFasta, $initialResidualsFasta, $outputResidualsFasta) = @ARGV;
+
+# get all IDs in groups file and in initial residuals file.
+# any proteins in the allProteinsFasta file that are not included in them are added as residuals
+
+my %knownIds;
+
+# suck in ids from groups file
+open(G, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
+while(<G>) {
+  chomp;
+  my @a = split(/s+/);
+  shift(@a);  # lose group id
+  foreach my $id (@a) {
+    $knownIds{$id} = 1;
+  }
+}
+close(G);
+
+# and from residuals file.  write these out to the new residuals file too
+open(O, ">$outputResidualsFasta") || die "Can't open fasta file '$outputResidualsFasta' for writing\n";
+open(R, $initialResidualsFasta) || die "Can't open fasta file '$initialResidualsFasta'\n";
+while(<R>) {
+  if (/>(\S+)/) {
+    $knownIds{$1} = 1;
+    print O "$1\n";
+  }
+}
+close(R);
+
+# scan proteins file.  any IDs not found are new residuals.
+open(A,$allProteinsFasta) || die "Can't open fasta file '$allProteinsFasta'\n";
+while(<A>) {
+  if (/>(\S+)/) {
+    print O "$1\n" if (!$knownIds{$1});
+  }
+}
+
+sub usage {
+die "
+Find proteins that are in the all_proteins file but are not in the provided groups and residuals files.
+Add them as residuals.
+
+Usage: addOrphansToResiduals input_groups_file input_residuals_file input_all_proteins_fasta_file output_residuals_file
+
+";
+}
+
