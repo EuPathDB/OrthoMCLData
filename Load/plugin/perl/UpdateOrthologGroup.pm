@@ -357,4 +357,13 @@ sub undoUpdateTables {
 	 );
 }
 
+
+sub undoTables {
+  my ($self) = @_;
+
+  return (
+         );
+}
+
+
 1;
