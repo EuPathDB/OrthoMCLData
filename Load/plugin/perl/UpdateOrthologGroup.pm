@@ -173,6 +173,9 @@ EOF
       my $sourceId = $row[1];
       push (@seqIdArr, "${seqId},$sourceId");
     }
+
+    next if @seqIdArr < 2;
+
     my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3);
 
     $updatedGrps += $grps;
