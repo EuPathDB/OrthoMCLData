@@ -15,11 +15,6 @@
   <dependencies>
 
     <dependency>
-      <groupId>net.lliira.common</groupId>
-      <artifactId>lliira-common-graphics</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>postgresql</groupId>
       <artifactId>postgresql</artifactId>
     </dependency>
