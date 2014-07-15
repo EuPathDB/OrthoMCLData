@@ -31,6 +31,7 @@ public class ForceEdge implements Edge {
     return edge;
   }
 
+  @Override
   public double getPreferredLength() {
     return preferredLength;
   }

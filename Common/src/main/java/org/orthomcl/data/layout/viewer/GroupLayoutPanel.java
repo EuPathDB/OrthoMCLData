@@ -165,14 +165,18 @@ public class GroupLayoutPanel extends JPanel implements LayoutObserver, Componen
     g.drawImage(front, 0, 0, null);
   }
 
+  @Override
   public void componentResized(ComponentEvent e) {
     initializeBuffer();
   }
 
+  @Override
   public void componentMoved(ComponentEvent e) {}
 
+  @Override
   public void componentShown(ComponentEvent e) {}
 
+  @Override
   public void componentHidden(ComponentEvent e) {}
 
 }

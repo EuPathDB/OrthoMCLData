@@ -21,6 +21,7 @@ public class ForceNode implements Node {
   /**
    * @return the point
    */
+  @Override
   public Vector getPoint() {
     return node.getPoint();
   }

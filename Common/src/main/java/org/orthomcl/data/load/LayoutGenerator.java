@@ -100,7 +100,7 @@ public class LayoutGenerator {
     LOG.info("Done. " + count + " layouts deleted.");
   }
 
-  public void process() throws OrthoMCLDataException {
+  public void process() {
     LOG.info("Start processing... Max Member = " + maxMember + ", tasks = " + taskCount);
 
     // get groups

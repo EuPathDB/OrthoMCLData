@@ -44,6 +44,7 @@ public class SpringLayout implements Layout {
    * @param minMoves
    *          the minMoves to set
    */
+  @Override
   public void setMinMoves(double minMoves) {
     this.minMoves = minMoves;
   }
@@ -51,6 +52,7 @@ public class SpringLayout implements Layout {
   /**
    * @return the maxIterations
    */
+  @Override
   public long getMaxIterations() {
     return maxIterations;
   }
@@ -59,6 +61,7 @@ public class SpringLayout implements Layout {
    * @param maxIterations
    *          the maxIterations to set
    */
+  @Override
   public void setMaxIterations(long maxIterations) {
     this.maxIterations = maxIterations;
   }
@@ -66,10 +69,12 @@ public class SpringLayout implements Layout {
   /**
    * @return the network
    */
+  @Override
   public Graph getGraph() {
     return graph;
   }
 
+  @Override
   public boolean isStopped() {
     return stopped;
   }
@@ -77,10 +82,12 @@ public class SpringLayout implements Layout {
   /**
    * the canceled to set
    */
+  @Override
   public void cancel() {
     this.canceled = true;
   }
 
+  @Override
   public void process(LayoutObserver observer) {
     LOG.debug("Initializing force-directed graph...");
 
