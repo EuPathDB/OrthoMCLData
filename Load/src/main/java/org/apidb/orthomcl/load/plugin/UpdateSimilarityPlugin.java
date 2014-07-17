@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.apidb.orthomcl.load.plugin;
 
 import java.io.BufferedReader;
@@ -21,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.gusdb.fgputil.IoUtil;
+import org.gusdb.fgputil.db.SqlUtils;
 
 /**
  * @author xingao 
@@ -99,11 +98,13 @@ public class UpdateSimilarityPlugin implements Plugin {
     @Override
     public void invoke() throws OrthoMCLException {
         // prepare the statement
+        BufferedReader reader = null;
+        PreparedStatement psUpdate = null;
         try {
-            PreparedStatement psUpdate = connection.prepareStatement("UPDATE"
+            psUpdate = connection.prepareStatement("UPDATE"
                     + " dots.Similarity SET non_overlap_match_length = ?"
                     + " WHERE query_id = ? AND subject_id = ?");
-            BufferedReader reader = new BufferedReader(new FileReader(
+            reader = new BufferedReader(new FileReader(
                     similarityFile));
 
             logger.info("Loading sequence lengths...");
@@ -185,13 +186,15 @@ public class UpdateSimilarityPlugin implements Plugin {
 
             // commit remaining updates
             if (updateCount % 1000 != 0) psUpdate.executeBatch();
-            psUpdate.close();
-
             logger.info("Total " + updateCount + " rows updated.");
+            
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
         } catch (IOException ex) {
             throw new OrthoMCLException(ex);
+        } finally {
+            SqlUtils.closeQuietly(psUpdate);
+            IoUtil.closeQuietly(reader);
         }
     }
 
