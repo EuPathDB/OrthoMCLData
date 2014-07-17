@@ -26,7 +26,7 @@
 
     <dependency>
       <groupId>com.oracle</groupId>
-      <artifactId>ojdbc5</artifactId>
+      <artifactId>ojdbc6</artifactId>
       <scope>provided</scope>
     </dependency>
 
@@ -42,9 +42,5 @@
     </dependency>
     
   </dependencies>
-
-  <build>
-    <finalName>OrthoMCLData-Load</finalName>
-  </build>
 
 </project>

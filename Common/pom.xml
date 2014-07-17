@@ -15,33 +15,27 @@
   <dependencies>
       
     <dependency>
+      <groupId>org.gusdb</groupId>
+      <artifactId>fgputil-util</artifactId>
+    </dependency>
+    
+    <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
     </dependency>
     
+    <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>ojdbc6</artifactId>
+      <scope>provided</scope>
+    </dependency>
     
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.gusdb</groupId>
-      <artifactId>fgputil-util</artifactId>
-    </dependency>
     
-    <dependency>
-        <groupId>com.oracle</groupId>
-        <artifactId>ojdbc6</artifactId>
-        <scope>provided</scope>
-        <version>11.2.0.3</version>
-    </dependency>
- 
   </dependencies>
-
-  <build>
-    <finalName>OrthoMCLData-Common</finalName>
-  </build>
 
 </project>
