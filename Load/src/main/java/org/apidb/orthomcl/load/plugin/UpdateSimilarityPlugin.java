@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +19,9 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.gusdb.fgputil.IoUtil;
 import org.gusdb.fgputil.db.SqlUtils;
+import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.DatabaseInstance;
+import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
 /**
  * @author xingao 
@@ -218,9 +220,9 @@ public class UpdateSimilarityPlugin implements Plugin {
         String password = args[4];
 
         try {
-            DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-            connection = DriverManager.getConnection(connectionString, login,
-                    password);
+            DatabaseInstance db = new DatabaseInstance("DB", SimpleDbConfig.create(
+                SupportedPlatform.ORACLE, connectionString, login, password));
+            connection = db.getDataSource().getConnection();
             similarityFile = new File(similarityFileName);
             if (!similarityFile.exists() || !similarityFile.isFile())
                 throw new FileNotFoundException(similarityFileName);
