@@ -28,7 +28,7 @@ public class LayoutGenerator {
   private static final String ARG_UNDO = "undo";
 
   public static final String DEFAULT_MAX_MEMBER = "500";
-  public static final String DEFAULT_TASK_COUNT = "4";
+  public static final String DEFAULT_TASK_COUNT = "8";
 
   private static final Logger LOG = Logger.getLogger(LayoutGenerator.class);
 

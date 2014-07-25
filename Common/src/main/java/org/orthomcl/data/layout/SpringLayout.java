@@ -89,7 +89,7 @@ public class SpringLayout implements Layout {
 
   @Override
   public void process(LayoutObserver observer) {
-    LOG.debug("Initializing force-directed graph...");
+    LOG.debug("Initializing force-directed graph for " + graph.getGraph() + "...");
 
     int iteration = 0;
     canceled = false;

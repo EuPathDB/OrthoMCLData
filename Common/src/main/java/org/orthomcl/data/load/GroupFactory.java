@@ -113,7 +113,7 @@ public class GroupFactory {
     }
 
     // load blast scores
-    List<BlastScore> scores = mapper.selectBlastScoresEx(group);
+    List<BlastScore> scores = mapper.selectBlastScores(group);
     for (BlastScore score : scores) {
       score.setGroup(group);
       group.addBlastScore(score);

@@ -16,8 +16,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
       SELECT ortholog_group_id, name FROM apidb.OrthologGroup
       WHERE ortholog_group_id NOT IN (SELECT ortholog_group_id FROM apidb.OrthologGroupLayout)
         AND number_of_members <= #{max}
-        AND ortholog_group_id IN (SELECT ortholog_group_id FROM ${apidb-schema}SimilarSequencesGroup)
-      ORDER BY number_of_members ASC
+        -- AND ortholog_group_id IN (SELECT ortholog_group_id FROM ${apidb-schema}SimilarSequencesGroup)
+      ORDER BY number_of_members DESC
   ]]>
 	</select>
 

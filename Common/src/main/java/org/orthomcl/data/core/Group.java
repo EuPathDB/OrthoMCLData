@@ -142,4 +142,9 @@ public class Group implements Graph {
       scores.put(score, score);
     }
   }
+  
+  @Override
+  public String toString() {
+    return name;
+  }
 }
