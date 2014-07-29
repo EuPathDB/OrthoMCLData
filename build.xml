@@ -69,11 +69,7 @@
     </ant>
     <ant target="deployMavenArtifacts">
       <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Data"/>
-    </ant>
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Client"/>
+      <property name="component" value="Load"/>
     </ant>
   </target>
     
