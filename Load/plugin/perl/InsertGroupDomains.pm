@@ -10,7 +10,7 @@ use FileHandle;
 
 use GUS::Model::ApiDB::OrthomclGroupDomain;
 
-use ApiCommonData::Load::Util;
+#use ApiCommonData::Load::Util;
 use Data::Dumper;
 
 require Exporter;
@@ -117,7 +117,7 @@ sub new {
   my $self = {};
   bless($self,$class);
 
-  $self->initialize({ requiredDbVersion => 3.5,
+  $self->initialize({ requiredDbVersion => 3.6,
                       cvsRevision       => '$Revision: 1 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,

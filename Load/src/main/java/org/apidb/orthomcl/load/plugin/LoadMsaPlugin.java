@@ -6,15 +6,16 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import oracle.sql.CLOB;
-
 import org.apache.log4j.Logger;
+import org.gusdb.fgputil.db.SqlUtils;
+import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.DatabaseInstance;
+import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
 /**
  * 
@@ -51,10 +52,9 @@ public class LoadMsaPlugin implements Plugin {
         String password = args[4];
 
         try {
-            DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-            connection = DriverManager.getConnection(connectionString, login,
-                    password);
-
+            DatabaseInstance db = new DatabaseInstance("DB", SimpleDbConfig.create(
+                SupportedPlatform.ORACLE, connectionString, login, password));
+            connection = db.getDataSource().getConnection();
             msaDir = new File(msaDirName);
             if (!msaDir.exists()) throw new FileNotFoundException(msaDirName);
         } catch (SQLException ex) {
@@ -95,10 +95,7 @@ public class LoadMsaPlugin implements Plugin {
                 String content = getContent(name, msaDir);
                 if (content.length() > 0) {
                     // update clob
-                    CLOB clob = CLOB.createTemporary(connection, false,
-                            CLOB.DURATION_SESSION);
-                    clob.setString(1, content);
-                    psUpdate.setClob(1, clob);
+                    SqlUtils.setClobData(psUpdate, 1, content);
                     psUpdate.setInt(2, groupId);
                     psUpdate.addBatch();
 
