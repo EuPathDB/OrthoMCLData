@@ -4,7 +4,7 @@
   <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <import file="${projectsDir}/ApiCommonData/build.xml" />
+  <import file="${projectsDir}/ApiCommonData/build.xml" optional="true" />
   <import file="${projectsDir}/OrthoMCLShared/build.xml" />
 
 
@@ -49,30 +49,16 @@
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <target name="OrthoMCLData-Installation" depends="ApiCommonData-Installation,
-                                                    OrthoMCLData-MavenInstallation,
-                                                    OrthoMCLShared-Installation,
+  <target name="OrthoMCLData-Installation" depends="OrthoMCLShared-Installation,
+                                                    OrthoMCLData/Common-Installation,
                                                     OrthoMCLData/Load-Installation">
+    <ant target="ApiCommonData-Installation" />
+
     <ant target="defaultProjectInstall">
       <property name="project" value="OrthoMCLData"/>
     </ant>
   </target>  
 
-  <target name="OrthoMCLData-MavenInstallation">
-    <ant target="mavenCleanInstall">
-      <property name="project" value="OrthoMCLData"/>
-    </ant>
-
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Common"/>
-    </ant>
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Load"/>
-    </ant>
-  </target>
-    
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation-postprocess">
@@ -88,8 +74,34 @@
 
   <!-- ooooooooooooooooooooooo  Install Components  ooooooooooooooooooooooo -->
 
+  <target name="OrthoMCLData/Common-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="OrthoMCLData"/>
+      <property name="component" value="Common"/>
+    </ant>
+
+    <ant target="mavenCleanInstall">
+      <property name="project" value="OrthoMCLData"/>
+    </ant>
+
+    <ant target="deployMavenArtifacts">
+      <property name="project" value="OrthoMCLData"/>
+      <property name="component" value="Common"/>
+    </ant>
+  </target>
+
+
   <target name="OrthoMCLData/Load-Installation" depends="ProjectTree">
     <ant target="defaultComponentInstall">
+      <property name="project" value="OrthoMCLData"/>
+      <property name="component" value="Load"/>
+    </ant>
+
+    <ant target="mavenCleanInstall">
+      <property name="project" value="OrthoMCLData"/>
+    </ant>
+
+    <ant target="deployMavenArtifacts">
       <property name="project" value="OrthoMCLData"/>
       <property name="component" value="Load"/>
     </ant>
