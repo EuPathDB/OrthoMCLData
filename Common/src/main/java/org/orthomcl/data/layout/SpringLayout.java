@@ -229,8 +229,10 @@ public class SpringLayout implements Layout {
 
       // move the current node in the direction of the current force; Only move an average distance of over
       // all affected forces.
-      overallForce.scale(1D / forceCount);
-      currentNode.getPoint().add(overallForce);
+      if (forceCount > 0) {
+        overallForce.scale(1D / forceCount);
+        currentNode.getPoint().add(overallForce);
+      }
 
       double strength = overallForce.getStrength();
       if (maxMove < strength)
