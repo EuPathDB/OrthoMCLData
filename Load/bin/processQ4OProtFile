@@ -1,0 +1,91 @@
+#! /usr/bin/perl
+
+#####################################################################################################################
+### script to process protein fasta file to get one protein exemplar per gene with gene id                        ###
+### input: Example = ftp://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.NCBI36.53.pep.all.fa.gz###
+#####################################################################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+use CBIL::Bio::SequenceUtils;
+
+### defline:  >db|UniqueIdentifier|EntryName ProteinName OS=OrganismName[ GN=GeneName]PE=ProteinExistence SV=SequenceVersion
+
+my ($maxStopCodonPercent,$fastaFile,$outputFile, $verbose);
+&GetOptions("maxStopCodonPercent=i" => \$maxStopCodonPercent,
+            "fastaFile=s" => \$fastaFile,
+            "outputFile=s" => \$outputFile,
+            "verbose!" => \$verbose);
+
+print STDERR "processQ4OProtFile --fastaFile --maxStopCodonPercent --outputFile  --verbose\n" unless ($fastaFile && $maxStopCodonPercent && $outputFile);
+
+my $f  = ($fastaFile =~ /\.gz$|\.Z$/) ? "zcat $fastaFile|" : '<'. $fastaFile;
+my $fastaFh = FileHandle->new($f);
+die "Can't open file $fastaFile\n" unless $fastaFh;
+
+my $outputFh = FileHandle->new(">$outputFile");
+die "Can't open file $outputFile for writing\n" unless $outputFh;
+
+
+my %printHsh;
+
+my ($protId,$protName,$seq);
+
+while (<$fastaFh>){
+  if ($_ =~ /^>/ && $seq) {
+    &makePrintHsh();
+    ($protId,$protName) = &getIds($_);
+    $seq = "";
+  }
+  elsif ($_ =~ /^>/ ) {
+    ($protId,$protName) = &getIds($_);
+  }
+  else {
+    $_ =~ s/\s//g;
+    $seq .= $_;
+  }
+}
+
+&makePrintHsh();
+
+&printFile();
+
+
+
+sub getIds {
+  my ($line) = @_;
+
+  if ($line =~ /^>\S+\|(\S+)\|\S+\s+(.+)OS=/){
+    return ($1,$2);
+  }
+  else{
+    die "Ids cannot be parsed from defline:\n     $line\n";
+  }
+}
+
+sub makePrintHsh {
+  my $count=($seq =~ tr/\*//);
+
+  my $aaLength = length ($seq);	
+  my $aaCount = ($seq =~ tr/[^A-Za-z]//);
+  my $aaStopCodonPercent = (($aaLength - $aaCount)/($aaLength)) * 100;
+
+  $printHsh{$protId}={'seq'=>$seq, 'name'=>$protName} if ($aaStopCodonPercent <= $maxStopCodonPercent);
+
+}
+
+sub printFile {
+  foreach my $id (keys %printHsh) {
+    my $defline = ">$id\t$printHsh{$id}->{'name'}";
+    $defline =~ s/\s+$//;
+    $defline .= "\n";
+
+    my $sequence = $printHsh{$id}->{'seq'};
+    print $outputFh ("$defline" . CBIL::Bio::SequenceUtils::breakSequence($sequence,60));
+  }
+}
+
+
