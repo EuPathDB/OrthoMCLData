@@ -79,7 +79,7 @@ sub makePrintHsh {
 
 sub printFile {
   foreach my $id (keys %printHsh) {
-    my $defline = ">$id\t$printHsh{$id}->{'name'}";
+    my $defline = ">$id\tD=$printHsh{$id}->{'name'}";
     $defline =~ s/\s+$//;
     $defline .= "\n";
 
