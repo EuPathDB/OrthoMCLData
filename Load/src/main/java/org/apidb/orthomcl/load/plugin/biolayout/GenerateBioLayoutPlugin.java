@@ -78,8 +78,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
 
         try {
             // create connection
-            DatabaseInstance db = new DatabaseInstance("DB", SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password));
+            DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
+                SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
             connection = db.getDataSource().getConnection();
             loader = new GroupLoader(connection);
         } catch (SQLException ex) {

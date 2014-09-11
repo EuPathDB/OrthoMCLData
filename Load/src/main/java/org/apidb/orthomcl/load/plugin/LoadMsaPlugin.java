@@ -18,12 +18,7 @@ import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
 /**
- * 
- */
-
-/**
  * @author xingao
- * 
  */
 public class LoadMsaPlugin implements Plugin {
 
@@ -52,8 +47,8 @@ public class LoadMsaPlugin implements Plugin {
         String password = args[4];
 
         try {
-            DatabaseInstance db = new DatabaseInstance("DB", SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password));
+            DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
+                SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
             connection = db.getDataSource().getConnection();
             msaDir = new File(msaDirName);
             if (!msaDir.exists()) throw new FileNotFoundException(msaDirName);

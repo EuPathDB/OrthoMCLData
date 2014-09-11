@@ -16,12 +16,7 @@ import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
 /**
- * 
- */
-
-/**
  * @author xingao
- * 
  */
 public class UpdateOrthologGroupPlugin implements Plugin {
 
@@ -143,8 +138,8 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         String password = args[3];
 
         try {
-          DatabaseInstance db = new DatabaseInstance("DB", SimpleDbConfig.create(
-              SupportedPlatform.ORACLE, connectionString, login, password));
+          DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
+              SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
           connection = db.getDataSource().getConnection();
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
