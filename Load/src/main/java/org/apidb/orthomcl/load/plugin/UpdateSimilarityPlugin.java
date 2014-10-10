@@ -221,7 +221,7 @@ public class UpdateSimilarityPlugin implements Plugin {
 
         try {
             DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
+                SupportedPlatform.ORACLE, connectionString, login, password));
             connection = db.getDataSource().getConnection();
             similarityFile = new File(similarityFileName);
             if (!similarityFile.exists() || !similarityFile.isFile())

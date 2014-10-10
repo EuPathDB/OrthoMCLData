@@ -48,7 +48,7 @@ public class LoadMsaPlugin implements Plugin {
 
         try {
             DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
+                SupportedPlatform.ORACLE, connectionString, login, password));
             connection = db.getDataSource().getConnection();
             msaDir = new File(msaDirName);
             if (!msaDir.exists()) throw new FileNotFoundException(msaDirName);

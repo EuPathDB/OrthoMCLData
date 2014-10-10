@@ -139,7 +139,7 @@ public class UpdateOrthologGroupPlugin implements Plugin {
 
         try {
           DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-              SupportedPlatform.ORACLE, connectionString, login, password)).initialize("DB");
+              SupportedPlatform.ORACLE, connectionString, login, password));
           connection = db.getDataSource().getConnection();
         } catch (SQLException ex) {
             throw new OrthoMCLException(ex);
