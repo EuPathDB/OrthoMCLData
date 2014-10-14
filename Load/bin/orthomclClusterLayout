@@ -13,7 +13,7 @@ my $sysProps = &WDK::Model::CommandHelper::getSystemProps($GUS_HOME, 'orthoPlugi
 my $gusConfigFile = "$GUS_HOME/config/gus.config";
 my $args = &WDK::Model::CommandHelper::getJavaArgs(@ARGV);
 
-my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.load.LayoutGenerator $args;
+my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.load.LayoutGenerator $args";
 
 print STDERR $cmd;
 system($cmd);
