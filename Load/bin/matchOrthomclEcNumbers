@@ -12,7 +12,7 @@ use strict;
 use Data::Dumper;
 use Getopt::Long;
 use DBI;
-use lib "$ENV{GUS_HOME}/lib/bin";
+use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 
 my ($blastFile, $uniprotEcMappingFile, $uniprotTaxonMappingFile, $outputEcMappingFile, $insertSequenceEcNumber);
