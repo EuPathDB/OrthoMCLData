@@ -90,7 +90,7 @@ foreach my $subjectId (sort keys %uniprotRep)  {
     print OUT "$subjectId\t$ecNum\n";
     $outRecordCount++;
     if ($insertSequenceEcNumber) {
-      insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt)
+      insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt);
       $dbh->commit() unless $outRecordCount % 1000;
     }
   }
