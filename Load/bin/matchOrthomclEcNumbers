@@ -88,16 +88,16 @@ foreach my $subjectId (sort keys %uniprotRep)  {
   foreach my $ecNum (split(/,/, $ecList)) {
     # print "result line: \"$subjectId\t$ecNum\"\n";
     print OUT "$subjectId\t$ecNum\n";
-    insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt)
-      if $insertSequenceEcNumber;
-
     $outRecordCount++;
-    $dbh->commit() unless $outRecordCount % 1000;
+    if ($insertSequenceEcNumber) {
+      insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt)
+      $dbh->commit() unless $outRecordCount % 1000;
+    }
   }
 }
 
 close(OUT);
-$dbh->commit();
+$dbh->commit()  if ($insertSequenceEcNumber);
 
 
 sub loadEcMappings {
