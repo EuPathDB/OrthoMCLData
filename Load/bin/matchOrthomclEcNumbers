@@ -152,6 +152,6 @@ sub usage {
   $0 =~ /([^\/]*)$/;
   my $programName = $1;
 
-  print "usage: $programName -blastFile <filename> -uniprotEcMappingFile <filename>  -outputEcMappingFile <filename> [-insertSequenceEcNumber -uniprotTaxonMappingFile <filename>]\n";
-  die;
+  die "
+usage: $programName -blastFile <filename> -uniprotEcMappingFile <filename>  -outputEcMappingFile <filename> [-insertSequenceEcNumber -uniprotTaxonMappingFile <filename>]\n\n";
 }
