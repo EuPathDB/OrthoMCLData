@@ -15,5 +15,5 @@ my $args = &WDK::Model::CommandHelper::getJavaArgs(@ARGV);
 
 my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.load.LayoutGenerator $args";
 
-print STDERR $cmd;
+#print STDERR $cmd;
 system($cmd);
