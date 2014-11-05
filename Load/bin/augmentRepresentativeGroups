@@ -21,7 +21,7 @@ my $groupsFile = $ARGV[0];
 my $outputGroupsFile = $ARGV[1];
 # my $residualsFile = "/home/iodice/argResiduals.fasta";
 my $residualsFile = $ARGV[2];
-my $simSeqsTable = $ARGV[3];
+#my $simSeqsTable = $ARGV[3];
 
 $| = 1;
 
