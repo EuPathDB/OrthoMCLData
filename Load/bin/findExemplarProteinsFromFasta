@@ -1,0 +1,126 @@
+#! /usr/bin/perl
+
+#####################################################################################################################
+### script to process protein fasta file to get one protein exemplar per gene with gene id                        ###
+### input: Example = ftp://ftp.ensembl.org/pub/current_fasta/homo_sapiens/pep/Homo_sapiens.NCBI36.53.pep.all.fa.gz###
+#####################################################################################################################
+
+use strict;
+
+use lib "$ENV{GUS_HOME}/lib/perl";
+use Getopt::Long;
+use FileHandle;
+use CBIL::Bio::SequenceUtils;
+
+my ($maxStopCodonPercent,$fastaFile,$outputFile, $log, $verbose, $preferredSource, $geneRegex, $proteinRegex);
+&GetOptions("maxStopCodonPercent=i" => \$maxStopCodonPercent,
+            "fastaFile=s" => \$fastaFile,
+            "outputFile=s" => \$outputFile,
+            "preferredSource=s" => \$preferredSource,
+            "geneIdRegex=s" => \$geneRegex,
+            "proteinIdRegex=s" => \$proteinRegex,
+	    "log=s" => \$log,
+            "verbose!" => \$verbose);
+
+usage() unless ($fastaFile && $maxStopCodonPercent && $outputFile && $log && $geneRegex $$ proteinRegex);
+
+my $f  = ($fastaFile =~ /\.gz$|\.Z$/) ? "zcat $fastaFile|" : '<'. $fastaFile;
+my $fastaFh = FileHandle->new($f);
+die "Can't open file $fastaFile\n" unless $fastaFh;
+
+my $outputFh = FileHandle->new(">$outputFile");
+die "Can't open file $outputFile for writing\n" unless $outputFh;
+
+my $logFh = FileHandle->new(">$log");
+die "Can't open log file $log for writing\n" unless $logFh;
+
+my %exemplars;  # best protein per gene
+
+my %geneIds;    # gene IDs seen in fasta file, including those w/ no qualifying exemplar
+
+my ($gene, $prot, $seq, $source);
+
+while (<$fastaFh>){
+  if ($_ =~ /^>/) {
+    if ($seq) {
+      checkForExemplar($gene, $prot, $seq, $source);
+      $seq = "";
+    }
+    ($geneId, $proteinId, $source) = extractFromDefline($_, $geneIdRegex, $proteinIdRegex);
+  } else {
+    $_ =~ s/\s//g;
+    $seq .= $_;
+  }
+}
+
+checkForExemplar($gene, $prot, $seq, $source);
+
+printFile();
+
+printLog();
+
+sub extractFromDefline {
+  my ($line, $geneIdRegex, $proteinIdRegex) = @_;
+
+  my ($geneId, $proteinId, $source);
+  if ($line =~ /$geneIdRegex/) {
+    $geneId= $1;
+  }
+  if ($line =~ /$proteinIdRegex/) {
+    $proteinId= $1;
+  }
+  die "Ids cannot be parsed from defline:\n  $line\n" unless $proteinId && $geneId;
+
+  if ($line =~ /\> (\w+)\|/) {
+    $source = $1;
+  }
+  return ($geneId, $proteinId, $source);
+}
+
+sub checkForExemplar {
+  my ($gene, $prot, $seq, $source) = @_;
+
+  my $count=($seq =~ tr/\*//);
+
+  my $aaLength = length ($seq);	
+  my $aaCount = ($seq =~ tr/[^A-Za-z]//);
+  my $aaStopCodonPercent = (($aaLength - $aaCount)/($aaLength)) * 100;
+
+  if ($aaLength > $exemplars{$gene}->{length} && $aaStopCodonPercent <= $maxStopCodonPercent) {
+    $exemplars{$gene}= {'seq'=>$seq, 'prot'=>$prot, 'length'=>$aaLength, 'source'=>$source} ;
+  }
+
+}
+
+sub printFile {
+  foreach my $geneId (keys %exemplars) {
+    my $defline = "\>".$exemplars{$geneId}->{'prot'};
+    $defline =~ s/\s+/ /g;
+    $defline .= "\n";
+
+    my $sequence = $exemplars{$geneId}->{'seq'};
+    print $outputFh ("$defline" . CBIL::Bio::SequenceUtils::breakSequence($sequence,60));
+  }
+}
+
+sub printLog {
+  my $geneNum = scalar (keys %geneIds);
+  my $protNum = scalar (keys %exemplars);
+  print $logFh ("There are $geneNum genes in $fastaFile\n    There are $protNum exemplars in $outputFile\n");
+}
+
+sub usage {
+  die "
+Find an example protein sequence per gene.  Use these criteria:
+  1) if a preferred source is provided (eg sp for swissprot), then there should be only one per gene, and use that
+  2) otherwise, use the longest (but filter away those with too many stop codons)
+
+Usage: findExmplarProteins --fastaFile file --outputFile file --geneIdRegex regex --proteinIdRegex regex --maxStopCodonPercent percent --log file [--preferredSource source] [--verbose]
+
+Where:
+ geneIdRegex: a regex to find a gene ID in the defline
+ proteinIdRegex: a regex to find a protein ID in the defline
+ maxStopCodonPercent: reject proteins with too many stop codons
+ preferredSource: this is mostly to distinguish sp proteins (swissprot) from trembl.  the source is expected like this:   > sp|protein_id_here
+";
+}
