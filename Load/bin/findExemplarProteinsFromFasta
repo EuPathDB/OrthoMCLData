@@ -86,7 +86,8 @@ sub checkForExemplar {
   my $aaCount = ($seq =~ tr/[^A-Za-z]//);
   my $aaStopCodonPercent = (($aaLength - $aaCount)/($aaLength)) * 100;
 
-  if ($aaLength > $exemplars{$gene}->{length} && $aaStopCodonPercent <= $maxStopCodonPercent) {
+  if (($preferredSource && $source eq $preferredSource)
+      || $aaLength > $exemplars{$gene}->{length} && $aaStopCodonPercent <= $maxStopCodonPercent) {
     $exemplars{$gene}= {'seq'=>$seq, 'prot'=>$prot, 'length'=>$aaLength, 'source'=>$source} ;
   }
 
