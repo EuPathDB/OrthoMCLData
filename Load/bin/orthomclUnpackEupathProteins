@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+ 
+use strict;
+
+usage() unless scalar(@ARGV) == 4;
+
+my ($inputTabFile, $outputFastaFile, $outputRepIdsFile, $outputAliasesFile) = @ARGV;
+
+open(FASTA, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing\n";
+open(REP, ">$outputRepIdsFile") || die "Can't open '$outputRepIdsFile' for writing\n";
+open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
+
+open(TAB, "$inputTabFile") || die "Can't open '$inputTabFile' for reading\n";
+my %repToIds;
+my %repToAliases;
+while(<TAB>) {
+    chomp;
+    my ($geneId, $repGeneId, $transcriptId, $seq, $product) = split;
+    print FASTA ">$geneId $product\n$seq\n";
+    $repToIds{$repGeneId} = [] unless $repToIds{$repGeneId};
+    $repToAliases{$repGeneId} = [] unless $repToAliases{$repGeneId};
+    push(@{$repToIds{$repGeneId}}, $geneId);
+    push(@{$repToAliases{$repGeneId}}, $transcriptId);
+}
+
+foreach my $geneId (keys(%repToIds)) {
+    print REP "$geneId\t" . join(",", @{$repToIds{$geneId}}) . "\n";
+    print ALIASES "$geneId\t" . join(",", @{$repToAliases{$geneId}}) . "\n";
+}
+
+sub usage {
+
+die "
+Unpack a tab file that contains info about EupathDB proteins. Include in the output fasta only transcripts from the representative gene.  
+
+Usage: orthomclUnpackEupathProteins input_tab_file output_fasta_file output_rep_ids_file output_aliases_file
+
+Where: 
+  input_tab_file:      gene_id, representative_gene_id, transcript_id, protein_seq, product
+  output_fasta_file:   fasta file as expected by orthomcl workflow
+  output_rep_ids_file: a mapping between the representative gene and those it represents.  tab delim. rep_id, reps...
+  output_aliases_file: a mapping between the representative gene and transcript_ids of the represented genes
+
+";
+}
