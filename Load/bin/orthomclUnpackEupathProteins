@@ -15,7 +15,7 @@ my %repToIds;
 my %repToAliases;
 while(<TAB>) {
     chomp;
-    my ($geneId, $repGeneId, $transcriptId, $seq, $product) = split;
+    my ($geneId, $repGeneId, $transcriptId, $seq, $product) = split("\t");
     print FASTA ">$geneId $product\n$seq\n";
     $repToIds{$repGeneId} = [] unless $repToIds{$repGeneId};
     $repToAliases{$repGeneId} = [] unless $repToAliases{$repGeneId};
