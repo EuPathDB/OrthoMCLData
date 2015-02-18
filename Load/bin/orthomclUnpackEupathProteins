@@ -19,8 +19,9 @@ while(<TAB>) {
     print FASTA ">$geneId $product\n$seq\n";
     $repToIds{$repGeneId} = [] unless $repToIds{$repGeneId};
     $repToAliases{$repGeneId} = [] unless $repToAliases{$repGeneId};
-    push(@{$repToIds{$repGeneId}}, $geneId);
+    push(@{$repToIds{$repGeneId}}, $geneId) unless $geneId eq $repGeneId;
     push(@{$repToAliases{$repGeneId}}, $transcriptId);
+    push(@{$repToAliases{$repGeneId}}, $geneId) unless $geneId eq $repGeneId;
 }
 
 foreach my $geneId (keys(%repToIds)) {
