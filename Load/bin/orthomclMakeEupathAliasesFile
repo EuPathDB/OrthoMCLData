@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+ 
+use strict;
+
+usage() unless scalar(@ARGV) == 3;
+
+my ($inputTabFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARGV;
+
+open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
+open(FASTA, "$inputExemplarsFastaFile") || die "Can't open '$inputExemplarsFastaFile' for reading\n";
+open(TAB, "$inputTabFile") || die "Can't open '$inputTabFile' for reading\n";
+
+# first read in exemplars, to find the transcript that is exemplar for each gene
+# sample def line: >pf3d7_12345|pf3d7_12345-t23_1 a really great protein
+my %exemplars;
+while((<FASTA>)) {
+    next unless /\>([^|])|(\S+)/;
+    my $geneId = $1;
+    my $transcriptId = $2;
+    $exemplars{$geneId} = $transcriptId;
+}
+
+my %geneIds;
+while(<TAB>) {
+    chomp;
+    my ($geneId, $repGeneId, $transcriptId, $seq, $product, $organism) = split("\t");
+
+    # gene alias
+    print ALIASES "$repGeneId\t$geneId\t$organism\n" unless $geneIds{$geneId};
+    $geneIds{$geneId} = 1;
+
+    # transcript alias
+    if ($exemplars{$geneId} eq $transcriptId) {
+	print ALIASES "$repGeneId\t$transcriptId\tEXEMPLAR\n";  # flag this transcript as an exemplar
+    } else {
+	print ALIASES "$repGeneId\t$transcriptId\t\n";  # empty remark column
+    }
+}
+
+sub usage {
+
+die "
+Make a file of repGeneId-geneId and repGeneId-transcriptId aliases.  (This includes the unity mapping of repGeneId-repGeneId)  
+
+Usage: orthomclMakeEupathAliasesFile input_tab_file input_exemplars_fasta_file output_aliases_file
+
+Where: 
+  input_tab_file:               gene_id, representative_gene_id, transcript_id, protein_seq, product
+  input_exemplars_fasta_file:   fasta file as expected by orthomcl workflow
+  output_aliases_file:          a mapping between the representative gene and gene_ids and transcript_ids of the represented genes.  Three columns:  rep_gene_id, alias_id, remark.  If the alias is a gene, the remark is organism.  If the alias is the exemplar transcript, the remark is EXEMPLAR. Otherwise, it is empty.
+
+";
+}
