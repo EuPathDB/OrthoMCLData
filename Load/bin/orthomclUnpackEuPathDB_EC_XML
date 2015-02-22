@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+use strict;
+use XML::Simple;
+use Data::Dumper;
+
+
+my ($inputFile, $outputFile, $orthomclTaxonAbbrev) = @ARGV;
+
+usage() unless $inputFile && $outputFile && $orthomclTaxonAbbrev;
+
+open(OUT, ">$outputFile") || die "Can't open output file '$outputFile'\n";
+
+# create object
+my $xml = new XML::Simple;
+
+# read XML file
+my $data = $xml->XMLin($inputFile);
+
+die "could not parse $inputFile.  Got no value.\n" unless $data;
+
+=head
+
+<response>
+  <recordset id='c959a5c950b9a48b436c934b89175928:all_results' count='26183' type='Gene'>
+    <record id='TGGT1_200010'>
+      <field name='ec_numbers_string' title='EC Numbers'><![CDATA[]]></field>
+    </record>
+
+    <record id='TGGT1_200240'>
+      <field name='ec_numbers_string' title='EC Numbers'><![CDATA[]]></field>
+    </record>
+
+    <record id='TGGT1_200290'>
+      <field name='ec_numbers_string' title='EC Numbers'><![CDATA[3.4.21.105 (Rhomboid protease)]]></field>
+    </record>
+  </recordset>
+</response>
+
+=cut
+
+foreach my $recordId (keys(%{$data->{recordset}->{record}})) {
+  my $ecStrings = $data->{recordset}->{record}->{$recordId}->{field}->{content};
+  next unless $ecStrings;
+  my @ecArr = split(/;/, $ecStrings);
+  foreach my $ecStr (@ecArr) {
+    $ecStr =~ /^(\S+)/;
+    print OUT "$orthomclTaxonAbbrev|$recordId\t$1\n";
+  }
+}
+
+sub usage {
+
+die "
+Parse XML from EuPathDB web service that contains gene IDs and EC numbers.
+
+Usage: inputXmlFile outputTabFile orthomclTaxonAbbrev
+
+Where:
+  inputXmlFile:  a file produced by the EuPathDB web services.
+  outputTabFile: two columns ID and EC number.  One line per EC assignment.
+  orthomclTaxonAbbrev: to be prepended on the EuPathDB ID
+
+";
+}
