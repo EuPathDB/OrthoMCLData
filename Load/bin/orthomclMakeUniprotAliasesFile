@@ -4,7 +4,7 @@ use strict;
 
 usage() unless scalar(@ARGV) == 3;
 
-my ($inputFastaFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARGV;
+my ($abbrev, $inputFastaFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARGV;
 
 open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
 open(EXEMPLARS, "$inputExemplarsFastaFile") || die "Can't open '$inputExemplarsFastaFile' for reading\n";
@@ -35,15 +35,15 @@ while(<FASTA>) {
     # gene aliases
     my %genes;
     foreach my $gene (@genes) {
-	print ALIASES "$genes[0]\t$gene\n" unless $genes{$gene};
+	print ALIASES "$abbrev|$genes[0]\t$gene\n" unless $genes{$gene};
 	$genes{$gene} = 1;
     }
 
     # protein alias
     if ($exemplars{$genes[0]} eq $proteinId) {
-	print ALIASES "$genes[0]\t$proteinId\tEXEMPLAR\n";  # flag this protein as an exemplar
+	print ALIASES "$abbrev|$genes[0]\t$proteinId\tEXEMPLAR\n";  # flag this protein as an exemplar
     } else {
-	print ALIASES "$genes[0]\t$proteinId\t\n";  # empty remark column
+	print ALIASES "$abbrev|$genes[0]\t$proteinId\t\n";  # empty remark column
     }
 }
 
@@ -52,9 +52,10 @@ sub usage {
 die "
 Make a file of repGeneId-geneId and repGeneId-proteinId aliases.  (This includes the unity mapping of repGeneId-repGeneId)  
 
-Usage: orthomclMakeUniprotAliasesFile input_fasta_file input_exemplars_fasta_file output_aliases_file
+Usage: orthomclMakeUniprotAliasesFile abbrev input_fasta_file input_exemplars_fasta_file output_aliases_file
 
 Where: 
+  abbrev:                       the organism abbreviation for this proteome
   input_fasta_file:             uniprot fasta file
   input_exemplars_fasta_file:   only includes exemplars
   output_aliases_file:          a mapping between the representative gene and gene_ids and transcript_ids of the represented genes.  Three columns:  rep_gene_id, alias_id, remark.  If the alias is the exemplar protein, the remark is EXEMPLAR. Otherwise, it is empty.
