@@ -11,14 +11,20 @@ use GUS::ObjRelP::DbiDatabase;
 use CBIL::Bio::SequenceUtils;
 use GUS::Supported::GusConfig;
 
-my ($gusConfigFile,$debug,$verbose,$outDir,$tarBall);
+my ($gusConfigFile,$debug,$verbose,$outDir,$tarBall, $minGroupSize, $maxGroupSize, $peripheralsOnly);
+
+$minGroupSize =1;
+$maxGroupSize =10000000;
 &GetOptions("verbose!"=> \$verbose,
             "outputDir=s" => \$outDir,
             "gusConfigFile=s" => \$gusConfigFile,
+            "minGroupSize=i" => \$minGroupSize,
+            "maxGroupSize=i" => \$maxGroupSize,
+            "peripheralsOnly!" => \$peripheralsOnly,
 	    "tarBall=i" => \$tarBall);
 
 if(!$outDir){
-	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] [--peripheralsOnly] --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
 }
 
 `mkdir -p $outDir`;
@@ -39,17 +45,18 @@ $dbh->{LongReadLen} = 8192 * 1024;
 
 my $fileNames = &getGroupNames;
 
-&makeFiles;
+&makeFiles($fileNames);
 
 &makeTarBalls if $tarBall;
 
 
-
+#####################################################################################
 
 
 sub getGroupNames {
+  my ($minGroupSize, $maxGroupSize) = @_;
 
-  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= 100 and number_of_members > 1";
+  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members > $minGroupSize";
 
   my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
@@ -68,8 +75,27 @@ sub getGroupNames {
 }
 
 sub makeFiles {
+  my ($fileNames, $peripheralsOnly) = @_;
 
-  my $seqSQL = "select ot.three_letter_abbrev || '|' || x.source_id, x.sequence from dots.externalaasequence x, apidb.orthomcltaxon ot,apidb.orthologgroupaasequence g where g.aa_sequence_id = x.aa_sequence_id and x.taxon_id = ot.taxon_id and g.ortholog_group_id = ?";
+my $peripheralsOnlyFromClause= "";
+my $peripheralsOnlyWhereClause = "";
+
+  if ($peripheralsOnly) {
+    $peripheralsOnlyFromClause = ", sres.externadatabaserelease edr, sres.externaldatabase ed";
+
+    $peripheralsOnlyWhereClause =
+"and x.external_database_release_id = edr.external_database_release_id
+and ed.external_database_id = edr.external_database_id
+and ed.subtype = 'peripheral'";
+  }
+
+  my $seqSQL = "
+select ot.three_letter_abbrev || '|' || x.source_id, x.sequence
+from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g $peripheralsOnlyFromClause;
+where g.aa_sequence_id = x.aa_sequence_id
+and x.taxon_id = ot.taxon_id
+$peripheralsOnlyWhereClause
+and g.ortholog_group_id = ?";
 
   my $seqStmt = $dbh->prepare($seqSQL);
 
