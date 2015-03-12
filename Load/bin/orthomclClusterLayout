@@ -3,15 +3,15 @@
 use strict;
 
 use lib "$ENV{GUS_HOME}/lib/perl";
-use WDK::Model::CommandHelper;
+use FgpUtil::Util::CommandHelper;
 use GUS::Supported::GusConfig;
 
 
 my $GUS_HOME = $ENV{GUS_HOME};
-my $CLASSPATH = &WDK::Model::CommandHelper::getJavaClasspath($GUS_HOME);
-my $sysProps = &WDK::Model::CommandHelper::getSystemProps($GUS_HOME, 'orthoPlugin');
+my $CLASSPATH = &FgpUtil::Util::CommandHelper::getJavaClasspath($GUS_HOME);
+my $sysProps = &FgpUtil::Util::CommandHelper::getSystemProps($GUS_HOME, 'orthoPlugin');
 my $gusConfigFile = "$GUS_HOME/config/gus.config";
-my $args = &WDK::Model::CommandHelper::getJavaArgs(@ARGV);
+my $args = &FgpUtil::Util::CommandHelper::getJavaArgs(@ARGV);
 
 my $cmd = "java -Xmx2048m $sysProps -classpath $CLASSPATH:$GUS_HOME/config/log4j.properties org.orthomcl.data.load.LayoutGenerator $args";
 
