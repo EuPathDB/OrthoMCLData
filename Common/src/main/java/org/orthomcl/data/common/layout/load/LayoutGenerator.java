@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.orthomcl.data.load;
+package org.orthomcl.data.common.layout.load;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
-import org.orthomcl.data.core.Group;
+import org.orthomcl.data.common.layout.core.Group;
 
 /**
  * @author Jerric

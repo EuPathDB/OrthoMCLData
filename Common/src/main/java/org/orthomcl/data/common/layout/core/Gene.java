@@ -1,11 +1,11 @@
-package org.orthomcl.data.core;
+package org.orthomcl.data.common.layout.core;
 
 import java.text.DecimalFormat;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.orthomcl.data.layout.Node;
-import org.orthomcl.data.layout.Vector;
+import org.orthomcl.shared.model.layout.Node;
+import org.orthomcl.shared.model.layout.Vector;
 
 public class Gene implements Node {
   

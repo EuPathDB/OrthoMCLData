@@ -1,4 +1,4 @@
-package org.orthomcl.data.core;
+package org.orthomcl.data.common.layout.core;
 
 public enum EdgeType {
   Ortholog("O"), Coortholog("C"), Inparalog("P"), Normal("N");

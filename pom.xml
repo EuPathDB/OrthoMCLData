@@ -21,6 +21,11 @@
         <artifactId>orthomcl-data-common</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.orthomcl</groupId>
+        <artifactId>orthomcl-shared-model</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   

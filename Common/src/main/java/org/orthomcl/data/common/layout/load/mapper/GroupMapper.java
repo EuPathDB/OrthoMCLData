@@ -1,8 +1,8 @@
-package org.orthomcl.data.load.mapper;
+package org.orthomcl.data.common.layout.load.mapper;
 
 import java.util.List;
 
-import org.orthomcl.data.core.Group;
+import org.orthomcl.data.common.layout.core.Group;
 
 public interface GroupMapper {
 

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.orthomcl.data.load;
+package org.orthomcl.data.common.layout.load;
 
 /**
  * @author jerric

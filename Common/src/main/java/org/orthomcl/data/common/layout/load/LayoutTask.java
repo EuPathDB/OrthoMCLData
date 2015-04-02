@@ -1,10 +1,10 @@
-package org.orthomcl.data.load;
+package org.orthomcl.data.common.layout.load;
 
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
-import org.orthomcl.data.core.Group;
-import org.orthomcl.data.layout.GraphicsException;
-import org.orthomcl.data.layout.SpringLayout;
+import org.orthomcl.data.common.layout.core.Group;
+import org.orthomcl.shared.model.layout.GraphicsException;
+import org.orthomcl.shared.model.layout.SpringLayout;
 
 public class LayoutTask implements Runnable {
 

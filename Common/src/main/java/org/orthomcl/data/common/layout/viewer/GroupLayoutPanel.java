@@ -1,4 +1,4 @@
-package org.orthomcl.data.layout.viewer;
+package org.orthomcl.data.common.layout.viewer;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -17,14 +17,14 @@ import java.util.Map;
 
 import javax.swing.JPanel;
 
-import org.orthomcl.data.core.Gene;
-import org.orthomcl.data.layout.ForceEdge;
-import org.orthomcl.data.layout.ForceGraph;
-import org.orthomcl.data.layout.ForceNode;
-import org.orthomcl.data.layout.Graph;
-import org.orthomcl.data.layout.LayoutObserver;
-import org.orthomcl.data.layout.LayoutUtility;
-import org.orthomcl.data.layout.Vector;
+import org.orthomcl.data.common.layout.core.Gene;
+import org.orthomcl.shared.model.layout.ForceEdge;
+import org.orthomcl.shared.model.layout.ForceGraph;
+import org.orthomcl.shared.model.layout.ForceNode;
+import org.orthomcl.shared.model.layout.Graph;
+import org.orthomcl.shared.model.layout.LayoutObserver;
+import org.orthomcl.shared.model.layout.LayoutUtility;
+import org.orthomcl.shared.model.layout.Vector;
 
 public class GroupLayoutPanel extends JPanel implements LayoutObserver, ComponentListener {
 

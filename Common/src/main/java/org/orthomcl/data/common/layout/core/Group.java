@@ -1,4 +1,4 @@
-package org.orthomcl.data.core;
+package org.orthomcl.data.common.layout.core;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,9 +8,9 @@ import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.orthomcl.data.layout.Edge;
-import org.orthomcl.data.layout.Graph;
-import org.orthomcl.data.layout.Node;
+import org.orthomcl.shared.model.layout.Edge;
+import org.orthomcl.shared.model.layout.Graph;
+import org.orthomcl.shared.model.layout.Node;
 
 /**
  * represent a graph of an OrthoMCL group.

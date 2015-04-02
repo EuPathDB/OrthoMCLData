@@ -1,4 +1,4 @@
-package org.orthomcl.data.core;
+package org.orthomcl.data.common.layout.core;
 
 public class GenePair {
 

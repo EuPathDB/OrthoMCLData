@@ -1,11 +1,11 @@
-package org.orthomcl.data.load.mapper;
+package org.orthomcl.data.common.layout.load.mapper;
 
 import java.util.List;
 
-import org.orthomcl.data.core.BlastScore;
-import org.orthomcl.data.core.Gene;
-import org.orthomcl.data.core.GenePair;
-import org.orthomcl.data.core.Group;
+import org.orthomcl.data.common.layout.core.BlastScore;
+import org.orthomcl.data.common.layout.core.Gene;
+import org.orthomcl.data.common.layout.core.GenePair;
+import org.orthomcl.data.common.layout.core.Group;
 
 public interface GeneMapper {
 

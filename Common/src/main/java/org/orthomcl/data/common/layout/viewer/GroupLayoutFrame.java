@@ -1,4 +1,4 @@
-package org.orthomcl.data.layout.viewer;
+package org.orthomcl.data.common.layout.viewer;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -18,14 +18,14 @@ import javax.swing.JToolBar;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.log4j.Logger;
-import org.orthomcl.data.core.Group;
-import org.orthomcl.data.layout.GraphicsException;
-import org.orthomcl.data.layout.Layout;
-import org.orthomcl.data.layout.SpringLayout;
-import org.orthomcl.data.load.GroupFactory;
-import org.orthomcl.data.load.LayoutGenerator;
-import org.orthomcl.data.load.OrthoMCLDataException;
-import org.orthomcl.data.load.mapper.GroupMapper;
+import org.orthomcl.data.common.layout.core.Group;
+import org.orthomcl.data.common.layout.load.GroupFactory;
+import org.orthomcl.data.common.layout.load.LayoutGenerator;
+import org.orthomcl.data.common.layout.load.OrthoMCLDataException;
+import org.orthomcl.data.common.layout.load.mapper.GroupMapper;
+import org.orthomcl.shared.model.layout.GraphicsException;
+import org.orthomcl.shared.model.layout.Layout;
+import org.orthomcl.shared.model.layout.SpringLayout;
 
 public class GroupLayoutFrame extends JFrame {
 

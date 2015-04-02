@@ -1,4 +1,4 @@
-package org.orthomcl.data.load;
+package org.orthomcl.data.common.layout.load;
 
 import java.io.File;
 import java.io.FileReader;
@@ -19,13 +19,13 @@ import org.gusdb.fgputil.runtime.GusHome;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.orthomcl.data.core.BlastScore;
-import org.orthomcl.data.core.EdgeType;
-import org.orthomcl.data.core.Gene;
-import org.orthomcl.data.core.GenePair;
-import org.orthomcl.data.core.Group;
-import org.orthomcl.data.load.mapper.GeneMapper;
-import org.orthomcl.data.load.mapper.GroupMapper;
+import org.orthomcl.data.common.layout.core.BlastScore;
+import org.orthomcl.data.common.layout.core.EdgeType;
+import org.orthomcl.data.common.layout.core.Gene;
+import org.orthomcl.data.common.layout.core.GenePair;
+import org.orthomcl.data.common.layout.core.Group;
+import org.orthomcl.data.common.layout.load.mapper.GeneMapper;
+import org.orthomcl.data.common.layout.load.mapper.GroupMapper;
 
 public class GroupFactory {
 
