@@ -20,7 +20,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.orthomcl.shared</groupId>
+      <groupId>org.orthomcl</groupId>
       <artifactId>orthomcl-shared-model</artifactId>
     </dependency>
 
