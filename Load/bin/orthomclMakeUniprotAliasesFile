@@ -2,7 +2,7 @@
  
 use strict;
 
-usage() unless scalar(@ARGV) == 3;
+usage() unless scalar(@ARGV) == 4;
 
 my ($abbrev, $inputFastaFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARGV;
 
