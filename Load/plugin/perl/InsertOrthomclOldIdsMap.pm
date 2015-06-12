@@ -379,8 +379,9 @@ sub getExternalDatabaseRelease{
 sub undoTables {
   my ($self) = @_;
 
-  return ('SRes.DbRef',
-          'DoTS.AASequenceDbRef',
+  return ('DoTS.AASequenceDbRef',
+	  'SRes.DbRef',
+          
 	 );
 }
 
