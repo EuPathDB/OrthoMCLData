@@ -44,9 +44,9 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
 my %geneIds;
 foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  my $repGeneId = $data->{recordset}->{record}->{$recordId}->{field}->{representative_gene}->{content};
-  my $organism = $data->{recordset}->{record}->{$recordId}->{field}->{organism}->{content};
-  my $transcriptId = $data->{recordset}->{record}->{$recordId}->{field}->{transcript_id}->{content};
+  my $repGeneId = $data->{recordset}->{record}->{$geneId}->{field}->{representative_gene}->{content};
+  my $organism = $data->{recordset}->{record}->{$geneId}->{field}->{organism}->{content};
+  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
 
   # gene alias
   print ALIASES "$abbrev|$repGeneId\t$geneId\t$organism\n" unless $geneIds{$geneId};

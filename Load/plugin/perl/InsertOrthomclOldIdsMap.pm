@@ -21,14 +21,14 @@ my $argsDeclaration =
 	    format         => '>pfa|123445',
             constraintFunc => undef,
             isList         => 0, }),
-    fileArg({name           => 'taxonMapFile',
-            descr          => 'mapping from old taxon abbreviations to new',
+    fileArg({name           => 'abbrevMapFile',
+            descr          => 'mapping from old taxon abbreviation to new',
             reqd           => 1,
             mustExist      => 1,
 	    format         => 'pfa pfal',
             constraintFunc => undef,
             isList         => 0, }),
-    stringArg({name           => 'dbVersion',
+    stringArg({name           => 'oldReleaseNum',
             descr          => 'version of old OrthoMCL for externaldatbaserelease row',
             reqd           => 1,
             constraintFunc => undef,
@@ -76,7 +76,7 @@ sub new {
   my $self = {};
   bless($self,$class);
 
-  $self->initialize({ requiredDbVersion => 3.5,
+  $self->initialize({ requiredDbVersion => 3.6,
                       cvsRevision       => '$Revision$',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
@@ -90,7 +90,7 @@ sub new {
 sub run {
   my ($self) = @_;
 
-  my $taxonMapFile = $self->getArg('taxonMapFile');
+  my $taxonMapFile = $self->getArg('abbrevMapFile');
   my $oldIDsFastaFile = $self->getArg('oldIdsFastaFile');
 
   my $taxonMap = $self->getTaxonMap($taxonMapFile); #old taxon abbrev -> new abbrev
@@ -110,6 +110,7 @@ sub run {
     $self->log("   number of old IDs: " . scalar(keys(%{$oldIDsHash->{$oldTaxon}})));
     my $oldIDs = $oldIDsHash->{$oldTaxon};
     my $newTaxon = $taxonMap->{$oldTaxon};
+    $self->error("Could not find old abbrev for '$oldTaxon'") unless $newTaxon;
     my $newIDsHash = $self->getNewIDs($newTaxon); # from db
 
     my $missingIDsHash = $self->subtract("old IDs minus new IDs", $oldIDs, $newIDsHash);
@@ -205,7 +206,7 @@ and ot.taxon_id = s.taxon_id
       $count++;
     }
     $self->log("   number of new IDs: $count");
-    $self->error("Did not find any new IDs for taxon $taxonAbbrev") unless $count;
+    $self->error("Did not find any new sequence IDs for taxon '$taxonAbbrev'") unless $count;
     return $newIDs;
 }
 
@@ -358,7 +359,7 @@ sub getExternalDatabaseRelease{
   }
   my $external_db_id = $externalDatabase->getExternalDatabaseId();
 
-  my $version = $self->getArg('dbVersion');
+  my $version = $self->getArg('oldReleaseNum');
 
   my $externalDatabaseRel = GUS::Model::SRes::ExternalDatabaseRelease->new ({'external_database_id'=>$external_db_id,'version'=>$version});
 

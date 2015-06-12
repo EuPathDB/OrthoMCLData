@@ -18,7 +18,7 @@ my ($inputFile,$outputFile, $abbrev, $verbose);
 print STDERR "orgAbbrevSourceId --inputFile --abbrev --outputFile --log --verbose\n" unless ($inputFile && $abbrev && $outputFile);
 
 
-if ($inputFile ~= /\.gz$/) {
+if ($inputFile =~ /\.gz$/) {
     open(IN, "zcat $inputFile |") || die "Can't gunzip and read input file '$inputFile'";
 } else {
     open(IN, $inputFile) || die "Can't read input file '$inputFile'";

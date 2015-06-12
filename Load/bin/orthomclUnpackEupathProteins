@@ -31,10 +31,10 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 =cut
 
 foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  my $repGeneId = $data->{recordset}->{record}->{$recordId}->{field}->{representative_gene}->{content};
-  my $product = $data->{recordset}->{record}->{$recordId}->{field}->{product}->{content};
-  my $seq = $data->{recordset}->{record}->{$recordId}->{field}->{protein_sequence}->{content};
-  my $transcriptId = $data->{recordset}->{record}->{$recordId}->{field}->{transcript_id}->{content};
+  my $repGeneId = $data->{recordset}->{record}->{$geneId}->{field}->{representative_gene}->{content};
+  my $product = $data->{recordset}->{record}->{$geneId}->{field}->{product}->{content};
+  my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
+  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
   print FASTA ">$geneId|$transcriptId $product\n$seq\n" if $geneId eq $repGeneId;
 }
 
