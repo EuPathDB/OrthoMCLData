@@ -110,7 +110,7 @@ sub run {
     $self->log("   number of old IDs: " . scalar(keys(%{$oldIDsHash->{$oldTaxon}})));
     my $oldIDs = $oldIDsHash->{$oldTaxon};
     my $newTaxon = $taxonMap->{$oldTaxon};
-    $self->error("Could not find old abbrev for '$oldTaxon'") unless $newTaxon;
+    $self->error("Could not find new abbrev for '$oldTaxon'") unless $newTaxon;
     my $newIDsHash = $self->getNewIDs($newTaxon); # from db
 
     my $missingIDsHash = $self->subtract("old IDs minus new IDs", $oldIDs, $newIDsHash);
@@ -152,7 +152,7 @@ sub run {
 sub getTaxonMap {
     my ($self, $taxonMapFile) = @_;
     $self->log("Reading taxon map file") or die $!;
-    open(F, $taxonMapFile);
+    open(F, $taxonMapFile) || die "Can't open abbrevMapFile '$taxonMapFile'\n";
     my $taxonMap;
     while (<F>) {
 	chomp;
