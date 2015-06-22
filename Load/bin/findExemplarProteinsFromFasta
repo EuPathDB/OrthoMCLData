@@ -63,6 +63,8 @@ if ($protein2geneFile) {
   close(F);
 }
 
+die "Found 0 gene IDs.  Must be something wrong with the gene ID regex '$geneIdRegex'\n" if scalar(keys(%proteinIdToGeneId)) == 0;
+
 while (<$fastaFh>){
   chomp;
   if ($_ =~ /^>/) {
@@ -82,6 +84,8 @@ while (<$fastaFh>){
 $seqCount++;
 
 $proteinInfo->{seq} = $seq;
+die "Protein with ID $proteinInfo->{proteinId} has no sequence" unless $proteinInfo->{seq};
+
 checkForExemplar($proteinInfo);
 
 printFile();
