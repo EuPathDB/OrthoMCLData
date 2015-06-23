@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+ 
+use strict;
+
+usage() unless scalar(@ARGV) == 4;
+
+my ($abbrev, $inputFastaFile, $outputFastaFile, $ncbiTaxonId, $abbrev) = @ARGV;
+
+open(IN, "$inputFastaFile") || die "Can't open '$inputFastaFile' for reading\n";
+open(UNIPROT, "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&columns=id,database%28GeneID%29\" -qO- |");
+open(OUT, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing\n";
+
+# sample input defline: >sp|Q8VCI5|PEX19_MOUSE Peroxisomal biogenesis factor 19 OS=Mus musculus GN=Pex19 PE=1 SV=1
+
+# sample output defline: >hsap|Q8VCI5 gene=12345 product=Peroxisomal biogenesis factor
+
+my %protein2geneIds;
+my $header = <UNIPROT>;
+chomp $header;
+die "Query to Uniprot did not provide expected header" unless $header =~ /Entry\s+Cross-reference \(GeneID\)/;
+
+# sample input:
+# B3L1G8  7319588; 
+
+while((<UNIPROT>)) {
+  chomp;
+  my ($proteinId, $geneId) = split(/\t/);
+  $protein2geneIds{$proteinId} = {$geneId};
+}
+close(UNIPROT);
+
+while(<IN>) {
+    if (/^>/) {
+      />\w\w\|([^|]+)|\S+ (.+) OS=/ || die "unexpected defline format: $_";
+      my $proteinId = $1;
+      my $product = $2;
+      die "ID mapping from uniprot does not include protein id '$proteinId' in the input fasta" unless defined($protein2geneIds{$proteinId});
+      my $geneId = $protein2geneIds{$proteinId};
+      $geneId = $proteinId unless $geneId;
+      print ">$abbrev|$proteinId gene=$geneId product=$product\n"
+    } else {
+      print OUT;
+    }
+}
+
+sub usage {
+
+die "
+Make a fasta file that is orthomcl compliant, for a uniprot proteome.
+
+Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file ncbi_taxon_id abbrev
+
+Where: 
+  input_fasta_file:             uniprot fasta file
+  output_fasta_file:            the file to write to
+  ncbi_taxon_id:                the ncbi taxon id for this organism
+  abbrev:                       the organism abbreviation for this proteome
+
+Use wget to access a uniprot query to get the protein to gene id (entrez gene) mapping
+
+sample input defline: >sp|Q8VCI5|PEX19_MOUSE Peroxisomal biogenesis factor 19 OS=Mus musculus GN=Pex19 PE=1 SV=1
+
+sample output defline: >hsap|Q8VCI5 gene=12345 product=Peroxisomal biogenesis factor
+
+";
+}
