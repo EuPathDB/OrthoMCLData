@@ -17,33 +17,25 @@ open(FASTA, "$inputFastaFile") || die "Can't open '$inputFastaFile' for reading\
 
 my %exemplars;
 while((<EXEMPLARS>)) {
-    next unless />\w\w\|(\w+).*GN=([^,\s]+)/; 
-    my $geneId = $2;
+    next unless />(\S+).*gene=(\S+)/;
     my $proteinId = $1;
+    my $geneId = $2;
     $exemplars{$geneId} = $proteinId;
 }
 
 my %geneIds;
 while(<FASTA>) {
     chomp;
-    next unless />\w\w\|(\w+).*GN=(\S+)/; 
+    next unless />(\S+).*gene=(\S+)/;
 
     my $proteinId = $1;
-    my $genes = $2;
-    my @genes = split(/,\s+/, $genes);
-
-    # gene aliases
-    my %genes;
-    foreach my $gene (@genes) {
-	print ALIASES "$abbrev|$genes[0]\t$gene\n" unless $genes{$gene};
-	$genes{$gene} = 1;
-    }
+    my $geneId = $2;
 
     # protein alias
-    if ($exemplars{$genes[0]} eq $proteinId) {
-	print ALIASES "$abbrev|$genes[0]\t$proteinId\tEXEMPLAR\n";  # flag this protein as an exemplar
+    if ($exemplars{$geneId} eq $proteinId) {
+	print ALIASES "$proteinId\t$proteinId\tEXEMPLAR\n";  # flag this protein as an exemplar
     } else {
-	print ALIASES "$abbrev|$genes[0]\t$proteinId\t\n";  # empty remark column
+	print ALIASES "$proteinIdabbrev|$genes[0]\t$proteinId\t\n";  # empty remark column
     }
 }
 
