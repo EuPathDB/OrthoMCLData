@@ -30,27 +30,31 @@ while(<FASTA>) {
 
     my $proteinId = $1;
     my $geneId = $2;
+    my $exemplarProteinId = $exemplars{$geneId};
+    my $proteinIdNoAbbrev = $proteinId;
+    $proteinIdNoAbbrev =~ s/$abbrev\|//;
 
-    # protein alias
-    if ($exemplars{$geneId} eq $proteinId) {
-	print ALIASES "$proteinId\t$proteinId\tEXEMPLAR\n";  # flag this protein as an exemplar
-    } else {
-	print ALIASES "$proteinIdabbrev|$genes[0]\t$proteinId\t\n";  # empty remark column
-    }
+    my $flag = $exemplarProteinId eq $proteinId? "EXEMPLAR" : "";
+    print ALIASES "$exemplarProteinId\t$proteinIdNoAbbrev\t$flag\n";
+    print ALIASES "$exemplarProteinId\t$proteinId\t\n";
 }
 
 sub usage {
 
 die "
-Make a file of repGeneId-geneId and repGeneId-proteinId aliases.  (This includes the unity mapping of repGeneId-repGeneId)  
+Make a file of protein aliases.  All IDs are protein IDs.  In this example, 123456 and 222222 are uniprot protein IDs.  Included aliases are:
+  - 123456 -> hsap|123456
+  - 222222 -> hsap|123456  (if the latter is an exemplar of the former)
+  - hsap|222222 -> hsap|123456  (if the latter is an exemplar of the former)
+  - hsap|123456 -> hsap|123456 (unity)
 
-Usage: orthomclMakeUniprotAliasesFile abbrev input_fasta_file input_exemplars_fasta_file output_aliases_file
+Usage: orthomclMakeUniprotAliasesFile abbrev input_compliant_fasta_file input_exemplars_fasta_file output_aliases_file
 
-Where: 
+Where:
   abbrev:                       the organism abbreviation for this proteome
-  input_fasta_file:             uniprot fasta file
+  input_fasta_file:             orthomcl compliant fasta file with all uniprot proteins for this organism
   input_exemplars_fasta_file:   only includes exemplars
-  output_aliases_file:          a mapping between the representative gene and gene_ids and transcript_ids of the represented genes.  Three columns:  rep_gene_id, alias_id, remark.  If the alias is the exemplar protein, the remark is EXEMPLAR. Otherwise, it is empty.
+  output_aliases_file:          a mapping between protein IDs and the representative protein.  Three columns:  rep_protein_id, alias_id, remark.  If the mapping is between a uniprot non-exemplar protein ID (no abbrev) and the orthomcl exemplar (with abbrev), the remark is EXEMPLAR.  (This way we can show this relationship in the UI)
 
 ";
 }

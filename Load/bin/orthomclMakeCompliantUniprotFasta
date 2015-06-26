@@ -4,15 +4,19 @@ use strict;
 
 usage() unless scalar(@ARGV) == 4;
 
-my ($inputFastaFile, $outputFastaFile, $ncbiTaxonId, $abbrev) = @ARGV;
+my ($inputFastaFile, $outputFastaFile, $abbrev, $ncbiTaxonId) = @ARGV;
 
 open(INPUT, $inputFastaFile) || die "Can't open '$inputFastaFile' for reading\n";
-open(UNIPROT, "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&columns=id,database%28GeneID%29\" -qO- |");
 open(OUT, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing\n";
 
 # sample input defline: >sp|Q8VCI5|PEX19_MOUSE Peroxisomal biogenesis factor 19 OS=Mus musculus GN=Pex19 PE=1 SV=1
 
 # sample output defline: >hsap|Q8VCI5 gene=12345 geneName=Pex19 product=Peroxisomal biogenesis factor
+
+my $wgetcmd = "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&fil=reviewed:yes&columns=id,database%28GeneID%29\" -qO-";
+open(UNIPROT, "$wgetcmd |");
+print STDERR "Reading from uniprot web service\n";
+print STDERR "$wgetcmd\n";
 
 my %protein2geneIds;
 my $header = <UNIPROT>;
@@ -22,7 +26,6 @@ die "Query to Uniprot did not provide expected header" unless $header =~ /Entry\
 # sample input:
 # B3L1G8  7319588; 
 
-print STDERR "Reading from uniprot web service\n";
 while(<UNIPROT>) {
   chomp;
   my ($proteinId, $geneId) = split(/\t/);
@@ -33,14 +36,18 @@ close(UNIPROT);
 print STDERR "Processing input fasta file\n";
 while(<INPUT>) {
     if (/^>/) {
-      />\w\w\|([^|]+)\|\S+ (.+) OS=.* GN=(\S*)/ || die "unexpected defline format: $_";
+      />\w\w\|([^|]+)\|\S+ (.+) OS=/ || die "unexpected defline format: $_";
       my $proteinId = $1;
       my $product = $2;
-      my $geneName = $3;
+      my $geneNameField = "";
+      if (/GN=(\S*)/) {
+	my $geneName = $1;
+	$geneNameField=" geneName=$geneName";
+      }
       die "ID mapping from uniprot does not include protein id '$proteinId' in the input fasta" unless defined($protein2geneIds{$proteinId});
       my $geneId = $protein2geneIds{$proteinId};
       $geneId = $proteinId unless $geneId;
-      print OUT ">$abbrev|$proteinId gene=$geneId geneName=$geneName product=$product\n"
+      print OUT ">$abbrev|$proteinId gene=$geneId$geneNameField product=$product\n"
     } else {
       print OUT;
     }
@@ -51,13 +58,13 @@ sub usage {
 die "
 Make a fasta file that is orthomcl compliant, for a uniprot proteome.
 
-Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file ncbi_taxon_id abbrev
+Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file abbrev ncbi_taxon_id
 
 Where: 
   input_fasta_file:             uniprot fasta file
   output_fasta_file:            the file to write to
-  ncbi_taxon_id:                the ncbi taxon id for this organism
   abbrev:                       the organism abbreviation for this proteome
+  ncbi_taxon_id:                the ncbi taxon id for this organism
 
 Use wget to access a uniprot query to get the protein to gene id (entrez gene) mapping
 
