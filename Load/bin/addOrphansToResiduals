@@ -31,17 +31,20 @@ open(R, $initialResidualsFasta) || die "Can't open fasta file '$initialResiduals
 while(<R>) {
   if (/>(\S+)/) {
     $knownIds{$1} = 1;
-    print O "$1\n";
   }
+  print O $_;
+
 }
 close(R);
 
 # scan proteins file.  any IDs not found are new residuals.
 open(A,$allProteinsFasta) || die "Can't open fasta file '$allProteinsFasta'\n";
+my $newResid;
 while(<A>) {
   if (/>(\S+)/) {
-    print O "$1\n" if (!$knownIds{$1});
+    $newResid = !$knownIds{$1};
   }
+  print O $_ if $newResid;
 }
 
 sub usage {
@@ -49,7 +52,7 @@ die "
 Find proteins that are in the all_proteins file but are not in the provided groups and residuals files.
 Add them as residuals.
 
-Usage: addOrphansToResiduals input_groups_file input_residuals_file input_all_proteins_fasta_file output_residuals_file
+Usage: addOrphansToResiduals input_groups_file input_all_proteins_fasta_file  input_residuals_file output_residuals_file
 
 ";
 }
