@@ -183,7 +183,7 @@ sub _parseGroup {
 		my $taxonAbbrev = $1;
 		my $sourceId = $2;
 		my $sequenceId = $self->getAASequenceId("$taxonAbbrev|$sourceId");
-		die "can't find an aa_sequence_id for $taxonAbbrev|$sourceId\n" if !$sequenceId;
+		die "Can't find an aa_sequence_id for abbrev:$taxonAbbrev source_id:$sourceId\n" if !$sequenceId;
 
 		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
