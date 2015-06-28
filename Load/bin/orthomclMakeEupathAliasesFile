@@ -10,10 +10,10 @@ my ($abbrev, $inputXmlFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARG
 open(FASTA, "$inputExemplarsFastaFile") || die "Can't open '$inputExemplarsFastaFile' for reading\n";
 
 # first read in exemplars, to find the transcript that is exemplar for each gene
-# sample def line: >pf3d7_12345|pf3d7_12345-t23_1 a really great protein
+# sample def line: >pf3d7_12345-t23_1 gene=pf3d7_12345  product=a really great protein
 my %exemplars;
 while((<FASTA>)) {
-    next unless /\>([^|])|(\S+)/;
+    next unless /\>(\S+) gene=(\S+)/;
     my $geneId = $1;
     my $transcriptId = $2;
     $exemplars{$geneId} = $transcriptId;

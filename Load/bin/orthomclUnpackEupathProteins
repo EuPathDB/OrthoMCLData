@@ -35,7 +35,8 @@ foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
   my $product = $data->{recordset}->{record}->{$geneId}->{field}->{product}->{content};
   my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
   my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
-  print FASTA ">$geneId|$transcriptId $product\n$seq\n" if $geneId eq $repGeneId;
+  $transcriptId = $geneId;   #temporary until GUS 4
+  print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n" if $geneId eq $repGeneId;
 }
 
 

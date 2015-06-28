@@ -26,7 +26,7 @@ my %grouplist;
 
 my $dbh = getDbHandle();
 
-print "reading orthomclGroups.txt into hash at " . `date` . "\n";
+print STDERR "reading orthomclGroups.txt into hash at " . `date` . "\n";
 
 open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
 while (<F>) {
@@ -44,14 +44,14 @@ my $pvalueExponentCutoff = 0; # no cutoff at all
 open(my $fh, ">", $residualsFile)
   or die "cannot open residuals file \"$residualsFile\" for writing: $!";
 
-print "preparing secondary-protein query at " . `date` . "\n";
+print STDERR "preparing secondary-protein query at " . `date` . "\n";
 # prepare query for secondary (that is, non-representative) protein IDs
 my $secondaryQuery = $dbh->prepare(<<SQL);
 select query_id
 from $peripheralsSimSeqTable
 SQL
 
-print "preparing query for representative for a given protein at " . `date` . "\n";
+print STDERR "preparing query for representative for a given protein at " . `date` . "\n";
 # prepare the query that, for a given non-representative protein, finds its best match among representatives
 my $repQuery = $dbh->prepare(<<SQL);
     select subject_id
@@ -61,27 +61,36 @@ my $repQuery = $dbh->prepare(<<SQL);
     order by evalue_exp, evalue_mant desc
 SQL
 
-print "executing secondary query at " . `date` . "\n";
+print STDERR "query 1:\n $secondaryQuery\n";
+print STDERR "query 2:\n $repQuery\n";
 $secondaryQuery->execute();
-print "iterating through rows at " . `date` . "\n";
-while (my($secondary) = $secondaryQuery->fetchrow_array()) {
 
+my $prevRep;
+my $count;
+while (my($secondary) = $secondaryQuery->fetchrow_array()) {
+  $count++;
+  if ($count == 10000) {
+    print STDERR '.';
+    $count = 0;
+  }
   # find this protein's representative
   $repQuery->execute($secondary);
   my ($representative) = $repQuery->fetchrow_array();
   $repQuery->finish();
 
+  next if $representative eq $prevRep;
+  $prevRep = $representative;
   if ($representative) {
     # we found a representative; update the hash
     my $groupName = $groups->{$representative};
-    # print "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
+    #print STDERR "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
 
     if ($groupName) {
       my @a = @{$grouplist{$groupName}};
       push (@a, $secondary);
       $grouplist{$groupName} = \@a;
     } else {
-      print "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
+      print STDERR "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
     }
   } else {
     # no representative found; write this protein ID to the residuals file
@@ -89,14 +98,14 @@ while (my($secondary) = $secondaryQuery->fetchrow_array()) {
   }
 }
 
-print "finishing secondaryQuery at " . `date` . "\n";
+print STDERR "finishing secondaryQuery at " . `date` . "\n";
 $secondaryQuery->finish();
 $dbh->disconnect();
 
 close($fh)
   or warn "close failed: $!";
 
-print "writing out augmented groups at " . `date` . "\n";
+print STDERR "writing out augmented groups at " . `date` . "\n";
 open(OUT, ">", $outputGroupsFile) || die "Can't open groups file '$outputGroupsFile'\n";
 foreach my $group (keys %grouplist) {
   my @a = @{$grouplist{$group}};
@@ -104,7 +113,7 @@ foreach my $group (keys %grouplist) {
 }
 close(OUT);
 
-print "done. at " . `date` . "\n";
+print STDERR "done. at " . `date` . "\n";
 
 sub getDbHandle {
 

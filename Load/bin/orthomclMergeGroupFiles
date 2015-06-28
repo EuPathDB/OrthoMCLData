@@ -14,15 +14,15 @@ open(O, ">$outputGroupsFile") || die "Can't open groups file '$outputGroupsFile'
 
 my $prefix;
 my $biggestId = 0;
-while(<p>) {
+while(<P>) {
   my $line = $_;
   chomp;
-  my @a = split(/s+/);
+  my @a = split(/\s+/);
   my $id = shift(@a);  # lose group id
   $id =~ /(\w+)_(\d+)/;
-  $prefix = $1;
-  $biggestId = $2 if $2 > $biggestId;
-  write O $line unless scalar (@a) == 1;
+  $prefix = $1;   # eg OG6
+  $biggestId = $2 if $2 > $biggestId;  #largest group id
+  print O $line unless scalar (@a) == 1;
 }
 close(P);
 
@@ -30,10 +30,13 @@ open(S, $secondaryGroupsFile) || die "Can't open groups file '$secondaryGroupsFi
 while(<S>) {
   my $line = $_;
   chomp;
-  my @a = split(/s+/);
+  my @a = split(/\s+/);
   my $id = shift(@a);  # lose group id
-  $id = "${prefix}_$biggestId:";
-  write O join(" ", ($id, @a)) unless scalar (@a) == 1;
+  if (scalar (@a) > 1) {
+      $biggestId++;
+      $id = "${prefix}_$biggestId:";
+      print O join(" ", ($id, @a)) . "\n";
+    }
 }
 
 sub usage {
