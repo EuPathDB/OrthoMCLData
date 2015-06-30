@@ -43,9 +43,9 @@ my $dbh = $db->getQueryHandle();
 
 $dbh->{LongReadLen} = 8192 * 1024;
 
-my $fileNames = &getGroupNames;
+my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize);
 
-&makeFiles($fileNames);
+&makeFiles($fileNames, $peripheralsOnly);
 
 &makeTarBalls if $tarBall;
 
@@ -81,17 +81,18 @@ my $peripheralsOnlyFromClause= "";
 my $peripheralsOnlyWhereClause = "";
 
   if ($peripheralsOnly) {
-    $peripheralsOnlyFromClause = ", sres.externadatabaserelease edr, sres.externaldatabase ed";
+    $peripheralsOnlyFromClause = ", sres.externaldatabaserelease edr, sres.externaldatabase ed, apidb.datasource ds";
 
     $peripheralsOnlyWhereClause =
 "and x.external_database_release_id = edr.external_database_release_id
 and ed.external_database_id = edr.external_database_id
-and ed.subtype = 'peripheral'";
+and ds.external_database_name = ed.name
+and ds.subtype = 'peripheral'";
   }
 
   my $seqSQL = "
 select ot.three_letter_abbrev || '|' || x.source_id, x.sequence
-from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g $peripheralsOnlyFromClause;
+from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g $peripheralsOnlyFromClause
 where g.aa_sequence_id = x.aa_sequence_id
 and x.taxon_id = ot.taxon_id
 $peripheralsOnlyWhereClause
@@ -143,7 +144,7 @@ sub makeTarBalls {
     if ($num >= $tarBall) {
       my $list = join (' ',@tarFiles);
       chdir $outDir || die "Can't change directory to $outDir\n";
-      `tar -zcf $outDir/tarrBall_${tarNum}.tar.gz $list`;
+      `tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list`;
 
       print STDERR ("$outDir/tarrBall_${tarNum}.tar.gz\n");
       `rm -f $list`;
@@ -156,10 +157,10 @@ sub makeTarBalls {
 
   my $finalList = join (' ',@tarFiles);
   chdir $outDir || die "Can't change directory to $outDir\n";
-  `tar -zcf $outDir/tarrBall_${tarNum}.tar.gz $finalList`;
+  `tar -zcf $outDir/tarBall_${tarNum}.tar.gz $finalList`;
   `rm -f $finalList`;
 
-  print STDERR ("$outDir/tarrBall_${tarNum}.tar.gz\n");
+  print STDERR ("$outDir/tarBall_${tarNum}.tar.gz\n");
 
 
   print STDERR ("$fileNum files used to make tar balls\n");
