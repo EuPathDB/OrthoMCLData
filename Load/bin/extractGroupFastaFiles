@@ -21,13 +21,14 @@ $maxGroupSize =10000000;
             "minGroupSize=i" => \$minGroupSize,
             "maxGroupSize=i" => \$maxGroupSize,
             "peripheralsOnly!" => \$peripheralsOnly,
-	    "tarBall=i" => \$tarBall);
+	    "tarBall=i" => \$tarBallSize);
 
 if(!$outDir){
 	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] [--peripheralsOnly] --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
 }
 
-`mkdir -p $outDir`;
+my $cmd = "mkdir -p $outDir";
+system($cmd) && die "Failed running cmd\n$cmd";
 
 print STDERR "Establishing dbi login\n" if $verbose;
 my $gusconfig = GUS::Supported::GusConfig->new($gusConfigFile);
@@ -45,9 +46,9 @@ $dbh->{LongReadLen} = 8192 * 1024;
 
 my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize);
 
-&makeFiles($fileNames, $peripheralsOnly);
+&makeFiles($fileNames, $peripheralsOnly, $outDir);
 
-&makeTarBalls if $tarBall;
+&makeTarBalls($fileNames, $tarBallSize, $outDir) if $tarBallSize;
 
 
 #####################################################################################
@@ -75,7 +76,7 @@ sub getGroupNames {
 }
 
 sub makeFiles {
-  my ($fileNames, $peripheralsOnly) = @_;
+  my ($fileNames, $peripheralsOnly, $outDir) = @_;
 
 my $peripheralsOnlyFromClause= "";
 my $peripheralsOnlyWhereClause = "";
@@ -100,11 +101,11 @@ and g.ortholog_group_id = ?";
 
   my $seqStmt = $dbh->prepare($seqSQL);
 
-  my $num;
+  my $num = 0;
 
   foreach my $name (keys %{$fileNames}) {
 
-    open(FILE, ">$outDir/$name");
+    open(FILE, ">$outDir/$name.fasta");
 
     $seqStmt->execute($fileNames->{$name}->{'id'});
 
@@ -119,17 +120,17 @@ and g.ortholog_group_id = ?";
 
     $num++;
 
-    print STDERR ("$num files printed\n") if $num % 1000 == 0;
+    print STDERR ("$num fasta files printed\n") if $num % 1000 == 0;
 
     close(FILE);
 
   }
 
-  print STDERR ("$num files printed\n") if $num;
+  print STDERR ("$num fasta files printed\n");
 }
 
 sub makeTarBalls {
-
+  my ($fileNames, $tarBallSize, $outDir) = @_;
   my $num = 0;
 
   my @tarFiles;
@@ -138,16 +139,16 @@ sub makeTarBalls {
 
   my $fileNum;
 
+  chdir $outDir || die "Can't change directory to $outDir\n";
   foreach  my $file (keys %{$fileNames}) {
     $num += $fileNames->{$file}->{'num'};
     push (@tarFiles,"$file");
-    if ($num >= $tarBall) {
+    if ($num >= $tarBallSize || scalar(@tarFiles) > 1000) {      # limit tar size by number of seqs and, number of files (to not overrun command line)
       my $list = join (' ',@tarFiles);
-      chdir $outDir || die "Can't change directory to $outDir\n";
-      `tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list`;
-
-      print STDERR ("$outDir/tarrBall_${tarNum}.tar.gz\n");
-      `rm -f $list`;
+      my $cmd = "tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list";
+      system($cmd) && die "Failed running cmd\n$cmd";
+      $cmd = "rm -f $list";
+      system($cmd) && die "Failed running cmd\n$cmd";
       @tarFiles=();
       $num = 0;
       $tarNum++;
@@ -155,13 +156,11 @@ sub makeTarBalls {
     $fileNum++;
   }
 
-  my $finalList = join (' ',@tarFiles);
-  chdir $outDir || die "Can't change directory to $outDir\n";
-  `tar -zcf $outDir/tarBall_${tarNum}.tar.gz $finalList`;
-  `rm -f $finalList`;
+  my $list = join (' ',@tarFiles);
+  my $cmd = "tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list";
+  system($cmd) && die "Failed running cmd\n$cmd";
+  $cmd = "rm -f $list";
+  system($cmd) && die "Failed running cmd\n$cmd";
 
-  print STDERR ("$outDir/tarBall_${tarNum}.tar.gz\n");
-
-
-  print STDERR ("$fileNum files used to make tar balls\n");
+  print STDERR ("$fileNum fasta files used to make tar balls\n");
 }
