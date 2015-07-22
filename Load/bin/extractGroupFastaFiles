@@ -11,7 +11,7 @@ use GUS::ObjRelP::DbiDatabase;
 use CBIL::Bio::SequenceUtils;
 use GUS::Supported::GusConfig;
 
-my ($gusConfigFile,$debug,$verbose,$outDir,$tarBall, $minGroupSize, $maxGroupSize, $peripheralsOnly);
+my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $peripheralsOnly);
 
 $minGroupSize =1;
 $maxGroupSize =10000000;
@@ -105,7 +105,7 @@ and g.ortholog_group_id = ?";
 
   foreach my $name (keys %{$fileNames}) {
 
-    open(FILE, ">$outDir/$name.fasta");
+    open(FILE, ">$outDir/$name");
 
     $seqStmt->execute($fileNames->{$name}->{'id'});
 
