@@ -61,8 +61,6 @@ my $repQuery = $dbh->prepare(<<SQL);
     order by evalue_exp, evalue_mant desc
 SQL
 
-print STDERR "query 1:\n $secondaryQuery\n";
-print STDERR "query 2:\n $repQuery\n";
 $secondaryQuery->execute();
 
 my $prevRep;
@@ -86,9 +84,7 @@ while (my($secondary) = $secondaryQuery->fetchrow_array()) {
     #print STDERR "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
 
     if ($groupName) {
-      my @a = @{$grouplist{$groupName}};
-      push (@a, $secondary);
-      $grouplist{$groupName} = \@a;
+      push(@{$grouplist{$groupName}}, $secondary);
     } else {
       print STDERR "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
     }
