@@ -2,57 +2,90 @@
 
 use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
-use CBIL::Util::PropertySet;
 
-usage() unless scalar(@ARGV) == 4;
+usage() unless scalar(@ARGV) == 7;
 
-my ($groupsFile, $allProteinsFasta, $initialResidualsFasta, $outputResidualsFasta) = @ARGV;
+my ($inputRefGroupsFile, $inputMappedGroupsFile, $refProteinsFasta, $peripheralProteinsFasta, $initialResidualIds, $outputResidualsFasta, $outputReducedGroupsFile) = @ARGV;
 
-# get all IDs in groups file and in initial residuals file.
-# any proteins in the allProteinsFasta file that are not included in them are added as residuals
+# read initial residual IDs (ref singletons)
+my %residualIds;
+open(IR, $initialResidualIds) || die "Can't open input residuals file '$initialResidualIds'\n";
+while(<IR>) {
+    chomp;
+    $residualIds{$_} = 1;
+}
+close(IR);
 
-my %knownIds;
-
-# suck in ids from groups file
-open(G, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
-while(<G>) {
+# read ref groups file, and remember the ID of all ref groups that are sz 1, 2, 3
+my %smallRefGroupIds;
+open(R, $inputRefGroupsFile) || die "Can't open ref groups file '$inputRefGroupsFile'\n";
+while(<R>) {
   chomp;
   my @a = split(/s+/);
-  shift(@a);  # lose group id
-  foreach my $id (@a) {
-    $knownIds{$id} = 1;
-  }
-}
-close(G);
-
-# and from residuals file.  write these out to the new residuals file too
-open(O, ">$outputResidualsFasta") || die "Can't open fasta file '$outputResidualsFasta' for writing\n";
-open(R, $initialResidualsFasta) || die "Can't open fasta file '$initialResidualsFasta'\n";
-while(<R>) {
-  if (/>(\S+)/) {
-    $knownIds{$1} = 1;
-  }
-  print O $_;
-
+  my $grpId = shift(@a);  
+  $smallRefGroupIds{$grpId} = 1 if scalar(@a) < 4;
 }
 close(R);
 
-# scan proteins file.  any IDs not found are new residuals.
-open(A,$allProteinsFasta) || die "Can't open fasta file '$allProteinsFasta'\n";
-my $newResid;
-while(<A>) {
-  if (/>(\S+)/) {
-    $newResid = !$knownIds{$1};
+# read mapped groups file
+# save ref and periph protein IDs from originally small groups, for residuals, and prune those groups from output groups
+open(M, $inputMappedGroupsFile) || die "Can't open mapped groups file '$inputMappedGroupsFile'\n";
+open(G, ">$outputReducedGroupsFile") || die "Can't open output groups file '$outputReducedGroupsFile' for writing\n";
+while(<M>) {
+  my $grp = $_;
+  chomp;
+  my @a = split(/s+/);
+  my $grpId = shift(@a);  
+  if ($smallRefGroupIds{$grpId}) {
+      map { $residualIds{$_} = 1 } @a;
+  } else {
+      print G $grp;
   }
-  print O $_ if $newResid;
 }
+close(M);
+close(G);
+
+# scan both input fasta files.  print out residual fasta
+open(O, ">$outputResidualsFasta") || die "Can't open fasta file '$outputResidualsFasta' for writing\n";
+open(P,$refProteinsFasta) || die "Can't open ref fasta file '$refProteinsFasta'\n";
+my $yes = 0;
+while(<P>) {
+  if (/>(\S+)/) {
+      if ($residualIds{$1)) {
+	  print O;
+	  $yes = 1;
+      } else {
+	  $yes = 0;
+      }
+  } else {
+      print O if $yes;
+  }
+}
+close(P);
+open(P,$periphProteinsFasta) || die "Can't open periph fasta file '$periphProteinsFasta'\n";
+$yes = 0;
+while(<P>) {
+  if (/>(\S+)/) {
+      if ($residualIds{$1)) {
+	  print O;
+	  $yes = 1;
+      } else {
+	  $yes = 0;
+      }
+  } else {
+      print O if $yes;
+  }
+}
+close(P);
+
 
 sub usage {
 die "
-Find proteins that are in the all_proteins file but are not in the provided groups and residuals files.
-Add them as residuals.
+Find proteins that are in the all_proteins file but are not in the provided mapped groups and residuals files.
+Add them as residuals.  Also, find groups in the mapped groups file that were originally of size 1, 2 or 3, but now
+are larger because of residuals.  Add those groups to the residuals, and excise them from the output groups file.
 
-Usage: addOrphansToResiduals input_groups_file input_all_proteins_fasta_file  input_residuals_file output_residuals_file
+Usage: addOrphansToResiduals input_ref_groups_file input_mapped_groups_file input_peripheral_proteins_fasta_file  input_residuals_file output_residuals_file output_reduced_groups_file
 
 ";
 }
