@@ -21,7 +21,7 @@ my %smallRefGroupIds;
 open(R, $inputRefGroupsFile) || die "Can't open ref groups file '$inputRefGroupsFile'\n";
 while(<R>) {
   chomp;
-  my @a = split(/s+/);
+  my @a = split(/\s+/);
   my $grpId = shift(@a);  
   $smallRefGroupIds{$grpId} = 1 if scalar(@a) < 4;
 }
@@ -34,10 +34,10 @@ open(G, ">$outputReducedGroupsFile") || die "Can't open output groups file '$out
 while(<M>) {
   my $grp = $_;
   chomp;
-  my @a = split(/s+/);
+  my @a = split(/\s+/);
   my $grpId = shift(@a);  
   if ($smallRefGroupIds{$grpId}) {
-      map { $residualIds{$_} = 1 } @a;
+      map { $residualIds{$_} = 1;} @a;
   } else {
       print G $grp;
   }
@@ -52,7 +52,7 @@ my $yes = 0;
 while(<P>) {
   if (/>(\S+)/) {
       if ($residualIds{$1}) {
-	  print O;
+	  print O ;
 	  $yes = 1;
       } else {
 	  $yes = 0;

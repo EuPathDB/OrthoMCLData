@@ -81,9 +81,9 @@ while (my($secondary) = $secondaryQuery->fetchrow_array()) {
   if ($representative) {
     # we found a representative; update the hash
     my $groupName = $groups->{$representative};
-    #print STDERR "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
-
     if ($groupName) {
+      # print STDERR "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
+
       push(@{$grouplist{$groupName}}, $secondary);
     } else {
       print STDERR "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
