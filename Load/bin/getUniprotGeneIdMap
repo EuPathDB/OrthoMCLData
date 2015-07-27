@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+use strict;
+
+usage() if scalar(@ARGV);  # eg -h
+
+=head
+AC   Q7ZVB2; Q6NYB3;
+DR   Ensembl; ENSDART00000100283; ENSDARP00000091056; ENSDARG00000069100.
+DR   Ensembl; ENSDART00000137838; ENSDARP00000118280; ENSDARG00000069100.
+DR   GeneID; 100005587; -.
+//
+AC   Q802W2; A2AWD6;
+DR   Ensembl; ENSDART00000053868; ENSDARP00000053867; ENSDARG00000037061.
+DR   GeneID; 399481; -.
+//
+AC   Q8JG69;
+DR   GeneID; 266755; -.
+//
+AC   Q8JG70;
+//
+=cut
+
+my %genes;
+my @localAccessions;
+my %localGenes;
+while(<>) {
+  chomp;
+
+  # handle a new set of accessions
+  if (/^AC/) {
+    my $line = $_;
+    my @a = split(/\s+/, $line);
+    shift(@a);  #lose AC
+    @localAccessions = map { s/;//; $_; } @a;  # on each accession the trailing semi-colon
+    %localGenes = ();
+  }
+
+  # an entrez gene ID
+  elsif (/^DR\s+GeneID/) {
+    /^DR\s+GeneID;\s+(\d+);\s+\-\.$/ || die "DR GeneID line not in expected format\n$_\n";
+    $localGenes{$1} = 1;
+  }
+
+  # an ensembl gene ID
+  elsif (/^DR\s+Ensembl/) {
+    /^DR\s+Ensembl;.+(ENS\w+G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
+    $localGenes{$1} = 1;
+  }
+
+  # process this completed record
+  elsif (/^\/\//) {
+    my $geneStr = join("\t", sort(keys(%localGenes)));
+    foreach my $acc (@localAccessions) {
+      if ($geneStr) {
+	print "$acc\t$geneStr\n";
+      } else {
+	print "$acc\n";
+      }
+    }
+  }
+}
+
+sub usage {
+  die "
+
+Parse Uniprot text file (genbank format) to find Entrez and Ensembl gene IDs for each protein, as available.
+
+Usage:  wget \"http://www.uniprot.org/uniprot/?fil=taxonomy:7955&format=txt\" -qO- | egrep \"^(AC|DR\s+Ensembl|DR\s+GeneID|//)\" | getUniprotGeneIdMap > output_file
+
+";
+}
