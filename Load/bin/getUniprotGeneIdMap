@@ -21,9 +21,16 @@ AC   Q8JG70;
 //
 =cut
 
-my %genes;
+# we want to find entrez,ensembl gene pairs that always come together.  these will be considered a single gene
+# for each gene, track the proteins it is found in (for those proteins that have both entrez and ensembl genes)
+my %gene2proteins;
+my %proteins2genes;
+
 my @localAccessions;
 my %localGenes;
+my @localEntrezGenes;
+my @localEnsemblGenes;
+my 
 while(<>) {
   chomp;
 
@@ -34,18 +41,22 @@ while(<>) {
     shift(@a);  #lose AC
     @localAccessions = map { s/;//; $_; } @a;  # on each accession the trailing semi-colon
     %localGenes = ();
+    @localEntrezGenes = ();
+    @localEnsemblGenes = ();
   }
 
   # an entrez gene ID
   elsif (/^DR\s+GeneID/) {
     /^DR\s+GeneID;\s+(\d+);\s+\-\.$/ || die "DR GeneID line not in expected format\n$_\n";
     $localGenes{$1} = 1;
+    push(@localEntrezGenes, $1);
   }
 
   # an ensembl gene ID
   elsif (/^DR\s+Ensembl/) {
     /^DR\s+Ensembl;.+(ENS\w+G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
     $localGenes{$1} = 1;
+    push(@localEnsemblGenes, $1);
   }
 
   # process this completed record
@@ -57,9 +68,39 @@ while(<>) {
       } else {
 	print "$acc\n";
       }
+      foreach my $geneId (@localEntrezGenes,@localEnsemblGenes) {
+	  push(@{$gene2proteins{$geneId}}, $acc);
+	  push(@{$proteins2genes{$acc}}, $geneId);
+      }
     }
-  }
+  }  
 }
+
+# now find a set of protein groups (ie, genes).
+# subsume smaller groups into superset groups.
+
+# now go through each gene, and decide which are subsumed
+# for each protein in the gene, save only gene groups that all proteins have
+my %deletedGenes;
+foreach my $geneId (keys(%gene2proteins)) {
+    my %remainingRelatedGenes;  # genes sharing this gene's proteins
+    my $firstProtein = 1;
+    foreach my $protein (@{$gene2proteins{$geneId}}) {
+	# if first protein in this gene, save its group indexes
+	if ($firstProtein) {
+	    map { $remainingRelatedGenes{$_} = 1 } @{$protein2genes{$protein}};
+	    delete $remainingRelatedGenes{$geneId};   # remove self reference
+	    $firstProtein = 0;
+	} else {
+	    my %genesFromThisProtein;
+	    map { $genesFromThisProtein{$_} = 1 } @{$protein2genes{$protein}};
+	    my @tempGenes = keys(%remainingRelatedGenes);
+	    map { delete $remainingRelatedGenes{$_} unless $genesFromThisProtein{$_} } @tempGenes;
+	}
+    }
+    $deletedGenes{$geneId} = 1 if scalar();
+}
+
 
 sub usage {
   die "
