@@ -2,7 +2,9 @@
 
 use strict;
 
-usage() if scalar(@ARGV);  # eg -h
+usage() if scalar(@ARGV) != 2; 
+
+my ($output_map_file, $output_protein_groups_file) = @ARGV;
 
 =head
 AC   Q7ZVB2; Q6NYB3;
@@ -24,14 +26,13 @@ AC   Q8JG70;
 # we want to find entrez,ensembl gene pairs that always come together.  these will be considered a single gene
 # for each gene, track the proteins it is found in (for those proteins that have both entrez and ensembl genes)
 my %gene2proteins;
-my %proteins2genes;
 
 my @localAccessions;
 my %localGenes;
 my @localEntrezGenes;
 my @localEnsemblGenes;
-my 
-while(<>) {
+open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
+while(<STDIN>) {
   chomp;
 
   # handle a new set of accessions
@@ -39,24 +40,20 @@ while(<>) {
     my $line = $_;
     my @a = split(/\s+/, $line);
     shift(@a);  #lose AC
-    @localAccessions = map { s/;//; $_; } @a;  # on each accession the trailing semi-colon
+    @localAccessions = map { s/;//; $_; } @a;  # lose trailing semi-colon on accessions
     %localGenes = ();
-    @localEntrezGenes = ();
-    @localEnsemblGenes = ();
   }
 
   # an entrez gene ID
   elsif (/^DR\s+GeneID/) {
     /^DR\s+GeneID;\s+(\d+);\s+\-\.$/ || die "DR GeneID line not in expected format\n$_\n";
     $localGenes{$1} = 1;
-    push(@localEntrezGenes, $1);
   }
 
   # an ensembl gene ID
   elsif (/^DR\s+Ensembl/) {
     /^DR\s+Ensembl;.+(ENS\w+G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
     $localGenes{$1} = 1;
-    push(@localEnsemblGenes, $1);
   }
 
   # process this completed record
@@ -64,41 +61,28 @@ while(<>) {
     my $geneStr = join("\t", sort(keys(%localGenes)));
     foreach my $acc (@localAccessions) {
       if ($geneStr) {
-	print "$acc\t$geneStr\n";
+	print M "$acc\t$geneStr\n";
       } else {
-	print "$acc\n";
+	print M "$acc\n";
       }
-      foreach my $geneId (@localEntrezGenes,@localEnsemblGenes) {
+      foreach my $geneId (keys(%localGenes)) {
 	  push(@{$gene2proteins{$geneId}}, $acc);
-	  push(@{$proteins2genes{$acc}}, $geneId);
       }
     }
-  }  
+  }
 }
+close(M);
 
-# now find a set of protein groups (ie, genes).
-# subsume smaller groups into superset groups.
-
-# now go through each gene, and decide which are subsumed
-# for each protein in the gene, save only gene groups that all proteins have
-my %deletedGenes;
+# print non-redundant set of protein groups
+open(P, ">$output_protein_groups_file") || die "Can't open protein groups file '$output_protein_groups_file' for writing\n";
+my %redundant;
 foreach my $geneId (keys(%gene2proteins)) {
-    my %remainingRelatedGenes;  # genes sharing this gene's proteins
-    my $firstProtein = 1;
-    foreach my $protein (@{$gene2proteins{$geneId}}) {
-	# if first protein in this gene, save its group indexes
-	if ($firstProtein) {
-	    map { $remainingRelatedGenes{$_} = 1 } @{$protein2genes{$protein}};
-	    delete $remainingRelatedGenes{$geneId};   # remove self reference
-	    $firstProtein = 0;
-	} else {
-	    my %genesFromThisProtein;
-	    map { $genesFromThisProtein{$_} = 1 } @{$protein2genes{$protein}};
-	    my @tempGenes = keys(%remainingRelatedGenes);
-	    map { delete $remainingRelatedGenes{$_} unless $genesFromThisProtein{$_} } @tempGenes;
-	}
+    my @sorted = sort @{$gene2proteins{$geneId}};
+    my $key = join("\t", @sorted);
+    if (!$redundant{$key}) {
+	map { print P "$_\t$geneId\n" } @sorted;
+	$redundant{$key} = 1;
     }
-    $deletedGenes{$geneId} = 1 if scalar();
 }
 
 
@@ -107,7 +91,16 @@ sub usage {
 
 Parse Uniprot text file (genbank format) to find Entrez and Ensembl gene IDs for each protein, as available.
 
-Usage:  wget \"http://www.uniprot.org/uniprot/?fil=taxonomy:7955&format=txt\" -qO- | egrep \"^(AC|DR\s+Ensembl|DR\s+GeneID|//)\" | getUniprotGeneIdMap > output_file
+Usage:  wget \"http://www.uniprot.org/uniprot/?fil=taxonomy:7955&format=txt\" -qO- | egrep \"^(AC|DR\s+Ensembl|DR\s+GeneID|//)\" | getUniprotGeneIdMap output_mapping_file output_protein_groups_file
+
+Where:
+  output_mapping_file:  a tab-delimited file, first column protein ID, next columns gene IDs
+  output_protein_groups_file: a tab-delimited file of groups of proteins that belong to a non-redundant gene
+
+The approach is to read the large genbank-like text file (input from uniprot), and find the mapping of gene IDs
+to proteins. 
+
+Then, convert that to proteins to gene id (where it is possible that more than one gene id has the same group of proteins).  Collapse that into a non-redundant list of protein groups.
 
 ";
 }
