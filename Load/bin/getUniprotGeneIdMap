@@ -2,9 +2,9 @@
 
 use strict;
 
-usage() if scalar(@ARGV) != 2; 
+usage() if scalar(@ARGV) != 3; 
 
-my ($output_map_file, $output_protein_groups_file) = @ARGV;
+my ($ncbi_taxon_id, $output_map_file, $output_protein_groups_file) = @ARGV;
 
 =head
 AC   Q7ZVB2; Q6NYB3;
@@ -31,8 +31,13 @@ my @localAccessions;
 my %localGenes;
 my @localEntrezGenes;
 my @localEnsemblGenes;
+
+my $url = "\"http://www.uniprot.org/uniprot/?fil=taxonomy:$ncbi_taxon_id&format=txt\"";
+
+open(W, "wget $url -qO- |") || die "Failed running 'wget $url -qO-'\n";
+
 open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
-while(<STDIN>) {
+while(<W>) {
   chomp;
 
   # handle a new set of accessions
