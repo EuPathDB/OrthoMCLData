@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+usage() unless scalar(@ARGV) == 3;
+
+my ($coreFile, $periphFile, $eupathBldNumber) = @ARGV;
+
+print STDOUT "<datasets>\n";
+open(C, $coreFile) || die "Can't open core file '$coreFile'\n";
+while(<C>) {
+  processRow("Reference", $_, $coreFile);
+}
+
+open(C, $periphFile) || die "Can't open periph file '$periphFile'\n";
+while(<C>) {
+  processRow("Peripheral", $_, $periphFile);
+}
+print STDOUT "</datasets>\n";
+
+sub processRow {
+  my ($type, $rowString, $file) = @_;
+  my @row = split("\t", $rowString);
+  die "Invalid row in $type file $file.  Too few columns:\n$_\n" unless scalar(@row) >= 6;
+  my ($eupathSite, $taxId, $genus, $species, $code, $oldCodes) = @row;
+  if ($eupathSite) {
+    print STDOUT "  <dataset class=\"orthomclEuPathReferenceProteome\">";
+    print STDOUT "    <prop name=\"project\">$eupathSite</prop>";
+    print STDOUT "    <prop name=\"speciesName\">$genus $species</prop>";
+    print STDOUT "    <prop name=\"version\">build $eupathBldNumber</prop>";
+  } else {
+    print STDOUT "  <dataset class=\"orthomclUniprotReferenceProteome\">";
+  }
+
+  print STDOUT "    <prop name=\"ncbiTaxonId\">$taxId</prop>";
+  print STDOUT "    <prop name=\"abbrev\">$code</prop>";
+  print STDOUT "    <prop name=\"oldAbbrevsList\">$oldCodes</prop>";
+  print STDOUT "  </dataset>";
+}
+
+
+sub usage() {
+  die "
+Read tab files containing the proteomes required for the orthomcl datasets XML files, and produce the XML file.
+
+Usage: orthomclTabFileToDatasetsXml core_tab_file peripheral_tab_file
+
+Output XML to STDOUT
+
+Input columns expected:
+
+EuPath_Component_Site   NCBI_Taxon_ID	Genus   Species  4_letter_code  old_abbrevs_list
+
+";
+}
