@@ -1,53 +1,65 @@
 #!/usr/bin/perl
 
-usage() unless scalar(@ARGV) == 3;
+usage() unless scalar(@ARGV) == 5;
 
-my ($coreFile, $periphFile, $eupathBldNumber) = @ARGV;
+my ($eupathBldNumber, $coreFile, $periphFile, $outputDatasetsFile, $outputTaxonsFile) = @ARGV;
 
-print STDOUT "<datasets>\n";
+open(TAX, ">$outputTaxonsFile") || die "can't open output file '$outputTaxonsFile'\n";
+open(XML, ">$outputDatasetsFile") || die "can't open output file '$outputDatasetsFile'\n";
+
+print XML "<datasets>\n";
 open(C, $coreFile) || die "Can't open core file '$coreFile'\n";
 while(<C>) {
+  chomp;
   processRow("Reference", $_, $coreFile);
 }
 
 open(C, $periphFile) || die "Can't open periph file '$periphFile'\n";
 while(<C>) {
+  chomp;
   processRow("Peripheral", $_, $periphFile);
 }
-print STDOUT "</datasets>\n";
+print XML "</datasets>\n";
 
 sub processRow {
   my ($type, $rowString, $file) = @_;
+
   my @row = split("\t", $rowString);
   die "Invalid row in $type file $file.  Too few columns:\n$_\n" unless scalar(@row) >= 6;
-  my ($eupathSite, $taxId, $genus, $species, $code, $oldCodes) = @row;
+
+  my ($eupathSite, $taxId, $organism, $isSpeciesLevel, $code, $clade, $oldCodes) = @row;
+
+  print TAX "$code\t$clade\t$taxId\n";
+
   if ($eupathSite) {
-    print STDOUT "  <dataset class=\"orthomclEuPathReferenceProteome\">";
-    print STDOUT "    <prop name=\"project\">$eupathSite</prop>";
-    print STDOUT "    <prop name=\"speciesName\">$genus $species</prop>";
-    print STDOUT "    <prop name=\"version\">build $eupathBldNumber</prop>";
+    print XML "  <dataset class=\"orthomclEuPathReferenceProteome\">\n";
+    print XML "    <prop name=\"project\">$eupathSite</prop>\n";
+    print XML "    <prop name=\"speciesName\">$organism</prop>\n";
+    print XML "    <prop name=\"taxIdIsSpeciesLevel\">$isSpeciesLevel</prop>\n";
+    print XML "    <prop name=\"version\">build $eupathBldNumber</prop>\n";
   } else {
-    print STDOUT "  <dataset class=\"orthomclUniprotReferenceProteome\">";
+    print XML "  <dataset class=\"orthomclUniprotReferenceProteome\">\n";
   }
 
-  print STDOUT "    <prop name=\"ncbiTaxonId\">$taxId</prop>";
-  print STDOUT "    <prop name=\"abbrev\">$code</prop>";
-  print STDOUT "    <prop name=\"oldAbbrevsList\">$oldCodes</prop>";
-  print STDOUT "  </dataset>";
+  print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
+  print XML "    <prop name=\"abbrev\">$code</prop>\n";
+  print XML "    <prop name=\"oldAbbrevsList\">$oldCodes</prop>\n";
+  print XML "  </dataset>\n";
 }
 
 
 sub usage() {
   die "
-Read tab files containing the proteomes required for the orthomcl datasets XML files, and produce the XML file.
+Read tab files containing the proteomes required for the orthomcl datasets XML files, and produce the XML file, as well as
+the taxons file (maps taxa to clades).
 
-Usage: orthomclTabFileToDatasetsXml core_tab_file peripheral_tab_file
-
-Output XML to STDOUT
+Usage: orthomclTabFileToDatasetsXml eupath_bld_num core_tab_file peripheral_tab_file output_dataset_xml_file output_taxon2clade_file
 
 Input columns expected:
 
-EuPath_Component_Site   NCBI_Taxon_ID	Genus   Species  4_letter_code  old_abbrevs_list
+EuPath_Component_Site   NCBI_Taxon_ID	Organism TaxIdIsSpeciesLevel 4_letter_code Clade Old_abbrevs
+
+TaxIdIsSpeciesLevel = yes if this is a eupathdb organism that does not have an ncbi tax id.  we use species tax id instead.
 
 ";
 }
