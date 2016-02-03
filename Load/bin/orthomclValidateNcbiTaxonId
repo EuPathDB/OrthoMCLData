@@ -7,7 +7,7 @@ use lib "$ENV{GUS_HOME}/lib/perl";
 use GUS::ObjRelP::DbiDatabase;
 use GUS::Supported::GusConfig;
 
-my ($abbrev, $ncbiTaxonId) = @ARGV;
+my ($abbrev, $ncbiTaxonId, $taxIdIsAtSpeciesLevel) = @ARGV;
 
 usage() unless ($abbrev && $ncbiTaxonId);
 
