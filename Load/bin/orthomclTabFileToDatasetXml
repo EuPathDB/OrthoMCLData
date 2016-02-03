@@ -32,13 +32,13 @@ sub processRow {
   print TAX "$code\t$clade\t$taxId\n";
 
   if ($eupathSite) {
-    print XML "  <dataset class=\"orthomclEuPathReferenceProteome\">\n";
+    print XML "  <dataset class=\"orthomclEuPath${type}Proteome\">\n";
     print XML "    <prop name=\"project\">$eupathSite</prop>\n";
     print XML "    <prop name=\"speciesName\">$organism</prop>\n";
     print XML "    <prop name=\"taxIdIsSpeciesLevel\">$isSpeciesLevel</prop>\n";
     print XML "    <prop name=\"version\">build $eupathBldNumber</prop>\n";
   } else {
-    print XML "  <dataset class=\"orthomclUniprotReferenceProteome\">\n";
+    print XML "  <dataset class=\"orthomclUniprot${type}Proteome\">\n";
   }
 
   print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
