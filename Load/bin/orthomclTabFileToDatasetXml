@@ -1,21 +1,30 @@
 #!/usr/bin/perl
 
-usage() unless scalar(@ARGV) == 5;
+usage() unless scalar(@ARGV) == 6;
 
-my ($eupathBldNumber, $coreFile, $periphFile, $outputDatasetsFile, $outputTaxonsFile) = @ARGV;
+my ($eupathBldNumber, $workflowVersion, $coreFile, $periphFile, $outputDatasetsFile, $outputTaxonsFile) = @ARGV;
 
 open(TAX, ">$outputTaxonsFile") || die "can't open output file '$outputTaxonsFile'\n";
 open(XML, ">$outputDatasetsFile") || die "can't open output file '$outputDatasetsFile'\n";
 
-print XML "<datasets>\n";
+print XML 
+"<datasets>
+
+  <dataset class=\"orthomclClades\">
+    <prop name=\"release\">$workflowVersion</prop>
+  </dataset>
+";
+
 open(C, $coreFile) || die "Can't open core file '$coreFile'\n";
 while(<C>) {
+  next if /code/;  # skip the header line
   chomp;
   processRow("Reference", $_, $coreFile);
 }
 
-open(C, $periphFile) || die "Can't open periph file '$periphFile'\n";
-while(<C>) {
+open(P, $periphFile) || die "Can't open periph file '$periphFile'\n";
+while(<P>) {
+  next if /code/;  # skip the header line
   chomp;
   processRow("Peripheral", $_, $periphFile);
 }
@@ -34,8 +43,8 @@ sub processRow {
   if ($eupathSite) {
     print XML "  <dataset class=\"orthomclEuPath${type}Proteome\">\n";
     print XML "    <prop name=\"project\">$eupathSite</prop>\n";
-    print XML "    <prop name=\"speciesName\">$organism</prop>\n";
-    print XML "    <prop name=\"taxIdIsSpeciesLevel\">$isSpeciesLevel</prop>\n";
+    print XML "    <prop name=\"organismName\">$organism</prop>\n";
+    print XML "    <prop name=\"ncbiTaxonIdIsAtSpeciesLevel\">$isSpeciesLevel</prop>\n";
     print XML "    <prop name=\"version\">build $eupathBldNumber</prop>\n";
   } else {
     print XML "  <dataset class=\"orthomclUniprot${type}Proteome\">\n";
@@ -53,7 +62,9 @@ sub usage() {
 Read tab files containing the proteomes required for the orthomcl datasets XML files, and produce the XML file, as well as
 the taxons file (maps taxa to clades).
 
-Usage: orthomclTabFileToDatasetsXml eupath_bld_num core_tab_file peripheral_tab_file output_dataset_xml_file output_taxon2clade_file
+WARNING: be sure input files are in unix file (use dos2unix if needed)
+
+Usage: orthomclTabFileToDatasetsXml eupath_bld_num workflow_version core_tab_file peripheral_tab_file output_dataset_xml_file output_taxon2clade_file
 
 Input columns expected:
 
