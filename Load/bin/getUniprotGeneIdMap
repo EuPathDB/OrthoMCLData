@@ -50,13 +50,13 @@ while(<W>) {
   }
 
   # an entrez gene ID
-  elsif (/^DR\s+GeneID/) {
+  elsif (/^DR\s+GeneID;/) {
     /^DR\s+GeneID;\s+(\d+);\s+\-\.$/ || die "DR GeneID line not in expected format\n$_\n";
     $localGenes{$1} = 1;
   }
 
   # an ensembl gene ID
-  elsif (/^DR\s+Ensembl/) {
+  elsif (/^DR\s+Ensembl;/) {
     /^DR\s+Ensembl;.+(ENS\w+G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
     $localGenes{$1} = 1;
   }
