@@ -13,7 +13,7 @@ open(OUT, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing
 
 # sample output defline: >hsap|Q8VCI5 gene=12345 geneName=Pex19 product=Peroxisomal biogenesis factor
 
-my $wgetcmd = "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&fil=reviewed:yes&columns=id,database%28GeneID%29\" -qO-";
+my $wgetcmd = "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&columns=id,database%28GeneID%29\" -qO-";
 open(UNIPROT, "$wgetcmd |");
 print STDERR "Reading from uniprot web service\n";
 print STDERR "$wgetcmd\n";
