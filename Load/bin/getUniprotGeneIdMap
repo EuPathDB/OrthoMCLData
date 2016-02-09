@@ -57,7 +57,7 @@ while(<W>) {
 
   # an ensembl gene ID
   elsif (/^DR\s+Ensembl;/) {
-    /^DR\s+Ensembl;.+(ENS\w+G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
+    /^DR\s+Ensembl;.+(ENS\w*G\d+)\./ || die "DR Ensembl line not in expected format\n$_\n";
     $localGenes{$1} = 1;
   }
 
