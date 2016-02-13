@@ -23,19 +23,17 @@ AC   Q8JG70;
 //
 =cut
 
-
 my @localAccessions;
 my %localGenes;
 my @localEntrezGenes;
 my @localEnsemblGenes;
 my $proteinsCount;
-my %keptGenes;
+my %gene2repGene;  # map gene to its alphabetically best equivalent
+my %protein2gene;
 
 my $url = "\"http://www.uniprot.org/uniprot/?fil=taxonomy:$ncbi_taxon_id&format=txt\"";
 
 open(W, "wget $url -qO- |") || die "Failed running 'wget $url -qO-'\n";
-
-open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
 
 while(<W>) {
   chomp;
@@ -63,21 +61,46 @@ while(<W>) {
 
   # process this completed record
   elsif (/^\/\//) {
-    my @genes = sort(keys(%localGenes));
+
+    # remember a gene id for these proteins
+    my $gene = (keys(%localGenes))[0];  # choose any gene id to map protein to. will improve later.
     foreach my $acc (@localAccessions) {
       $proteinsCount++;
-      my $gene = $genes[0];
-      if ($gene) {
-	print M "$acc\t$gene\n";
-	$keptGenes{$gene} = 1;
-      }
+      $protein2gene{$acc} = $gene if ($gene);
+    }
+
+    # for these gene ids, map to their best rep (alphabetically)
+    my @sortedLocalGenes = sort(keys(%localGenes));
+    foreach my $g (@sortedLocalGenes) {
+      $gene2repGene{$g} = $sortedLocalGenes[0] unless $gene2repGene{$g} && $gene2repGene{$g} lt $sortedLocalGenes[0];
     }
   }
 }
-close(M);
+close(W);
 
-my $genesCount = scalar(keys(%keptGenes));
-print STDERR "Uniprot Count Summary - proteins: $proteinsCount genes: $genesCount\n";
+# pass through gene to gene mapping, to find the best rep for each gene
+#   - iterate in alphabetical order
+#   - this way we find the preferred reps first
+#   - if a gene maps to another gene, use that genes's rep, as it is the most preferred
+print STDERR "Finding representative Gene IDs\n";
+foreach my $g (sort(keys(%gene2repGene))) {
+  my $rep = $gene2repGene{$g};
+  $gene2repGene{$g} = $gene2repGene{$rep};   # my rep is my rep's rep.
+}
+
+print STDERR "Mapping proteins to rep proteins\n";
+open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
+my %repGenes;
+my $mappedProteinsCount;
+foreach my $p (keys(%protein2gene)) {
+  $mappedProteinsCount++;
+  my $repGene = $gene2repGene{$protein2gene{$p}};
+  print M "$p\t$repGene\n";
+  $repGenes{$repGene}  = 1;
+}
+
+my $genesCount = scalar(keys(%repGenes));
+print STDERR "Uniprot Count Summary | taxon: $ncbi_taxon_id total proteins: $proteinsCount  mapped proteins: $mappedProteinsCount genes: $genesCount\n";
 
 sub usage {
   die "
@@ -96,7 +119,7 @@ Calls this to get the text file:
 The approach is to read the large genbank-like text file (input from uniprot), and find the mapping of gene IDs
 to proteins. 
 
-For each protein, keep the alphabetically first geneId.
+Find a representative gene for each set of genes formed by transitive closure on the genes assigned to proteins.  All gene IDs that transtivily share a set of proteins is considered a single gene, and is represented by an arbitrary member of the set of genes.
 
 ";
 }
