@@ -30,6 +30,7 @@ my @localEnsemblGenes;
 my $proteinsCount;
 my %gene2repGene;  # map gene to its alphabetically best equivalent
 my %protein2gene;
+my $uniqueProteinsCount;
 
 my $url = "\"http://www.uniprot.org/uniprot/?query=taxonomy:$ncbi_taxon_id+AND+proteome:$proteome_id&format=txt\"";
 
@@ -42,6 +43,7 @@ while(<W>) {
 
   # handle a new set of accessions
   if (/^AC/) {
+    $uniqueProteinsCount++;
     my $line = $_;
     my @a = split(/\s+/, $line);
     shift(@a);  #lose AC
@@ -101,8 +103,8 @@ my $genesCount = scalar(keys(%repGenes));
 # if we have a low gene count, assume it is bacterial, and use the protein id as gene id
 # but, if we also have a high protein count, it can't be bacterial, so there is a problem.
 my $doNotUseGenes;
-if ($genesCount < 500) {
-  die "Error: messed up proteome.  Too few Genes ($genesCount) and too many proteins ($proteinsCount)\n" if ($proteinsCount > 10000);
+if ($genesCount < 1000) {
+  die "Error: messed up proteome.  Too few Genes ($genesCount) and too many proteins ($uniqueProteinsCount)\n" if ($uniqueProteinsCount > 10000);
   $doNotUseGenes = 'yes';
 }
 
@@ -122,7 +124,7 @@ if ($doNotUseGenes) {
   }
 }
 my $org = $organismName? " $organismName" : "";
-my @report = ("Uniprot Count Summary:", "taxon: ${ncbi_taxon_id}", "total proteins: $proteinsCount",  "mapped proteins: $mappedProteinsCount", "genes: $genesCount", "ignored genes: $doNotUseGenes", $org);
+my @report = ("Uniprot Count Summary:", "taxon: ${ncbi_taxon_id}", "proteins: $proteinsCount",  "unique: $uniqueProteinsCount", "mapped : $mappedProteinsCount", "genes: $genesCount", "ignored genes: $doNotUseGenes", $org);
 print STDERR join("\t", @report) . "\n";
 
 sub usage {

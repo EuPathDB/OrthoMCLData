@@ -36,20 +36,27 @@ sub processRow {
   my @row = split("\t", $rowString);
   die "Invalid row in $type file $file.  Too few columns:\n$_\n" unless scalar(@row) >= 6;
 
-  my ($eupathSite, $taxId, $organism, $isSpeciesLevel, $code, $clade, $oldCodes) = @row;
+  my ($eupathSite, $proteomeId, $taxId, $organism, $isSpeciesLevel, $code, $clade, $disabled) = @row;
+
+  if ($disabled) {
+    print STDERR "$organism is disabled in the spreadsheet.  Ignoring\n";
+    return;
+  }
 
   print TAX "$code\t$clade\t$taxId\n";
 
   if ($eupathSite) {
     print XML "  <dataset class=\"orthomclEuPath${type}Proteome\">\n";
     print XML "    <prop name=\"project\">$eupathSite</prop>\n";
-    print XML "    <prop name=\"organismName\">$organism</prop>\n";
     print XML "    <prop name=\"ncbiTaxonIdIsAtSpeciesLevel\">$isSpeciesLevel</prop>\n";
     print XML "    <prop name=\"version\">build $eupathBldNumber</prop>\n";
   } else {
     print XML "  <dataset class=\"orthomclUniprot${type}Proteome\">\n";
+    print XML "    <prop name=\"proteomeId\">$proteomeId</prop>\n";
+
   }
 
+  print XML "    <prop name=\"organismName\">$organism</prop>\n";
   print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
   print XML "    <prop name=\"abbrev\">$code</prop>\n";
   print XML "    <prop name=\"oldAbbrevsList\">$oldCodes</prop>\n";
@@ -68,7 +75,7 @@ Usage: orthomclTabFileToDatasetsXml eupath_bld_num workflow_version core_tab_fil
 
 Input columns expected:
 
-EuPath_Component_Site   NCBI_Taxon_ID	Organism TaxIdIsSpeciesLevel 4_letter_code Clade Old_abbrevs
+EuPath_Component_Site Uniprot_proteome_id  NCBI_Taxon_ID  Organism TaxIdIsSpeciesLevel 4_letter_code Clade Disabled
 
 TaxIdIsSpeciesLevel = yes if this is a eupathdb organism that does not have an ncbi tax id.  we use species tax id instead.
 
