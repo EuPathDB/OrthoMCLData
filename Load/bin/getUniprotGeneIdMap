@@ -2,9 +2,9 @@
 
 use strict;
 
-usage() if scalar(@ARGV) != 2;
+usage() if scalar(@ARGV) < 3;
 
-my ($ncbi_taxon_id, $output_map_file) = @ARGV;
+my ($ncbi_taxon_id, $proteome_id, $output_map_file, $organismName) = @ARGV;
 
 =head
 AC   Q7ZVB2; Q6NYB3;
@@ -31,10 +31,12 @@ my $proteinsCount;
 my %gene2repGene;  # map gene to its alphabetically best equivalent
 my %protein2gene;
 
-my $url = "\"http://www.uniprot.org/uniprot/?fil=taxonomy:$ncbi_taxon_id&format=txt\"";
+my $url = "\"http://www.uniprot.org/uniprot/?query=taxonomy:$ncbi_taxon_id+AND+proteome:$proteome_id&format=txt\"";
+
+#print STDERR "$url\n";
 
 open(W, "wget $url -qO- |") || die "Failed running 'wget $url -qO-'\n";
-
+my @allProteins;
 while(<W>) {
   chomp;
 
@@ -67,6 +69,7 @@ while(<W>) {
     foreach my $acc (@localAccessions) {
       $proteinsCount++;
       $protein2gene{$acc} = $gene if ($gene);
+      push(@allProteins, $acc);
     }
 
     # for these gene ids, map to their best rep (alphabetically)
@@ -78,6 +81,8 @@ while(<W>) {
 }
 close(W);
 
+die "Error: found no proteins.  Perhaps there is a mismatch between ncbi tax id and uniprot proteome id\n" unless $proteinsCount;
+
 # pass through gene to gene mapping, to find the best rep for each gene
 #   - iterate in alphabetical order
 #   - this way we find the preferred reps first
@@ -88,32 +93,51 @@ foreach my $g (sort(keys(%gene2repGene))) {
   $gene2repGene{$g} = $gene2repGene{$rep};   # my rep is my rep's rep.
 }
 
-print STDERR "Mapping proteins to rep proteins\n";
-open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
+# count unique rep genes
 my %repGenes;
-my $mappedProteinsCount;
-foreach my $p (keys(%protein2gene)) {
-  $mappedProteinsCount++;
-  my $repGene = $gene2repGene{$protein2gene{$p}};
-  print M "$p\t$repGene\n";
-  $repGenes{$repGene}  = 1;
+foreach my $r (values(%gene2repGene)) { $repGenes{$r} = 1; }
+my $genesCount = scalar(keys(%repGenes));
+
+# if we have a low gene count, assume it is bacterial, and use the protein id as gene id
+# but, if we also have a high protein count, it can't be bacterial, so there is a problem.
+my $doNotUseGenes;
+if ($genesCount < 500) {
+  die "Error: messed up proteome.  Too few Genes ($genesCount) and too many proteins ($proteinsCount)\n" if ($proteinsCount > 10000);
+  $doNotUseGenes = 'yes';
 }
 
-my $genesCount = scalar(keys(%repGenes));
-print STDERR "Uniprot Count Summary | taxon: $ncbi_taxon_id total proteins: $proteinsCount  mapped proteins: $mappedProteinsCount genes: $genesCount\n";
+print STDERR "Mapping proteins to rep proteins\n";
+open(M, ">$output_map_file") || die "Can't open output map file '$output_map_file' for writing\n";
+
+my $mappedProteinsCount;
+if ($doNotUseGenes) {
+  foreach my $p (@allProteins) {
+  print M "$p\t$p\n";
+  }
+} else {
+  foreach my $p (keys(%protein2gene)) {
+    $mappedProteinsCount++;
+    my $repGene = $gene2repGene{$protein2gene{$p}};
+    print M "$p\t$repGene\n";
+  }
+}
+my $org = $organismName? " $organismName" : "";
+my @report = ("Uniprot Count Summary:", "taxon: ${ncbi_taxon_id}", "total proteins: $proteinsCount",  "mapped proteins: $mappedProteinsCount", "genes: $genesCount", "ignored genes: $doNotUseGenes", $org);
+print STDERR join("\t", @report) . "\n";
 
 sub usage {
   die "
 
 Parse Uniprot text file (genbank format) to find Entrez and Ensembl gene IDs for each protein, as available.
 
-Usage: getUniprotGeneIdMap output_mapping_file
+Usage: getUniprotGeneIdMap ncbi_taxon_id uniprot_proteome_id output_mapping_file [organism_name]
 
 Where:
   output_mapping_file:  a tab-delimited file, first column protein ID, next column gene ID
+  organism_name: used just for reporting at the end
 
 Calls this to get the text file:
-  wget \"http://www.uniprot.org/uniprot/?fil=taxonomy:7955&format=txt\" -qO- 
+  wget \"http://www.uniprot.org/uniprot/?query=proteome:UP000000799+AND+taxonomy:192222&format&format=txt\" -qO- 
 
 
 The approach is to read the large genbank-like text file (input from uniprot), and find the mapping of gene IDs
