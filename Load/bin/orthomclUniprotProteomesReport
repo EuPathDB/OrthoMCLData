@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+use strict;
+
+usage() unless scalar(@ARGV) == 1;
+
+my ($inputFile) = @ARGV;
+
+open(F, $inputFile) || die "Can't open input file '$inputFile'\n";
+
+while(<F>) {
+  chomp;
+  my ($eupathProj, $proteomeId, $ncbi_tax_id, $org_name) = split(/\t/);
+  next if $eupathProj;
+  my $cmd = "getUniprotGeneIdMap $ncbi_tax_id $proteomeId ${ncbi_tax_id}.txt \'$org_name\'";
+  print STDERR "\nRunning: $cmd\n";
+  `$cmd`;
+
+}
+
+sub usage {
+
+die "
+
+Get a report summarizing protein and gene counts for a set of uniprot proteomes.  Used to confirm viability of them.'
+
+Usage:  orthomclUniprotProteomesReport tab_file 2> logfile
+
+Where: tab_file is a dump of an orthomcl spreadsheet.  It must have these columns:
+  1: Eupath project (empty if uniprot)
+  2: uniprot proteome id
+  3: ncbi taxon id
+  4: organism name
+
+When done, grep logfile for 'Summary'
+
+Calls getUniprotGeneIdMap on each uniprot proteome
+
+Writes a set of protein-gene mapping files in the current directory (one per uniprot proteome), named by taxon id.
+
+";
+}
