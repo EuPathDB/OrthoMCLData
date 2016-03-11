@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+use strict;
 
 usage() unless scalar(@ARGV) == 6;
 
@@ -59,11 +60,11 @@ sub processRow {
   print XML "    <prop name=\"organismName\">$organism</prop>\n";
   print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
   print XML "    <prop name=\"abbrev\">$code</prop>\n";
-  print XML "    <prop name=\"oldAbbrevsList\">$oldCodes</prop>\n";
+  print XML "    <prop name=\"oldAbbrevsList\"></prop>\n";
   print XML "  </dataset>\n\n";
 
   my $source = $eupathSite? "eupath" : "uniprot";
-  print XML "  <dataset class=\"$sourceEcMappings\">\n";
+  print XML "  <dataset class=\"${source}EcMappings\">\n";
   print XML "    <prop name=\"abbrev\">$code</prop>\n";
   print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
   print XML "    <prop name=\"organismName\">$organism</prop>\n" if $eupathSite;
