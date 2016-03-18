@@ -68,6 +68,7 @@ sub processRow {
   print XML "    <prop name=\"abbrev\">$code</prop>\n";
   print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
   print XML "    <prop name=\"organismName\">$organism</prop>\n" if $eupathSite;
+  print XML "    <prop name=\"version\">$eupathBldNumber</prop>\n" if $eupathSite;
   print XML "  </dataset>\n\n";
 
 }
