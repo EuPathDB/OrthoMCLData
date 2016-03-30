@@ -16,7 +16,14 @@ use GUS::Model::SRes::ExternalDatabaseRelease;
 #use ApiCommonData::Load::Util;
 
 my $argsDeclaration =
-[];
+[
+ stringArg({ descr => 'Suffix for SimilarSequences table',
+	     name  => 'simSeqsTableSuffix',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+];
 
 my $purpose = <<PURPOSE;
 update ApiDB::OrthologGroup and ApiDB::OrthologGroupAaSequence tablesxs.
@@ -82,9 +89,11 @@ sub new {
 sub run {
     my ($self) = @_;
 
+    my $suffix = $self->getArg('simSeqsTableSuffix');
+
     my $unfinished = $self->getUnfinishedOrthologGroups();
 
-    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished);
+    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $suffix);
 
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
 }
@@ -120,7 +129,7 @@ EOF
 }
 
 sub processUnfinishedGroups {
-  my ($self, $unfinished) = @_;
+  my ($self, $unfinished, $suffix) = @_;
 
   my $updatedGrps;
 
@@ -141,7 +150,7 @@ EOF
      SELECT
        s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
-     FROM apidb.SimilarSequences s
+     FROM apidb.SimilarSequences$suffix s
      WHERE (s.query_id = ? AND s.subject_id = ?)
             OR (s.subject_id = ? AND s.query_id = ?)
 ";
@@ -150,12 +159,12 @@ EOF
 
   my $conCount = <<"EOF";
      select count(*) from
-     (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
+     (SELECT sequence_id_a FROM apidb.ortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
 and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.coortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+     SELECT sequence_id_a FROM apidb.coortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+     SELECT sequence_id_a FROM apidb.inparalog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
 
   my $sth3 = $dbh->prepare($conCount);
