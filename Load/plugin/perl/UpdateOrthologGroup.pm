@@ -20,7 +20,8 @@ my $argsDeclaration =
  stringArg({ descr => 'Suffix for SimilarSequences table',
 	     name  => 'simSeqsTableSuffix',
 	     isList    => 0,
-	     reqd  => 1,
+	     reqd  => 0,
+	     default  => "",
 	     constraintFunc => undef,
 	   }),
 ];
