@@ -52,8 +52,8 @@ public class LayoutGenerator {
     catch (ParseException ex) {
       System.err.println(ex);
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("orthoGenerateLayout -d \"ApiDB.GroupLayout\" [-m " + DEFAULT_MAX_MEMBER +
-          "] [-t " + DEFAULT_TASK_COUNT + "]", options);
+      formatter.printHelp("orthomclClusterLayout [-max " + DEFAULT_MAX_MEMBER +
+          "] [-task " + DEFAULT_TASK_COUNT + "] [-undo]", options);
       System.exit(-1);
     }
   }
