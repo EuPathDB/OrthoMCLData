@@ -10,12 +10,11 @@ PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
   <settings>
    <setting name="defaultExecutorType" value="REUSE"/>
   </settings>
-
 	<typeAliases>
-    <typeAlias type="org.orthomcl.data.core.Group" alias="Group" />
-    <typeAlias type="org.orthomcl.data.core.Gene" alias="Gene" />
-    <typeAlias type="org.orthomcl.data.core.GenePair" alias="GenePair" />
-    <typeAlias type="org.orthomcl.data.core.BlastScore" alias="BlastScore" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.Group" alias="Group" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.Gene" alias="Gene" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.GenePair" alias="GenePair" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.BlastScore" alias="BlastScore" />
 	</typeAliases>
 
 	<environments default="development">
