@@ -20,7 +20,6 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 <response>
   <recordset id='c959a5c950b9a48b436c934b89175928:all_results' count='26183' type='Gene'>
     <record id='TGGT1_200010'>
-      <field name='representative_gene' title='Gene Group (representative)'>TGGT1_200010</field>
       <field name='product' title='Product description'>Hypothetical protein</field>
       <field name='organism' title='Organism'>T. gondii GT1</field>
       <field name='protein_sequence' title='Predicted Protein Sequence'>MHERRETIATHTEAGE</field>
@@ -31,24 +30,23 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 =cut
 
 foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  my $repGeneId = $data->{recordset}->{record}->{$geneId}->{field}->{representative_gene}->{content};
   my $product = $data->{recordset}->{record}->{$geneId}->{field}->{product}->{content};
   my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
   my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
   $transcriptId = $geneId;   #temporary until GUS 4
-  print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n" if $geneId eq $repGeneId;
+  print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n";
 }
 
 
 sub usage {
 
 die "
-Unpack a eupath web services XML file that contains info about EupathDB proteins. Include in the output fasta only transcripts from the representative gene.  
+Unpack a eupath web services XML file that contains info about EupathDB proteins.
 
 Usage: orthomclUnpackEupathProteins input_tab_file output_fasta_file 
 
 Where: 
-  input_xml_file:      eupath web svc XML file containing fields: gene_id, representative_gene_id, transcript_id, organism, protein_sequence, product
+  input_xml_file:      eupath web svc XML file containing fields: gene_id, transcript_id, organism, protein_sequence, product
   output_fasta_file:   fasta file as expected by orthomcl workflow
 ";
 }
