@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<properties>
+		<property name="apidb-schema" value="apidb." />
+	</properties>
+  
+  <settings>
+   <setting name="defaultExecutorType" value="REUSE"/>
+  </settings>
+	<typeAliases>
+    <typeAlias type="org.orthomcl.data.common.layout.core.Group" alias="Group" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.Gene" alias="Gene" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.GenePair" alias="GenePair" />
+    <typeAlias type="org.orthomcl.data.common.layout.core.BlastScore" alias="BlastScore" />
+	</typeAliases>
+
+	<environments default="development">
+		<environment id="development">
+			<transactionManager type="JDBC" />
+			<dataSource type="POOLED">
+				<property name="driver" value="oracle.jdbc.driver.OracleDriver" />
+				<property name="url" value="${orthomcl.db.url}" />
+				<property name="username" value="${orthomcl.db.login}" />
+        <property name="password" value="${orthomcl.db.password}" />
+        <property name="poolMaximumActiveConnections" value="${orthomcl.db.pool.active}" />
+        <property name="poolMaximumIdleConnections" value="${orthomcl.db.pool.idle}" />
+			</dataSource>
+		</environment>
+	</environments>
+
+	<mappers>
+    <mapper resource="mappers/GroupMapper.xml" />
+    <mapper resource="mappers/GeneMapper.xml" />
+	</mappers>
+</configuration>

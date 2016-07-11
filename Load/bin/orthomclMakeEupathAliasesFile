@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+ 
+use strict;
+use XML::Simple;
+
+usage() unless scalar(@ARGV) == 4;
+
+my ($abbrev, $inputXmlFile, $inputExemplarsFastaFile, $outputAliasesFile) = @ARGV;
+
+open(FASTA, "$inputExemplarsFastaFile") || die "Can't open '$inputExemplarsFastaFile' for reading\n";
+
+# first read in exemplars, to find the transcript that is exemplar for each gene
+# sample def line: >pf3d7_12345-t23_1 gene=pf3d7_12345  product=a really great protein
+my %exemplars;
+while((<FASTA>)) {
+    next unless /\>(\S+) gene=(\S+)/;
+    my $geneId = $1;
+    my $transcriptId = $2;
+    $exemplars{$geneId} = $transcriptId;
+}
+close(FASTA);
+
+=head
+
+<response>
+  <recordset id='c959a5c950b9a48b436c934b89175928:all_results' count='26183' type='Gene'>
+    <record id='TGGT1_200010'>
+      <field name='representative_gene' title='Gene Group (representative)'>TGGT1_200010</field>
+      <field name='product' title='Product description'>Hypothetical protein</field>
+      <field name='organism' title='Organism'>T. gondii GT1</field>
+      <field name='protein_sequence' title='Predicted Protein Sequence'>MHERRETIATHTEAGE</field>
+    </record>
+  </recordset>
+</response>
+
+=cut
+
+# read XML file
+my $xml = new XML::Simple;
+my $data = $xml->XMLin($inputXmlFile);
+die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
+
+
+open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
+my %geneIds;
+foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
+  my $repGeneId = $data->{recordset}->{record}->{$geneId}->{field}->{representative_gene}->{content};
+  my $organism = $data->{recordset}->{record}->{$geneId}->{field}->{organism}->{content};
+  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+
+  # gene alias
+  print ALIASES "$abbrev|$repGeneId\t$geneId\t$organism\n" unless $geneIds{$geneId};
+  $geneIds{$geneId} = 1;
+
+  # transcript alias
+  if ($exemplars{$geneId} eq $transcriptId) {
+      print ALIASES "$abbrev|$repGeneId\t$transcriptId\tEXEMPLAR\n";  # flag this transcript as an exemplar
+  } else {
+      print ALIASES "$abbrev|$repGeneId\t$transcriptId\t\n";  # empty remark column
+  }
+}
+
+sub usage {
+
+die "
+Make a file of repGeneId-geneId and repGeneId-transcriptId aliases.  (This includes the unity mapping of repGeneId-repGeneId)  
+
+Usage: orthomclMakeEupathAliasesFile abbrev input_xml_file input_exemplars_fasta_file output_aliases_file
+
+Where: 
+  abbrev:                       the organism abbreviation for this proteome
+  input_xml_file:               eupath web svc XML file containing fields: gene_id, representative_gene_id, transcript_id
+  input_exemplars_fasta_file:   fasta file as expected by orthomcl workflow, containing only exemplar proteins per gene
+  output_aliases_file:          a mapping between the representative gene and gene_ids and transcript_ids of the represented genes.  Three columns:  rep_gene_id, alias_id, remark.  If the alias is a gene, the remark is organism.  If the alias is the exemplar transcript, the remark is EXEMPLAR. Otherwise, it is empty.
+
+";
+}

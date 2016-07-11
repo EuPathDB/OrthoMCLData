@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.orthomcl.data.common.layout.load.mapper.GroupMapper">
+
+	<resultMap type="Group" id="GroupMap">
+		<constructor>
+      <idArg column="ortholog_group_id" javaType="_int" />
+      <idArg column="name" javaType="string" />
+		</constructor>
+	</resultMap>
+
+	<select id="selectGroups" parameterType="int" resultMap="GroupMap" fetchSize="5000">
+  <![CDATA[
+      SELECT ortholog_group_id, name FROM apidb.OrthologGroup
+      WHERE ortholog_group_id NOT IN (SELECT ortholog_group_id FROM apidb.OrthologGroupLayout)
+        AND number_of_members <= #{max}
+        -- AND ortholog_group_id IN (SELECT ortholog_group_id FROM ${apidb-schema}SimilarSequencesGroup)
+      ORDER BY number_of_members DESC
+  ]]>
+	</select>
+
+  <select id="selectGroupById" parameterType="int" resultMap="GroupMap">
+  <![CDATA[
+    SELECT ortholog_group_id, name FROM apidb.OrthologGroup
+    WHERE ortholog_group_id = #{id}
+  ]]>
+  </select>
+
+  <select id="selectLayout" parameterType="Group" resultType="string">
+  <![CDATA[
+    SELECT layout FROM apidb.OrthologGroupLayout WHERE ortholog_group_id = #{id}
+  ]]>
+  </select>
+
+  <select id="selectGroupByName" parameterType="string" resultMap="GroupMap">
+  <![CDATA[
+    SELECT ortholog_group_id, name FROM apidb.OrthologGroup
+    WHERE name = #{name}
+  ]]>
+  </select>
+
+	<insert id="insertLayout" parameterType="Group">
+  <![CDATA[
+      INSERT INTO apidb.OrthologGroupLayout (ortholog_group_id, layout) VALUES (#{id}, #{layout})
+  ]]>
+	</insert>
+
+  <delete id="deleteLayout" parameterType="Group">
+  <![CDATA[
+      DELETE FROM apidb.OrthologGroupLayout WHERE ortholog_group_id = #{id}
+  ]]>
+  </delete>
+
+  <delete id="deleteLayouts">
+  <![CDATA[
+      DELETE FROM apidb.OrthologGroupLayout
+  ]]>
+  </delete>
+
+</mapper>

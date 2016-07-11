@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+use strict;
+
+usage() unless scalar(@ARGV) == 6;
+
+my ($eupathBldNumber, $workflowVersion, $coreFile, $periphFile, $outputDatasetsFile, $outputTaxonsFile) = @ARGV;
+
+open(TAX, ">$outputTaxonsFile") || die "can't open output file '$outputTaxonsFile'\n";
+open(XML, ">$outputDatasetsFile") || die "can't open output file '$outputDatasetsFile'\n";
+
+print XML 
+"<datasets>
+
+  <dataset class=\"orthomclClades\">
+    <prop name=\"release\">$workflowVersion</prop>
+  </dataset>
+";
+
+open(C, $coreFile) || die "Can't open core file '$coreFile'\n";
+while(<C>) {
+  next if /code/;  # skip the header line
+  chomp;
+  processRow("Reference", $_, $coreFile);
+}
+
+open(P, $periphFile) || die "Can't open periph file '$periphFile'\n";
+while(<P>) {
+  next if /code/;  # skip the header line
+  chomp;
+  processRow("Peripheral", $_, $periphFile);
+}
+print XML "</datasets>\n";
+
+sub processRow {
+  my ($type, $rowString, $file) = @_;
+
+  my @row = split("\t", $rowString);
+  die "Invalid row in $type file $file.  Too few columns:\n$_\n" unless scalar(@row) >= 6;
+
+  my ($eupathSite, $proteomeId, $taxId, $organism, $isSpeciesLevel, $code, $clade, $disabled) = @row;
+
+  if ($disabled) {
+    print STDERR "$organism is disabled in the spreadsheet.  Ignoring\n";
+    return;
+  }
+
+  print TAX "$code\t$clade\t$taxId\n";
+
+  if ($eupathSite) {
+    print XML "  <dataset class=\"orthomclEuPath${type}Proteome\">\n";
+    print XML "    <prop name=\"project\">$eupathSite</prop>\n";
+    print XML "    <prop name=\"ncbiTaxonIdIsAtSpeciesLevel\">$isSpeciesLevel</prop>\n";
+    print XML "    <prop name=\"version\">$eupathBldNumber</prop>\n";
+  } else {
+    print XML "  <dataset class=\"orthomclUniprot${type}Proteome\">\n";
+    print XML "    <prop name=\"proteomeId\">$proteomeId</prop>\n";
+
+  }
+
+  print XML "    <prop name=\"organismName\">$organism</prop>\n";
+  print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
+  print XML "    <prop name=\"abbrev\">$code</prop>\n";
+  print XML "    <prop name=\"oldAbbrevsList\"></prop>\n";
+  print XML "  </dataset>\n\n";
+
+  my $source = $eupathSite? "eupath" : "uniprot";
+  print XML "  <dataset class=\"${source}EcMappings\">\n";
+  print XML "    <prop name=\"abbrev\">$code</prop>\n";
+  print XML "    <prop name=\"ncbiTaxonId\">$taxId</prop>\n";
+  print XML "    <prop name=\"organismName\">$organism</prop>\n" if $eupathSite;
+  print XML "    <prop name=\"version\">$eupathBldNumber</prop>\n" if $eupathSite;
+  print XML "  </dataset>\n\n";
+
+}
+
+
+sub usage() {
+  die "
+Read tab files containing the proteomes required for the orthomcl datasets XML files, and produce the XML file, as well as
+the taxons file (maps taxa to clades).
+
+WARNING: be sure input files are in unix file (use dos2unix if needed)
+
+Usage: orthomclTabFileToDatasetsXml eupath_bld_num workflow_version core_tab_file peripheral_tab_file output_dataset_xml_file output_taxon2clade_file
+
+Input columns expected:
+
+EuPath_Component_Site Uniprot_proteome_id  NCBI_Taxon_ID  Organism TaxIdIsSpeciesLevel 4_letter_code Clade Disabled
+
+TaxIdIsSpeciesLevel = yes if this is a eupathdb organism that does not have an ncbi tax id.  we use species tax id instead.
+
+";
+}

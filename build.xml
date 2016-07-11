@@ -4,13 +4,14 @@
   <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <import file="${projectsDir}/ApiCommonData/build.xml" />
+  <import file="${projectsDir}/ApiCommonData/build.xml" optional="true" />
   <import file="${projectsDir}/OrthoMCLShared/build.xml" />
 
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo    Checkout    oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
   <target name="OrthoMCLData-ChildCheckout">
     <available file="../ApiCommonData" type="dir"  property="ApiCommonData.present" />
     <antcall target="ApiCommonData-Checkout"/>
@@ -38,6 +39,7 @@
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo    Update    oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
   <target name="OrthoMCLData-ChildUpdate">
     <ant target="defaultProjectUpdate">
       <property name="project" value="ApiCommonData"/>
@@ -45,38 +47,30 @@
     </ant>
   </target>
 
+
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <target name="OrthoMCLData-Installation" depends="ApiCommonData-Installation,
+  <target name="OrthoMCLData-Installation" depends="OrthoMCLShared-Installation,
                                                     OrthoMCLData-MavenInstallation,
-                                                    OrthoMCLShared-Installation,
+                                                    OrthoMCLData/Common-Installation,
                                                     OrthoMCLData/Load-Installation">
+    <ant target="ApiCommonData-Installation" />
+
     <ant target="defaultProjectInstall">
       <property name="project" value="OrthoMCLData"/>
     </ant>
-  </target>  
+  </target>
 
   <target name="OrthoMCLData-MavenInstallation">
-    <ant target="mavenCleanInstall">
+    <ant target="mavenBuildProject">
       <property name="project" value="OrthoMCLData"/>
     </ant>
-
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Common"/>
-    </ant>
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Data"/>
-    </ant>
-    <ant target="deployMavenArtifacts">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Client"/>
-    </ant>
+    <property name="alreadyBuilt" value="true"/>
   </target>
-    
+
+
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation-postprocess">
@@ -92,6 +86,13 @@
 
   <!-- ooooooooooooooooooooooo  Install Components  ooooooooooooooooooooooo -->
 
+  <target name="OrthoMCLData/Common-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="OrthoMCLData"/>
+      <property name="component" value="Common"/>
+    </ant>
+  </target>
+
   <target name="OrthoMCLData/Load-Installation" depends="ProjectTree">
     <ant target="defaultComponentInstall">
       <property name="project" value="OrthoMCLData"/>
@@ -99,18 +100,19 @@
     </ant>
   </target>  
 
+
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Distributable  ooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Distributable" depends="ProjectTree">
-
     <copy todir="${targetDir}">
       <fileset dir="${projectsDir}" >
         <exclude name="**/.svn/*" />
       </fileset>
     </copy>
   </target>
+
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  ProjectTree  ooooooooooooooooooooooooooo -->

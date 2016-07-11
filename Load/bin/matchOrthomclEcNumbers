@@ -12,6 +12,7 @@ use strict;
 use Data::Dumper;
 use Getopt::Long;
 use DBI;
+use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 
 my ($blastFile, $uniprotEcMappingFile, $uniprotTaxonMappingFile, $outputEcMappingFile, $insertSequenceEcNumber);
@@ -87,16 +88,16 @@ foreach my $subjectId (sort keys %uniprotRep)  {
   foreach my $ecNum (split(/,/, $ecList)) {
     # print "result line: \"$subjectId\t$ecNum\"\n";
     print OUT "$subjectId\t$ecNum\n";
-    insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt)
-      if $insertSequenceEcNumber;
-
     $outRecordCount++;
-    $dbh->commit() unless $outRecordCount % 1000;
+    if ($insertSequenceEcNumber) {
+      insertMapping($queryId, $subjectId, $taxonMapping{$uniprot_suffix}, $ecNum, $insertStmt);
+      $dbh->commit() unless $outRecordCount % 1000;
+    }
   }
 }
 
 close(OUT);
-$dbh->commit();
+$dbh->commit()  if ($insertSequenceEcNumber);
 
 
 sub loadEcMappings {
@@ -151,6 +152,6 @@ sub usage {
   $0 =~ /([^\/]*)$/;
   my $programName = $1;
 
-  print "usage: $programName -blastFile <filename> -uniprotEcMappingFile <filename> { -uniprotTaxonMappingFile <filename> } -outputEcMappingFile <filename> { -insertSequenceEcNumber }\n";
-  die;
+  die "
+usage: $programName -blastFile <filename> -uniprotEcMappingFile <filename>  -outputEcMappingFile <filename> [-insertSequenceEcNumber -uniprotTaxonMappingFile <filename>]\n\n";
 }

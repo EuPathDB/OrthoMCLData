@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+ 
+use strict;
+use XML::Simple;
+use Data::Dumper;
+
+usage() unless scalar(@ARGV) == 2;
+
+my ($inputXmlFile, $outputFastaFile) = @ARGV;
+
+open(FASTA, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing\n";
+
+# read XML file
+my $xml = new XML::Simple;
+my $data = $xml->XMLin($inputXmlFile);
+die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
+
+=head
+
+<response>
+  <recordset id='c959a5c950b9a48b436c934b89175928:all_results' count='26183' type='Gene'>
+    <record id='TGGT1_200010'>
+      <field name='product' title='Product description'>Hypothetical protein</field>
+      <field name='organism' title='Organism'>T. gondii GT1</field>
+      <field name='protein_sequence' title='Predicted Protein Sequence'>MHERRETIATHTEAGE</field>
+    </record>
+  </recordset>
+</response>
+
+=cut
+
+foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
+  my $product = $data->{recordset}->{record}->{$geneId}->{field}->{product}->{content};
+  my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
+  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+  $transcriptId = $geneId;   #temporary until GUS 4
+  print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n";
+}
+
+
+sub usage {
+
+die "
+Unpack a eupath web services XML file that contains info about EupathDB proteins.
+
+Usage: orthomclUnpackEupathProteins input_tab_file output_fasta_file 
+
+Where: 
+  input_xml_file:      eupath web svc XML file containing fields: gene_id, transcript_id, organism, protein_sequence, product
+  output_fasta_file:   fasta file as expected by orthomcl workflow
+";
+}

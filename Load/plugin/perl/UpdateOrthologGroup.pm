@@ -16,7 +16,15 @@ use GUS::Model::SRes::ExternalDatabaseRelease;
 #use ApiCommonData::Load::Util;
 
 my $argsDeclaration =
-[];
+[
+ stringArg({ descr => 'Suffix for SimilarSequences table',
+	     name  => 'simSeqsTableSuffix',
+	     isList    => 0,
+	     reqd  => 0,
+	     default  => "",
+	     constraintFunc => undef,
+	   }),
+];
 
 my $purpose = <<PURPOSE;
 update ApiDB::OrthologGroup and ApiDB::OrthologGroupAaSequence tablesxs.
@@ -24,10 +32,9 @@ PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
 update apidb.orthologgroup average percent identity,average percent match, average mantissa, average exponent, average connectivity, number match pairs and apidb.orthologgroupaasequence.connectivity.
-
-Avg connectivity is the connectivity of each sequence divivided by the group size.  A sequence connectivity is the total number of seqs it has a similarity to.
-(NOTE: this should probably normalize by the size of the group, ie, divide each seqs score by N choose 2)
 PURPOSE_BRIEF
+
+#Avg connectivity is the connectivity of each sequence divivided by the group size.  A sequence connectivity is the total number of seqs it has a similarity to.(NOTE: this should probably normalize by the size of the group, ie, divide each seqs score by N choose 2)
 
 my $notes = <<NOTES;
 NOTES
@@ -83,9 +90,11 @@ sub new {
 sub run {
     my ($self) = @_;
 
+    my $suffix = $self->getArg('simSeqsTableSuffix');
+
     my $unfinished = $self->getUnfinishedOrthologGroups();
 
-    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished);
+    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $suffix);
 
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
 }
@@ -121,7 +130,7 @@ EOF
 }
 
 sub processUnfinishedGroups {
-  my ($self, $unfinished) = @_;
+  my ($self, $unfinished, $suffix) = @_;
 
   my $updatedGrps;
 
@@ -142,7 +151,7 @@ EOF
      SELECT
        s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
-     FROM apidb.SimilarSequences s
+     FROM apidb.SimilarSequences$suffix s
      WHERE (s.query_id = ? AND s.subject_id = ?)
             OR (s.subject_id = ? AND s.query_id = ?)
 ";
@@ -151,12 +160,12 @@ EOF
 
   my $conCount = <<"EOF";
      select count(*) from
-     (SELECT sequence_id_a FROM apidb.ortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
+     (SELECT sequence_id_a FROM apidb.ortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
 and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.coortholog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+     SELECT sequence_id_a FROM apidb.coortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.inparalog where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+     SELECT sequence_id_a FROM apidb.inparalog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
 
   my $sth3 = $dbh->prepare($conCount);
@@ -174,6 +183,9 @@ EOF
       my $sourceId = $row[1];
       push (@seqIdArr, "${seqId},$sourceId");
     }
+
+    next if @seqIdArr < 2;
+
     my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3);
 
     $updatedGrps += $grps;
@@ -357,5 +369,14 @@ sub undoUpdateTables {
           'ApiDB.OrthologGroup',
 	 );
 }
+
+
+sub undoTables {
+  my ($self) = @_;
+
+  return (
+         );
+}
+
 
 1;

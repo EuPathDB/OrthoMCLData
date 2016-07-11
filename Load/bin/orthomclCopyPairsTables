@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+my ($fromSuffix, $toSuffix, $undo) = @ARGV;
+
+usage() unless scalar(@ARGV >= 2);
+
+my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        0,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+foreach my $table ("ortholog", "inparalog", "coortholog") {
+  my $sql = $undo? "truncate table apidb.$table$toSuffix" : "insert into apidb.$table$toSuffix select * from apidb.$table$fromSuffix";
+  print STDERR "executing sql: $sql\n";
+  my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+  $queryHandle->execute() or die $dbh->errstr;
+}
+
+sub usage {
+    die "
+
+Copy the rows from a set of orthomcl pairs tables (ortholog, inparalog, coortholog) to a new (empty) set.
+
+Usage: orthomclCopyPairsTables fromSuffix toSuffix [-undo]
+
+Copies from Apidb.orthologs\${fromSuffix} (etc) to Apidb.orthologs\${toSuffix}
+
+If undo is set, removes all rows from the destination tables.
+
+";
+}
+

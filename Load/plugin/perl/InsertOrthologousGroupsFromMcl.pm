@@ -92,7 +92,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 3.6,
-                      cvsRevision       => '$Revision: 9 $',
+                      cvsRevision       => '$Revision: 68598 $',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
@@ -183,7 +183,7 @@ sub _parseGroup {
 		my $taxonAbbrev = $1;
 		my $sourceId = $2;
 		my $sequenceId = $self->getAASequenceId("$taxonAbbrev|$sourceId");
-		die "can't find an aa_sequence_id for $taxonAbbrev|$sourceId\n" if !$sequenceId;
+		die "Can't find an aa_sequence_id for abbrev:$taxonAbbrev source_id:$sourceId\n" if !$sequenceId;
 
 		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->

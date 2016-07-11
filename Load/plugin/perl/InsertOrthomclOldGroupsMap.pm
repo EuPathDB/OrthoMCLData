@@ -76,7 +76,7 @@ sub new {
   my $self = {};
   bless($self,$class);
 
-  $self->initialize({ requiredDbVersion => 3.5,
+  $self->initialize({ requiredDbVersion => 3.6,
                       cvsRevision       => '$Revision$',
                       name              => ref($self),
                       argsDeclaration   => $argsDeclaration,
@@ -253,8 +253,8 @@ sub getExternalDatabaseRelease{
 sub undoTables {
   my ($self) = @_;
 
-  return ('SRes.DbRef',
-          'DoTs.AASequenceDbRef',
+  return ('DoTs.AASequenceDbRef'
+       #  'SRes.DbRef',
 	 );
 }
 

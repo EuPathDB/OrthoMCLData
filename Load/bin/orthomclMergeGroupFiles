@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+
+usage() unless scalar(@ARGV) == 3;
+
+my ($primaryGroupsFile, $secondaryGroupsFile, $outputGroupsFile) = @ARGV;
+
+# suck in ids from groups file
+open(P, $primaryGroupsFile) || die "Can't open groups file '$primaryGroupsFile'\n";
+open(O, ">$outputGroupsFile") || die "Can't open groups file '$outputGroupsFile' for writing\n";
+
+my $prefix;
+my $biggestId = 0;
+while(<P>) {
+  my $line = $_;
+  chomp;
+  my @a = split(/\s+/);
+  my $id = shift(@a);  # lose group id
+  $id =~ /(\w+)_(\d+)/;
+  $prefix = $1;   # eg OG6
+  $biggestId = $2 if $2 > $biggestId;  #largest group id
+  print O $line unless scalar (@a) == 1;
+}
+close(P);
+
+open(S, $secondaryGroupsFile) || die "Can't open groups file '$secondaryGroupsFile'\n";
+while(<S>) {
+  my $line = $_;
+  chomp;
+  my @a = split(/\s+/);
+  my $id = shift(@a);  # lose group id
+  if (scalar (@a) > 1) {
+      $biggestId++;
+      $id = "${prefix}_$biggestId:";
+      print O join(" ", ($id, @a)) . "\n";
+    }
+}
+
+sub usage {
+die "
+Merge two orthomcl groups files.  Remove singleton groups from the main file if any (assumes they are at the end of the file).
+
+Usage: orthomclMergeGroupFiles main_groups_file secondary_groups_file
+
+Where:
+  main_groups_file:       a groups file with correct groups and group IDs, except may include singleton groups at the end
+  secondary_groups_file:  file to merge in.  Has temporary group IDs.  New group IDs are assigned, sequential to last in main file.
+
+";
+}
+

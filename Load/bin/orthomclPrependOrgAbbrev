@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+use strict;
+
+my ($inputFile, $orthomclTaxonAbbrev) = @ARGV;
+
+usage() unless $inputFile && $outputFile && $orthomclTaxonAbbrev;
+
+open(IN, ">$inputFile") || die "Can't open output file '$inputFile'\n";
+open(OUT, ">$outputFile") || die "Can't open output file '$outputFile'\n";
+
+while(<IN>) {
+  
+foreach my $recordId (keys(%{$data->{recordset}->{record}})) {
+  my $ecStrings = $data->{recordset}->{record}->{$recordId}->{field}->{content};
+  next unless $ecStrings;
+  my @ecArr = split(/;;/, $ecStrings);
+  foreach my $ecStr (@ecArr) {
+    $ecStr =~ /^(\S+)/;
+    print OUT "$orthomclTaxonAbbrev|$recordId\t$1\n";
+  }
+}
+
+sub usage {
+
+die "
+Prepend an orthomcl organism abbrev to each line of a file.  (Assumes a tab file with first field being protein id.)
+
+Usage: orthomclPrependOrgAbbrev inputFile outputFile orthomclTaxonAbbrev
+
+Where:
+  inputFile:  a text file in which each line begins with a protein id
+  outputFile: same as input file, but with orthomclTaxonAbbrev| prepended to each line
+  orthomclTaxonAbbrev: to be prepended to each line, followed by a |
+
+";
+}
