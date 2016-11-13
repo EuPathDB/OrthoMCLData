@@ -122,6 +122,8 @@ sub checkForExemplar {
   my $seq = $proteinInfo->{seq};
   my $seqLength = $proteinInfo->{seqLength};
 
+  return if $seqLength == 0;  # for mysterious reasons, we sometimes get protein coding genes w/ 0 length
+
   $geneIds{$gene} = 1;
 
   my $aaCount = ($seq =~ tr/[^A-Za-z]//);
