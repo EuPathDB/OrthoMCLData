@@ -5,7 +5,7 @@
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
   <import file="${projectsDir}/ApiCommonData/build.xml" optional="true" />
-  <import file="${projectsDir}/OrthoMCLShared/build.xml" />
+  <import file="${projectsDir}/OrthoMCLModel/build.xml" />
 
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
@@ -15,8 +15,8 @@
   <target name="OrthoMCLData-ChildCheckout">
     <available file="../ApiCommonData" type="dir"  property="ApiCommonData.present" />
     <antcall target="ApiCommonData-Checkout"/>
-    <available file="../OrthoMCLShared" type="dir"  property="OrthoMCLShared.present" />
-    <antcall target="OrthoMCLShared-Checkout"/>
+    <available file="../OrthoMCLModel" type="dir"  property="OrthoMCLModel.present" />
+    <antcall target="OrthoMCLModel-Checkout"/>
   </target>
 
   <target name="ApiCommonData-Checkout" unless="ApiCommonData.present">
@@ -27,10 +27,10 @@
     </ant>
   </target>
   
-  <target name="OrthoMCLShared-Checkout" unless="OrthoMCLShared.present">
+  <target name="OrthoMCLModel-Checkout" unless="OrthoMCLModel.present">
     <ant target="defaultProjectCheckout" inheritAll="false">
-      <property name="svnurl" value="https://www.cbil.upenn.edu/svn/apidb/OrthoMCLShared"/>
-      <property name="project" value="OrthoMCLShared"/>
+      <property name="svnurl" value="https://www.cbil.upenn.edu/svn/apidb/OrthoMCLModel"/>
+      <property name="project" value="OrthoMCLModel"/>
       <property name="version" value="api-august-2006"/>
     </ant>
   </target>
@@ -43,7 +43,7 @@
   <target name="OrthoMCLData-ChildUpdate">
     <ant target="defaultProjectUpdate">
       <property name="project" value="ApiCommonData"/>
-      <property name="project" value="OrthoMCLShared"/>
+      <property name="project" value="OrthoMCLModel"/>
     </ant>
   </target>
 
@@ -52,7 +52,7 @@
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
-  <target name="OrthoMCLData-Installation" depends="OrthoMCLShared-Installation,
+  <target name="OrthoMCLData-Installation" depends="OrthoMCLModel-Installation,
                                                     OrthoMCLData-MavenInstallation,
                                                     OrthoMCLData/Common-Installation,
                                                     OrthoMCLData/Load-Installation">

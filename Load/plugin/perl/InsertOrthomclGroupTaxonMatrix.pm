@@ -9,7 +9,7 @@ use GUS::PluginMgr::Plugin;
 use FileHandle;
 
 use GUS::Model::ApiDB::GroupTaxonMatrix;
-use OrthoMCLShared::Ppe::MatrixColumnManager;
+use OrthoMCLModel::Ppe::MatrixColumnManager;
 #use ApiCommonData::Load::Util;
 use Data::Dumper;
 
@@ -81,7 +81,7 @@ sub run {
 
     my $dbh = $self->getDbHandle();
 
-    my $columnManager = OrthoMCLShared::Ppe::MatrixColumnManager->new($dbh);
+    my $columnManager = OrthoMCLModel::Ppe::MatrixColumnManager->new($dbh);
 
     $self->log("getting species and clades");
     ($self->{speciesClades}, $self->{taxaCount}) = $self->getSpeciesClades($dbh);

@@ -23,7 +23,7 @@
       </dependency>
       <dependency>
         <groupId>org.orthomcl</groupId>
-        <artifactId>orthomcl-shared-model</artifactId>
+        <artifactId>orthomcl-model-model</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>
