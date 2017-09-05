@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.ConnectionPoolConfig;
 import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
@@ -46,10 +47,10 @@ public class UpdateOrthologGroupPlugin implements Plugin {
         }
     }
 
-    private static final Logger logger = Logger.getLogger(UpdateOrthologGroupPlugin.class);
+    private static final Logger LOG = Logger.getLogger(UpdateOrthologGroupPlugin.class);
 
-    private Connection connection;
-    private String sequenceTable;
+    private ConnectionPoolConfig _dbConfig;
+    private String _sequenceTable;
 
     /*
      * (non-Javadoc)
@@ -58,7 +59,8 @@ public class UpdateOrthologGroupPlugin implements Plugin {
      */
     @Override
     public void invoke() throws OrthoMCLException {
-        try {
+        try (DatabaseInstance db = new DatabaseInstance(_dbConfig);
+             Connection connection = db.getDataSource().getConnection()){
             PreparedStatement psSelectSimilarity = connection.prepareStatement("SELECT"
                     + " s.total_match_length, s.pvalue_mant, s.pvalue_exp, "
                     + " s.non_overlap_match_length, s.number_identical "
@@ -79,11 +81,11 @@ public class UpdateOrthologGroupPlugin implements Plugin {
                     + " apidb.OrthologGroupAaSequence SET connectivity = ?"
                     + " WHERE ortholog_group_aa_sequence_id = ?");
 
-            logger.info("loading sequence lengths...");
-            Map<Integer, Integer> lengthMap = getSequenceLength();
+            LOG.info("loading sequence lengths...");
+            Map<Integer, Integer> lengthMap = getSequenceLength(connection);
 
             // load un-finished groups
-            logger.info("checking ortholog groups to be updated...");
+            LOG.info("checking ortholog groups to be updated...");
             Statement stSelectGroup = connection.createStatement();
             ResultSet rsGroup = stSelectGroup.executeQuery("SELECT "
                     + " ortholog_group_id, name FROM apidb.OrthologGroup "
@@ -98,33 +100,28 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             stSelectGroup.close();
 
             // start updating groups
-            logger.info("updating ortholog " + groups.size() + " groups...");
+            LOG.info("updating ortholog " + groups.size() + " groups...");
             int groupCount = 0;
             for (int orthologGroupId : groups.keySet()) {
-                String orthologName = groups.get(orthologGroupId);
-                updateOrthologGroup(orthologGroupId, orthologName,
+                updateOrthologGroup(orthologGroupId,
                         psSelectSimilarity, psSelectSequence, psUpdateGroup,
                         psUpdateSequence, lengthMap);
                 groupCount++;
                 if (groupCount % 100 == 0)
-                    logger.info(groupCount + " ortholog groups updated.");
+                    LOG.info(groupCount + " ortholog groups updated.");
             }
             psUpdateSequence.close();
             psUpdateGroup.close();
             psSelectSequence.close();
             psSelectSimilarity.close();
 
-            logger.info("Total " + groupCount + " ortholog groups updated.");
-        } catch (SQLException ex) {
+            LOG.info("Total " + groupCount + " ortholog groups updated.");
+        }
+        catch (Exception ex) {
             throw new OrthoMCLException(ex);
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
-     */
     @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
@@ -132,21 +129,15 @@ public class UpdateOrthologGroupPlugin implements Plugin {
             throw new OrthoMCLException("The args should be: <sequence_table> "
                     + " <connection_string> <login> <password>");
         }
-        sequenceTable = args[0];
+        _sequenceTable = args[0];
         String connectionString = args[1];
         String login = args[2];
         String password = args[3];
 
-        try {
-          DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-              SupportedPlatform.ORACLE, connectionString, login, password));
-          connection = db.getDataSource().getConnection();
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        }
+        _dbConfig = SimpleDbConfig.create(SupportedPlatform.ORACLE, connectionString, login, password);
     }
 
-    private void updateOrthologGroup(int orthologGroupId, String orthologName,
+    private void updateOrthologGroup(int orthologGroupId,
             PreparedStatement psSelectSimilarity,
             PreparedStatement psSelectSequence,
             PreparedStatement psUpdateGroup,
@@ -246,10 +237,10 @@ public class UpdateOrthologGroupPlugin implements Plugin {
                 sumPercentMatch / count, sumEvalue / count };
     }
 
-    private Map<Integer, Integer> getSequenceLength() throws SQLException {
+    private Map<Integer, Integer> getSequenceLength(Connection connection) throws SQLException {
         Statement stSequence = connection.createStatement();
         ResultSet rsSequence = stSequence.executeQuery("SELECT aa_sequence_id, "
-                + " length FROM " + sequenceTable);
+                + " length FROM " + _sequenceTable);
         Map<Integer, Integer> lengthMap = new HashMap<Integer, Integer>();
         while (rsSequence.next()) {
             int sequenceId = rsSequence.getInt("aa_sequence_id");

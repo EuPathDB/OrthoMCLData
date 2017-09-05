@@ -21,6 +21,7 @@ import org.apidb.orthomcl.load.plugin.OrthoMCLException;
 import org.apidb.orthomcl.load.plugin.Plugin;
 import org.gusdb.fgputil.db.SqlUtils;
 import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.ConnectionPoolConfig;
 import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
@@ -33,10 +34,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
     private static final Logger logger = Logger.getLogger(GenerateBioLayoutPlugin.class);
 
     public static final int MAX_GROUP_SIZE = 500;
-    
-    private Connection connection;
-    
-    private GroupLoader loader;
+
+    private ConnectionPoolConfig _dbConfig;
     private Object processor;
     private Method saveMethod;
 
@@ -76,15 +75,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
         String login = args[1];
         String password = args[2];
 
-        try {
-            // create connection
-            DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password));
-            connection = db.getDataSource().getConnection();
-            loader = new GroupLoader(connection);
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        }
+        _dbConfig = SimpleDbConfig.create(SupportedPlatform.ORACLE, connectionString, login, password);
     }
 
     /*
@@ -94,9 +85,10 @@ public class GenerateBioLayoutPlugin implements Plugin {
      */
     @Override
     public void invoke() throws Exception {
-      Map<Integer, String> groups = getGroups();
       PreparedStatement psUpdateImage = null;
-      try {
+      try (DatabaseInstance db = new DatabaseInstance(_dbConfig);
+           Connection connection = db.getDataSource().getConnection()) {
+        Map<Integer, String> groups = getGroups(connection);
         logger.debug(groups.size() + " groups to be processed.");
         int groupCount = 0;
         int sequenceCount = 0;
@@ -104,7 +96,8 @@ public class GenerateBioLayoutPlugin implements Plugin {
             + "  apidb.OrthologGroup "
             + " SET biolayout_image = ?, svg_content = ? "
             + " WHERE ortholog_group_id = ?");
-          
+
+        GroupLoader loader = new GroupLoader(connection);
         for (int groupId : groups.keySet()) {
           Group group = loader.getGroup(groupId);
           group.name = groups.get(groupId);
@@ -131,7 +124,7 @@ public class GenerateBioLayoutPlugin implements Plugin {
       }
     }
 
-    private Map<Integer, String> getGroups() throws SQLException {
+    private Map<Integer, String> getGroups(Connection connection) throws SQLException {
       Statement stGroup = null;
       ResultSet rsGroup = null;
       try {

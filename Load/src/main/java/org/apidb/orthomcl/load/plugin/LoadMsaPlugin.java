@@ -8,12 +8,12 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 import org.gusdb.fgputil.db.SqlUtils;
 import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.ConnectionPoolConfig;
 import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
@@ -24,16 +24,11 @@ public class LoadMsaPlugin implements Plugin {
 
     // private static final int BASE = 70612;
 
-    private static final Logger logger = Logger.getLogger(LoadMsaPlugin.class);
+    private static final Logger LOG = Logger.getLogger(LoadMsaPlugin.class);
 
-    private Connection connection;
-    private File msaDir;
+    private ConnectionPoolConfig _dbConfig;
+    private File _msaDir;
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
-     */
     @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
@@ -46,33 +41,23 @@ public class LoadMsaPlugin implements Plugin {
         String login = args[3];
         String password = args[4];
 
-        try {
-            DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password));
-            connection = db.getDataSource().getConnection();
-            msaDir = new File(msaDirName);
-            if (!msaDir.exists()) throw new FileNotFoundException(msaDirName);
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (FileNotFoundException ex) {
-            throw new OrthoMCLException(ex);
+        _dbConfig = SimpleDbConfig.create(SupportedPlatform.ORACLE, connectionString, login, password);
+        _msaDir = new File(msaDirName);
+        if (!_msaDir.exists()) {
+          throw new OrthoMCLException(new FileNotFoundException(msaDirName));
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
-     */
     @Override
     public void invoke() throws OrthoMCLException {
-        logger.info("Making connections...");
-        try {
+        LOG.info("Making connections...");
+        try (DatabaseInstance db = new DatabaseInstance(_dbConfig);
+             Connection connection = db.getDataSource().getConnection();){
             // get sequence map
-            logger.info("Getting sequence names...");
+            LOG.info("Getting sequence names...");
             //Map<String, String> sequences = getSequences(connection);
 
-            logger.info("Getting svg content...");
+            LOG.info("Getting svg content...");
 
             PreparedStatement psUpdate = connection.prepareStatement("UPDATE "
                     + " apidb.OrthologGroup SET multiple_sequence_alignment = ? "
@@ -87,7 +72,7 @@ public class LoadMsaPlugin implements Plugin {
                 int groupId = resultSet.getInt("ortholog_group_id");
                 String name = resultSet.getString("name");
 
-                String content = getContent(name, msaDir);
+                String content = getContent(name, _msaDir);
                 if (content.length() > 0) {
                     // update clob
                     SqlUtils.setClobData(psUpdate, 1, content);
@@ -99,7 +84,7 @@ public class LoadMsaPlugin implements Plugin {
 
                 if (count % 100 == 0) {
                     psUpdate.executeBatch();
-                    logger.info(count + " groups updated.");
+                    LOG.info(count + " groups updated.");
                 }
             }
             if (count % 100 != 0) psUpdate.executeBatch();
@@ -110,9 +95,8 @@ public class LoadMsaPlugin implements Plugin {
 
             connection.close();
             System.out.println("Total " + count + " groups updated.");
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (IOException ex) {
+        }
+        catch (Exception ex) {
             throw new OrthoMCLException(ex);
         }
     }
@@ -139,12 +123,12 @@ public class LoadMsaPlugin implements Plugin {
 //        return sequences;
 //    }
 
-    private String getContent(String name, File msaDir) throws IOException {
+    private static String getContent(String name, File msaDir) throws IOException {
         StringBuffer buffer = new StringBuffer();
 
         File msaFile = new File(msaDir, name + ".msa");
         if (!msaFile.exists()) {
-            logger.warn("MSA not found for group name: " + name);
+            LOG.warn("MSA not found for group name: " + name);
             return buffer.toString();
         }
         String line;

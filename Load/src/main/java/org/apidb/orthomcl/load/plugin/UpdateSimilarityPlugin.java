@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,6 +19,7 @@ import org.apache.log4j.Logger;
 import org.gusdb.fgputil.IoUtil;
 import org.gusdb.fgputil.db.SqlUtils;
 import org.gusdb.fgputil.db.platform.SupportedPlatform;
+import org.gusdb.fgputil.db.pool.ConnectionPoolConfig;
 import org.gusdb.fgputil.db.pool.DatabaseInstance;
 import org.gusdb.fgputil.db.pool.SimpleDbConfig;
 
@@ -74,11 +74,6 @@ public class UpdateSimilarityPlugin implements Plugin {
             Length = length;
         }
 
-        /*
-         * (non-Javadoc)
-         * 
-         * @see java.lang.Comparable#compareTo(java.lang.Object)
-         */
         @Override
         public int compareTo(Segment o) {
             int startDiff = this.Start - o.Start;
@@ -86,33 +81,29 @@ public class UpdateSimilarityPlugin implements Plugin {
         }
     }
 
-    private static final Logger logger = Logger.getLogger(UpdateSimilarityPlugin.class);
+    private static final Logger LOG = Logger.getLogger(UpdateSimilarityPlugin.class);
 
-    private Connection connection;
-    private File similarityFile;
-    private String sequenceTable;
+    private ConnectionPoolConfig _dbConfig;
+    private File _similarityFile;
+    private String _sequenceTable;
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apidb.orthomcl.load.plugin.Plugin#invoke()
-     */
     @Override
     public void invoke() throws OrthoMCLException {
         // prepare the statement
         BufferedReader reader = null;
         PreparedStatement psUpdate = null;
-        try {
+        try (DatabaseInstance db = new DatabaseInstance(_dbConfig);
+             Connection connection = db.getDataSource().getConnection()) {
             psUpdate = connection.prepareStatement("UPDATE"
                     + " dots.Similarity SET non_overlap_match_length = ?"
                     + " WHERE query_id = ? AND subject_id = ?");
             reader = new BufferedReader(new FileReader(
-                    similarityFile));
+                    _similarityFile));
 
-            logger.info("Loading sequence lengths...");
-            Map<String, Integer> lengthMap = getLengthMap();
+            LOG.info("Loading sequence lengths...");
+            Map<String, Integer> lengthMap = getLengthMap(connection);
 
-            logger.info("Updating non-overlap match lengths...");
+            LOG.info("Updating non-overlap match lengths...");
             String line = null, queryId = null, subjectId = null;
             boolean useQuery = true;
             List<Segment> segments = null;
@@ -121,7 +112,7 @@ public class UpdateSimilarityPlugin implements Plugin {
             while ((line = reader.readLine()) != null) {
                 lineCount++;
                 if (lineCount % 100000 == 0)
-                    logger.debug("Read " + lineCount + " lines.");
+                    LOG.debug("Read " + lineCount + " lines.");
 
                 line = line.trim();
                 if (line.startsWith(">")) {
@@ -131,7 +122,7 @@ public class UpdateSimilarityPlugin implements Plugin {
                             updateCount++;
                             if (updateCount % 1000 == 0) {
                                 psUpdate.executeBatch();
-                                logger.info(updateCount + " pairs updated.");
+                                LOG.info(updateCount + " pairs updated.");
                             }
                         }
 
@@ -146,7 +137,7 @@ public class UpdateSimilarityPlugin implements Plugin {
                             updateCount++;
                             if (updateCount % 1000 == 0) {
                                 psUpdate.executeBatch();
-                                logger.info(updateCount + " pairs updated.");
+                                LOG.info(updateCount + " pairs updated.");
                             }
                         }
 
@@ -182,29 +173,24 @@ public class UpdateSimilarityPlugin implements Plugin {
                     updateCount++;
                     if (updateCount % 1000 == 0) {
                         psUpdate.executeBatch();
-                        logger.info(updateCount + " pairs updated.");
+                        LOG.info(updateCount + " pairs updated.");
                     }
                 }
 
             // commit remaining updates
             if (updateCount % 1000 != 0) psUpdate.executeBatch();
-            logger.info("Total " + updateCount + " rows updated.");
+            LOG.info("Total " + updateCount + " rows updated.");
             
-        } catch (SQLException ex) {
+        }
+        catch (Exception ex) {
             throw new OrthoMCLException(ex);
-        } catch (IOException ex) {
-            throw new OrthoMCLException(ex);
-        } finally {
+        }
+        finally {
             SqlUtils.closeQuietly(psUpdate);
             IoUtil.closeQuietly(reader);
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apidb.orthomcl.load.plugin.Plugin#setArgs(java.lang.String[])
-     */
     @Override
     public void setArgs(String[] args) throws OrthoMCLException {
         // verify the args
@@ -213,39 +199,38 @@ public class UpdateSimilarityPlugin implements Plugin {
                     "The args should be: <sequence_table> <similarity_file> "
                             + "<connection_string> <login> <password>");
         }
-        sequenceTable = args[0];
+        _sequenceTable = args[0];
         String similarityFileName = args[1];
         String connectionString = args[2];
         String login = args[3];
         String password = args[4];
 
-        try {
-            DatabaseInstance db = new DatabaseInstance(SimpleDbConfig.create(
-                SupportedPlatform.ORACLE, connectionString, login, password));
-            connection = db.getDataSource().getConnection();
-            similarityFile = new File(similarityFileName);
-            if (!similarityFile.exists() || !similarityFile.isFile())
-                throw new FileNotFoundException(similarityFileName);
-        } catch (SQLException ex) {
-            throw new OrthoMCLException(ex);
-        } catch (FileNotFoundException ex) {
-            throw new OrthoMCLException(ex);
+        _dbConfig = SimpleDbConfig.create(SupportedPlatform.ORACLE, connectionString, login, password);
+
+        _similarityFile = new File(similarityFileName);
+        if (!_similarityFile.exists() || !_similarityFile.isFile()) {
+          throw new OrthoMCLException(new FileNotFoundException(similarityFileName));
         }
     }
 
-    private Map<String, Integer> getLengthMap() throws SQLException {
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT aa_sequence_id, length FROM "
-                + sequenceTable);
-        Map<String, Integer> lengthMap = new HashMap<String, Integer>();
-        while (rs.next()) {
+    private Map<String, Integer> getLengthMap(Connection connection) throws SQLException {
+        Statement stmt = null;
+        ResultSet rs = null;
+        try {
+          stmt = connection.createStatement();
+          rs = stmt.executeQuery("SELECT aa_sequence_id, length FROM " + _sequenceTable);
+          Map<String, Integer> lengthMap = new HashMap<String, Integer>();
+          while (rs.next()) {
             String sequenceId = rs.getString("aa_sequence_id");
             int length = rs.getInt("length");
             lengthMap.put(sequenceId, length);
+          }
+          return lengthMap;
         }
-        rs.close();
-        stmt.close();
-        return lengthMap;
+        finally {
+          if (rs != null) rs.close();
+          if (stmt != null) stmt.close();
+        }
     }
 
     private boolean update(String queryId, String subjectId,

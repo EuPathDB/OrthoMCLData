@@ -179,8 +179,8 @@ public class GroupLayoutFrame extends JFrame {
       try {
         // check if the layout already exists, if so, delete it first
         GroupMapper mapper = session.getMapper(GroupMapper.class);
-        String layout = mapper.selectLayout(group);
-        if (layout != null)
+        String groupLayout = mapper.selectLayout(group);
+        if (groupLayout != null)
           mapper.deleteLayout(group);
 
         groupFactory.saveLayout(group, session);
