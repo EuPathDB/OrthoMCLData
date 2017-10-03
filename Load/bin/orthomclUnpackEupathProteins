@@ -30,9 +30,16 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 =cut
 
 foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  my $product = $data->{recordset}->{record}->{$geneId}->{field}->{product}->{content};
+  die "Error: No product field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{gene_product};
+  my $product = $data->{recordset}->{record}->{$geneId}->{field}->{gene_product}->{content};
+
+  die "Error: No sequence field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{sequence};
   my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
-  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+
+  #restore after test db is built
+#  die "Error: No transcript_id field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id};
+#  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+
   $transcriptId = $geneId;   #temporary until GUS 4
   print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n";
 }
