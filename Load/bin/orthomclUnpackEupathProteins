@@ -40,7 +40,7 @@ foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
 #  die "Error: No transcript_id field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id};
 #  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
 
-  $transcriptId = $geneId;   #temporary until GUS 4
+  my $transcriptId = $geneId;   #temporary until GUS 4
   print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n";
 }
 
