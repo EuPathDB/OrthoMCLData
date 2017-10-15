@@ -33,7 +33,7 @@ foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
   die "Error: No product field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{gene_product};
   my $product = $data->{recordset}->{record}->{$geneId}->{field}->{gene_product}->{content};
 
-  die "Error: No sequence field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{sequence};
+  die "Error: No sequence field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence};
   my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
 
   #restore after test db is built
