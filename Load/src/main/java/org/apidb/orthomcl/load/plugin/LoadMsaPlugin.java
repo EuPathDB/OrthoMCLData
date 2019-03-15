@@ -52,7 +52,8 @@ public class LoadMsaPlugin implements Plugin {
     public void invoke() throws OrthoMCLException {
         LOG.info("Making connections...");
         try (DatabaseInstance db = new DatabaseInstance(_dbConfig);
-             Connection connection = db.getDataSource().getConnection();){
+             Connection connection = db.getDataSource().getConnection()){
+
             // get sequence map
             LOG.info("Getting sequence names...");
             //Map<String, String> sequences = getSequences(connection);
@@ -93,7 +94,6 @@ public class LoadMsaPlugin implements Plugin {
             stSelect.close();
             psUpdate.close();
 
-            connection.close();
             System.out.println("Total " + count + " groups updated.");
         }
         catch (Exception ex) {
