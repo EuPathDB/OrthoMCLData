@@ -197,7 +197,7 @@ sub updateOrthologGroup {
 
 # ----------------------------------------------------------------------
 
-sub undoUpdateTables {
+sub undoTables {
   my ($self) = @_;
 
   return ('ApiDB.OrthologGroup',
