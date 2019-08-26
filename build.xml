@@ -9,46 +9,6 @@
 
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooo    Checkout    oooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-
-  <target name="OrthoMCLData-ChildCheckout">
-    <available file="../ApiCommonData" type="dir"  property="ApiCommonData.present" />
-    <antcall target="ApiCommonData-Checkout"/>
-    <available file="../OrthoMCLModel" type="dir"  property="OrthoMCLModel.present" />
-    <antcall target="OrthoMCLModel-Checkout"/>
-  </target>
-
-  <target name="ApiCommonData-Checkout" unless="ApiCommonData.present">
-    <ant target="defaultProjectCheckout" inheritAll="false">
-      <property name="svnurl" value="https://cbilsvn.pmacs.upenn.edu/svn/apidb/ApiCommonData"/>
-      <property name="project" value="ApiCommonData"/>
-      <property name="version" value="api-august-2006"/>
-    </ant>
-  </target>
-  
-  <target name="OrthoMCLModel-Checkout" unless="OrthoMCLModel.present">
-    <ant target="defaultProjectCheckout" inheritAll="false">
-      <property name="svnurl" value="https://cbilsvn.pmacs.upenn.edu/svn/apidb/OrthoMCLModel"/>
-      <property name="project" value="OrthoMCLModel"/>
-      <property name="version" value="api-august-2006"/>
-    </ant>
-  </target>
-
-
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooo    Update    oooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-
-  <target name="OrthoMCLData-ChildUpdate">
-    <ant target="defaultProjectUpdate">
-      <property name="project" value="ApiCommonData"/>
-      <property name="project" value="OrthoMCLModel"/>
-    </ant>
-  </target>
-
-
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
@@ -59,27 +19,27 @@
     <ant target="ApiCommonData-Installation" />
 
     <ant target="defaultProjectInstall">
-      <property name="project" value="OrthoMCLData"/>
+      <property name="project" value="OrthoMCLData" />
     </ant>
   </target>
 
   <target name="OrthoMCLData-MavenInstallation">
     <ant target="mavenBuildProject">
-      <property name="project" value="OrthoMCLData"/>
+      <property name="project" value="OrthoMCLData" />
     </ant>
-    <property name="alreadyBuilt" value="true"/>
+    <property name="alreadyBuilt" value="true" />
   </target>
 
 
   <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation-postprocess">
-    <echo message="Postprocessing the OrthoMCLData installation"/>
+    <echo message="Postprocessing the OrthoMCLData installation" />
 
-    <replace dir="${targetDir}/bin" 
-             propertyFile="${targetDir}/config/replacements.prop" >
+    <replace dir="${targetDir}/bin"
+             propertyFile="${targetDir}/config/replacements.prop">
       <include name="**/*" />
-      <replacefilter token="@perl@" property="perl"/>
+      <replacefilter token="@perl@" property="perl" />
     </replace>
   </target>
 
@@ -88,17 +48,17 @@
 
   <target name="OrthoMCLData/Common-Installation">
     <ant target="defaultComponentInstall">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Common"/>
+      <property name="project" value="OrthoMCLData" />
+      <property name="component" value="Common" />
     </ant>
   </target>
 
   <target name="OrthoMCLData/Load-Installation" depends="ProjectTree">
     <ant target="defaultComponentInstall">
-      <property name="project" value="OrthoMCLData"/>
-      <property name="component" value="Load"/>
+      <property name="project" value="OrthoMCLData" />
+      <property name="component" value="Load" />
     </ant>
-  </target>  
+  </target>
 
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
@@ -107,7 +67,7 @@
 
   <target name="OrthoMCLData-Distributable" depends="ProjectTree">
     <copy todir="${targetDir}">
-      <fileset dir="${projectsDir}" >
+      <fileset dir="${projectsDir}">
         <exclude name="**/.svn/*" />
       </fileset>
     </copy>
@@ -119,8 +79,8 @@
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
   <target name="ProjectTree" if="${checkout}">
-    <ant target="projectCheckOut"/>
-  </target>  
+    <ant target="projectCheckOut" />
+  </target>
 
 </project>
 
