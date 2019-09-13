@@ -1,0 +1,385 @@
+#!/usr/bin/perl
+ 
+use strict;
+
+usage() unless scalar(@ARGV) == 3;
+
+my ($ncbiTaxonId, $dir, $fastaFile) = @ARGV;
+
+my $uniprotFile = "geneMappingsFromUniprot.txt";
+my $ensemblFile = "ensembl.gtf";
+my $outputFile = "finalGeneMapping.txt";
+
+my $cmd = "cd $dir";
+system($cmd);
+
+
+#FASTA file, gene names, with data structure hash of hash, containing all fields
+#Ensembl file, loop through, if gene name, add to above hash pointing to Ensembl gene id and transcripts
+#uniprot file, loop through, if gene name, put in above hash pointing components of line
+#
+
+# create gene names hash from fasta file
+my $geneNamesHashRef = getGeneNamesHashFromFasta($fastaFile);
+
+
+=pod
+
+# download Uniprot gene mapping file
+print STDERR localtime()."\n";
+print STDERR "Downloading gene Ids and names from Uniprot.\n";
+$cmd = "wget \"http://www.uniprot.org/uniprot/?&query=taxonomy:${ncbiTaxonId}&format=tab&columns=genes,id,database(refseq),database(ensembl),database(vectorbase)\" -qO $uniprotFile";
+print STDERR "$cmd\n";
+system($cmd);
+
+# look into Uniprot file for Ensembl transcript. Use this to determine species and get Ensembl GTF file 
+print STDERR localtime()."\n";
+print STDERR "Determining whether the Uniprot file '$uniprotFile' has Ensembl transcript IDs. If so, attempting to obtain the Ensembl species name and download GTF from Ensembl.\n";
+my ($txFound,$species,$gtfDownloaded) = useEnsemblTranscriptsToGetGtfFile($uniprotFile,$ensemblFile);
+if ($txFound == 0) {
+    print STDERR "There are no Ensembl IDs.\n";
+} else {
+    print STDERR "There are Ensembl IDs. ";
+}
+if ($species eq "") {
+    print STDERR "A species was not determined.\n";
+} else {
+    print STDERR "The species is $species. ";
+}
+if ($gtfDownloaded == 0) {
+    print STDERR "The GTF file was NOT downloaded.\n";
+} else {
+    print STDERR "The GTF file, $ensemblFile, was downloaded.\n";
+}
+
+=cut
+
+# loop through Uniprot file, add info to geneNamesHash
+# order of columns: genes,uniprot,refseq,ensembl,vectorbase
+print STDERR localtime()."\n"; 
+print STDERR "Reading the $uniprotFile file and adding fields to geneNamesHash\n";
+open(UNIPROT, $uniprotFile) || die "Can't open '$uniprotFile' for reading.\n";                            
+my $header = <UNIPROT>;                                                                                                                   
+die "Query to Uniprot did not provide expected header" unless $header =~ /^Gene name/;  
+while(<UNIPROT>) {
+  my $line = $_;
+  chomp $line;
+  my ($genes,$uniprot,$refseq,$ensemblTx,$vectorbase) = split("\t",$line);
+  my ($geneName,$otherNamesArrayRef) = getGeneNamesFromUniprot($genes,$geneNamesHashRef);
+  next if ($geneName eq "");
+  #print "$geneName\n";
+  #print "$_\n" foreach (@{$otherNamesArrayRef});
+  #exit;
+  addToArrayAndSort(${$geneNamesHashRef}{$geneName}{otherNames}, $otherNamesArrayRef);
+  addToArrayAndSort(${$geneNamesHashRef}{$geneName}{uniprot}, formatFieldFromUniprot($uniprot));
+  addToArrayAndSort(${$geneNamesHashRef}{$geneName}{refseq}, formatFieldFromUniprot($refseq));
+  addToArrayAndSort(${$geneNamesHashRef}{$geneName}{ensemblTx}, formatFieldFromUniprot($ensemblTx));
+  addToArrayAndSort(${$geneNamesHashRef}{$geneName}{vectorbaseGene}, formatFieldFromUniprot($vectorbase));
+}
+close(UNIPROT);
+
+
+# if there is Ensembl GTF file, then loop through two times, add info to geneNamesHash
+#if ($gtfDownloaded == 1) {
+
+# first, map to gene names only
+    print STDERR localtime()."\n"; 
+    print STDERR "Reading the Ensembl GTF file '$ensemblFile' and adding fields to geneNamesHash\n";
+    open(ENSEMBL, $ensemblFile) || die "Can't open '$ensemblFile' for reading.\n";                            
+    while(<ENSEMBL>) {
+	my $line = $_;
+	chomp $line;
+	my @fields = split("\t",$line);
+	my $numFields = scalar @fields;
+	next if $numFields < 2;
+	die "Too few fields: $numFields\n$line\n" if ($numFields != 9);
+	next if ($fields[2] ne "gene");
+        die "Did not find gene id when expected.\n$line\n" if ($fields[8] !~ /gene_id "(\S+)"/);
+        my @geneId = ($1);
+        die "Did not find gene name when expected.\n$line\n" if ($fields[8] !~ /gene_name "(\S+)"/);
+        my $geneName = $1;
+	if (exists(${$geneNamesHashRef}{$geneName})) {
+	    addToArrayAndSort(${$geneNamesHashRef}{$geneName}{ensemblGene}, \@geneId); 
+	}
+    }
+    close(ENSEMBL);
+
+# use ensembl gtf file to create hash with Ensembl gene id to tx id mapping, then loop through geneNamesHashRef and add these ids
+# then, as a backup, this uses the ensembl web site to find ensembl gene ids, so this can be turned off to make quicker
+    my ($geneIdToTxId,$txIdToGeneId) = createEnsemblGeneTranscriptHash($ensemblFile);
+# loop through hash to get ensembl transcripts
+    foreach my $geneName (keys %{$geneNamesHashRef}) {
+	my ($txRef,$geneRef)=getEnsmblGeneTx(${$geneNamesHashRef}{$geneName}{ensemblTx},${$geneNamesHashRef}{$geneName}{ensemblGene},$geneIdToTxId,$txIdToGeneId);
+	addToArrayAndSort(${$geneNamesHashRef}{$geneName}{ensemblTx}, $txRef);
+	addToArrayAndSort(${$geneNamesHashRef}{$geneName}{ensemblGene}, $geneRef);
+    }
+
+#}
+
+
+#writing to output file
+print STDERR localtime()."\n"; 
+print STDERR "Writing $outputFile.\n";    
+open(OUT, ">$outputFile") || die "Can't open '$outputFile' for writing.\n";
+print OUT "OrthoMCLGene\tOtherGene\tUniprotId\tRefSeqGene\tEnsemblGene\tEnsemblTx\tVectorbaseGene\tVectorbaseTx\n";
+foreach my $gene (keys %{$geneNamesHashRef}) {
+    my $other = join(" ",@{${$geneNamesHashRef}{$gene}{otherNames}});
+    my $uniprot = join(" ",@{${$geneNamesHashRef}{$gene}{uniprot}});
+    my $refseq = join(" ",@{${$geneNamesHashRef}{$gene}{refseq}});
+    my $ensemblGene = join(" ",@{${$geneNamesHashRef}{$gene}{ensemblGene}});
+    my $ensemblTx = join(" ",@{${$geneNamesHashRef}{$gene}{ensemblTx}});
+    my $vbGene = join(" ",@{${$geneNamesHashRef}{$gene}{vectorbaseGene}});
+    my $vbTx = join(" ",@{${$geneNamesHashRef}{$gene}{vectorbaseTx}});
+    print OUT "$gene\t$other\t$uniprot\t$refseq\t$ensemblGene\t$ensemblTx\t$vbGene\t$vbTx\n";;
+}
+close(OUT);
+
+
+
+
+#    $ensembl = formatEnsembl($ensembl,$geneIdToTx,$txToGeneId) if ($ensembl ne "");
+
+#  print OUT "$gene\t$uniprot\t$refseq\t$ensembl\t$vectorbase\n";
+
+
+# if there is an Ensembl transcript, then get the species using the transcript ID, then download the species GTF file from Ensembl
+# use this GTF file to make two hashes connecting Ensembl transcripts to genes and vice-versa
+#my ($geneIdToTx,$txToGeneId,$geneIdToGeneName);
+
+
+
+
+
+print STDERR localtime()."\n"; 
+print STDERR "Finished writing $outputFile.\n";
+
+exit;
+
+
+# sub arrayRefToString {
+#     my ($sep,$arrayRef) = @_;
+#     my $string = "";
+#     if (defined($arrayRef)
+
+#     return $string;
+# }
+
+sub addToArrayAndSort {
+    my ($destinationArrayRef,$sourceArrayRef)=@_;
+    return if (scalar @$sourceArrayRef == 0);
+    my %hash = map { $_, 1 } @$destinationArrayRef;
+    $hash{$_}=1 foreach (@$sourceArrayRef);
+    @$destinationArrayRef = sort keys %hash;
+    return;
+}
+
+sub formatFieldFromUniprot {
+    my ($ids) = @_;
+    my @array = split(";",$ids);
+    @array = map {s/ //g; $_;} @array;
+    @array = map {s/\[.*\]//g; $_;} @array;
+    return \@array;
+}
+
+sub getEnsmblGeneTx {
+    my ($transcripts,$genes,$geneIdToTxId,$txIdToGeneId) = @_;
+    my @transcriptArray = split(" ",$transcripts);
+    my @geneArray = split(" ",$genes);
+    my %newGenes;
+    my %newTxs;
+    foreach my $transcript (@transcriptArray) {
+	if (exists(${$txIdToGeneId}{$transcript})) {
+	    $newGenes{${$txIdToGeneId}{$transcript}}=1;
+	} else {
+	    #look up each transcript at ensembl.org if not found in GTF file
+	    my $foundGene = extraLookupEnsemblGene($transcript); 
+	    if ($foundGene ne "") {
+		$newGenes{$foundGene}=1;
+	    }
+	}
+    }
+    foreach my $gene (@geneArray) {
+	if (exists(${$geneIdToTxId}{$gene})) {
+            foreach my $geneTx (@{${$geneIdToTxId}{$gene}}) {
+		$newTxs{$geneTx}=1;
+	    }
+	}	
+    }
+    foreach my $gene (keys %newGenes) {
+	if (exists(${$geneIdToTxId}{$gene})) {
+            foreach my $geneTx (@{${$geneIdToTxId}{$gene}}) {
+		$newTxs{$geneTx}=1;
+	    }
+	}	
+    }
+    my $tx = [keys %newTxs];
+    my $gn = [keys %newGenes];
+    return ($tx,$gn);
+}
+
+sub extraLookupEnsemblGene {
+    my ($transcript) = @_;
+    $cmd = "wget \"https://rest.ensembl.org/lookup/id/".$transcript."?expand=0\" -qO-";                                            
+    open(ENSEMBL, "$cmd |");                                                                                                       
+    my $foundGene = "";
+    while(<ENSEMBL>) {
+	if ($_ =~ /^Parent: (\S+)/) {
+	    $foundGene = $1;
+	    close(ENSEMBL);
+	    last;
+	}
+    }
+    return $foundGene;
+}
+
+sub useEnsemblTranscriptsToGetGtfFile {
+    my ($uniprotFile,$ensemblFile) = @_;
+    open(UNIPROT, $uniprotFile) || die "Can't open $uniprotFile for reading.\n";
+    my $header = <UNIPROT>;
+    die "Query to Uniprot did not provide expected header" unless $header =~ /^Gene name/;
+    my ($txFound,$species,$gtfDownloaded) = (0,"",0);
+    while(<UNIPROT>) {
+	my $line = $_;
+	chomp $line;
+	my ($gene,$uniprot,$refseq,$ensembl,$vectorbase) = split("\t",$line);
+	next if ($ensembl !~ /T\d+/);
+	$txFound = 1;
+	my $currentTxs = formatFieldFromUniprot($ensembl);
+	foreach my $tx (@$currentTxs) {
+	    $species = getSpeciesFromTranscript($tx);
+	    if ($species ne "") {
+       		$gtfDownloaded = getEnsemblGtfFromSpecies($species,$ensemblFile);
+		if ($gtfDownloaded == 1) {
+		    close(UNIPROT);
+		    return ($txFound,$species,$gtfDownloaded);
+		}
+	    }
+	} 
+    }
+    close(UNIPROT);
+    return ($txFound,$species,$gtfDownloaded);
+}
+
+sub getSpeciesFromTranscript {
+    my ($transcript) = @_;
+    my $cmd = "wget \"https://rest.ensembl.org/lookup/id/".$transcript."?expand=0\" -qO-";
+    open(ENSEMBL, "$cmd |");
+    my $species = "";
+    while(<ENSEMBL>) {
+	if ($_ =~ /^species: (\S+)/) {
+	    $species = $1;
+	    close(ENSEMBL);
+	    last;
+	}
+    }
+    return $species;
+}
+
+sub getEnsemblGtfFromSpecies {
+    my ($species,$ensemblFile) = @_;
+    my $speciesCap = ucfirst($species);
+    my $cmd = "wget \"ftp://ftp.ensembl.org/pub/release-97/gtf/".$species."/".$speciesCap."*97.gtf.gz\" -qO ".$ensemblFile.".gz";
+    system($cmd);
+    $cmd = "gunzip -d ".$ensemblFile.".gz";
+    system($cmd);
+    if (-e $ensemblFile) {
+	return 1;
+    } else {
+	return 0;
+    }
+}
+
+
+sub createEnsemblGeneTranscriptHash {
+    my ($ensemblFile) = @_;
+    print STDERR localtime()."\n"; 
+    print STDERR "Putting Ensembl transcripts and genes into hashes. These genes and transcripts will be put into the mapping file.\n";
+    open(ENSEMBL,$ensemblFile) || die "Can't open '$ensemblFile' for reading.\n";
+    my (%geneIdToTxId, %txIdToGeneId);
+    while (<ENSEMBL>) {
+	my $line = $_;
+	chomp $line;
+	my @fields = split("\t",$line);
+	my $numFields = scalar @fields;
+	next if $numFields < 2;
+	die "Too few fields: $numFields\n$line\n" if ($numFields != 9);
+	next if ($fields[2] ne "gene" && $fields[2] ne "transcript");
+	die "Did not find gene id when expected.\n$line\n" if ($fields[8] !~ /gene_id "(\S+)"/);
+	my $geneId = $1;
+	if (!exists($geneIdToTxId{$geneId})) { 
+	    $geneIdToTxId{$geneId} = [];
+	} else {
+	    if ($fields[2] eq "transcript") {
+		die "Did not find transcript name when expected.\n$line\n" if ($fields[8] !~ /transcript_id "(\S+)"/);
+		my $transcript = $1;
+		if (!exists($txIdToGeneId{$transcript})) {
+		    push @{$geneIdToTxId{$geneId}}, $transcript;
+		    $txIdToGeneId{$transcript}=$geneId;
+		}
+	    }
+	}
+    }
+    close(ENSEMBL);
+    return (\%geneIdToTxId,\%txIdToGeneId);
+}
+
+sub getGeneNamesHashFromFasta {
+    my ($fastaFile) = @_;
+    my %geneNames;
+    open(FASTA, $fastaFile) || die "Can't open '$fastaFile' for reading.\n";
+    while(<FASTA>) {
+	my $line = $_;
+	chomp $line;
+	if ($line =~ /^>\S+\|(\S+)/) {
+	    $geneNames{$1}{otherNames}=[];
+	    $geneNames{$1}{uniprot}=[];
+	    $geneNames{$1}{refseq}=[];
+	    $geneNames{$1}{ensemblGene}=[];
+	    $geneNames{$1}{ensemblTx}=[];
+	    $geneNames{$1}{vectorbaseGene}=[];
+	    $geneNames{$1}{vectorbaseTx}=[];
+	}
+    }
+    close(FASTA);
+    return \%geneNames;
+}
+
+
+sub getGeneNamesFromUniprot {
+    my ($geneField,$geneNamesHashRef) = @_;
+    my @genes = split(" ",$geneField);
+    my $geneName= "";
+    my @otherNames = ();
+    foreach my $eachGene (@genes) {
+	if (exists(${$geneNamesHashRef}{$eachGene})) {
+	    $geneName = $eachGene;
+	} else {
+	    push @otherNames, $eachGene;
+	}
+    }
+    return ($geneName, \@otherNames);
+}
+
+
+
+sub usage {
+
+die "
+Make a fasta file that is orthomcl compliant, for a uniprot proteome.
+
+Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file abbrev ncbi_taxon_id
+
+Where: 
+  input_fasta_file:             uniprot fasta file
+  output_fasta_file:            the file to write to
+  abbrev:                       the organism abbreviation for this proteome
+  ncbi_taxon_id:                the ncbi taxon id for this organism
+
+Use wget to access a uniprot query to get the protein to gene id (RefSeq protein) mapping.
+
+sample input defline: >sp|D0VWU4|SECE_AQUAE Protein translocase subunit SecE OS=Aquifex aeolicus (strain VF5) OX=224324 GN=secE PE=1 SV=1          
+
+sample output defline: >aaeo|NP_214325 proteinId=D0VWU4 product=Protein translocase subunit SecE  
+
+";
+}
