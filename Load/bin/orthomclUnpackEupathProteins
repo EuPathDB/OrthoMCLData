@@ -29,19 +29,21 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 
 =cut
 
-foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  die "Error: No product field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{gene_product};
-  my $product = $data->{recordset}->{record}->{$geneId}->{field}->{gene_product}->{content};
+foreach my $geneId (@{$data->{recordset}->{record}} ) {
 
-  die "Error: No sequence field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence};
-  my $seq = $data->{recordset}->{record}->{$geneId}->{field}->{protein_sequence}->{content};
+    die "Error: No product field found" unless $geneId->{field}->{gene_product};
+    my $product = $geneId->{field}->{gene_product}->{content};
 
-  #restore after test db is built
-#  die "Error: No transcript_id field found" unless $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id};
-#  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+    die "Error: No sequence field found" unless $geneId->{field}->{protein_sequence};
+    my $seq = $geneId->{field}->{protein_sequence}->{content};
 
-  my $transcriptId = $geneId;   #temporary until GUS 4
-  print FASTA ">$transcriptId gene=$geneId product=$product\n$seq\n";
+    die "Error: No transcript field found" unless $geneId->{primaryKey}->{column}->{source_id};
+    my $transcript = $geneId->{primaryKey}->{column}->{source_id}->{content};
+
+    die "Error: No gene field found" unless $geneId->{primaryKey}->{column}->{gene_source_id};
+    my $gene = $geneId->{primaryKey}->{column}->{gene_source_id}->{content};
+
+    print FASTA ">$transcript gene=$gene product=$product\n$seq\n";
 }
 
 
