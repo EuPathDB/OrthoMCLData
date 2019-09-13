@@ -39,13 +39,15 @@ die "could not parse $inputFile.  Got no value.\n" unless $data;
 
 =cut
 
-foreach my $recordId (keys(%{$data->{recordset}->{record}})) {
-  my $ecStrings = $data->{recordset}->{record}->{$recordId}->{field}->{content};
-  next unless $ecStrings;
-  my @ecArr = split(/;/, $ecStrings);
+foreach my $recordId ( @{$data->{recordset}->{record}} ) {
+  my $ecString = $recordId->{field}->{content};
+  next unless $ecString;
+  my @ecArr = split(/;/, $ecString);
   foreach my $ecStr (@ecArr) {
     $ecStr =~ /^(\S+)/;
-    print OUT "$orthomclTaxonAbbrev|$recordId\t$1\n";
+    my $singleEc = $1;
+    my $geneId = $recordId->{primaryKey}->{column}->{gene_source_id}->{content};
+    print OUT "$orthomclTaxonAbbrev|$geneId\t$singleEc\n";
   }
 }
 

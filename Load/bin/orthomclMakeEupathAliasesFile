@@ -14,8 +14,8 @@ open(FASTA, "$inputExemplarsFastaFile") || die "Can't open '$inputExemplarsFasta
 my %exemplars;
 while((<FASTA>)) {
     next unless /\>(\S+) gene=(\S+)/;
-    my $geneId = $1;
-    my $transcriptId = $2;
+    my $geneId = $2;
+    my $transcriptId = $1;
     $exemplars{$geneId} = $transcriptId;
 }
 close(FASTA);
@@ -43,17 +43,17 @@ die "could not parse $inputXmlFile.  Got no value.\n" unless $data;
 
 open(ALIASES, ">$outputAliasesFile") || die "Can't open '$outputAliasesFile' for writing\n";
 my %geneIds;
-foreach my $geneId (keys(%{$data->{recordset}->{record}})) {
-  my $repGeneId = $data->{recordset}->{record}->{$geneId}->{field}->{representative_gene}->{content};
-  my $organism = $data->{recordset}->{record}->{$geneId}->{field}->{organism}->{content};
-  my $transcriptId = $data->{recordset}->{record}->{$geneId}->{field}->{transcript_id}->{content};
+foreach my $geneId ( @{$data->{recordset}->{record}} ) {
+  my $repGeneId = $geneId->{primaryKey}->{column}->{gene_source_id}->{content};
+  my $organism = $geneId->{field}->{organism}->{content};
+  my $transcriptId = $geneId->{primaryKey}->{column}->{source_id}->{content};
 
   # gene alias
-  print ALIASES "$abbrev|$repGeneId\t$geneId\t$organism\n" unless $geneIds{$geneId};
-  $geneIds{$geneId} = 1;
+  print ALIASES "$abbrev|$repGeneId\t$repGeneId\t$organism\n" unless $geneIds{$repGeneId};
+  $geneIds{$repGeneId} = 1;
 
   # transcript alias
-  if ($exemplars{$geneId} eq $transcriptId) {
+  if ($exemplars{$repGeneId} eq $transcriptId) {
       print ALIASES "$abbrev|$repGeneId\t$transcriptId\tEXEMPLAR\n";  # flag this transcript as an exemplar
   } else {
       print ALIASES "$abbrev|$repGeneId\t$transcriptId\t\n";  # empty remark column
