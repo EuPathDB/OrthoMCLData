@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+my ($undo) = @ARGV;
+
+usage() unless (scalar(@ARGV)==0 || scalar(@ARGV)==1);
+
+my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        0,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+my $sql;
+if ($undo) {
+    $sql = "truncate table apidb.SimilarSequencesGroup";
+} else {
+    $sql = "
+INSERT INTO apidb.SimilarSequencesGroup(ortholog_group_id, query_id, subject_id, evalue_mant, evalue_exp)
+SELECT ogsq.ortholog_group_id, ss.query_id, ss.subject_id, ss.evalue_mant, ss.evalue_exp
+FROM apidb.SimilarSequences ss, dots.ExternalAaSequence easq, dots.ExternalAaSequence eass, 
+     APIDB.ORTHOLOGGROUPAASEQUENCE ogsq, apidb.ORTHOLOGGROUPAASEQUENCE ogss
+WHERE ss.query_id = easq.secondary_identifier AND easq.aa_sequence_id = ogsq.aa_sequence_id
+  AND ogsq.ortholog_group_id = ogss.ortholog_group_id
+  AND ss.subject_id = eass.secondary_identifier AND eass.aa_sequence_id = ogss.aa_sequence_id
+";
+}
+
+print STDERR "executing sql: $sql\n";
+my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+$queryHandle->execute() or die $dbh->errstr;
+
+
+sub usage {
+    die "
+
+Insert rows into the table apidb.SimilarSequencesGroup
+
+Usage: orthomclInsertSimilarSequencesGroup [-undo]
+
+If undo is set, removes all rows from the table apidb.SimilarSequencesGroup
+
+";
+}
+
