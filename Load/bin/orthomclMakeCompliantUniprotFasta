@@ -11,49 +11,41 @@ open(OUT, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing
 
 # sample input defline: >sp|D0VWU4|SECE_AQUAE Protein translocase subunit SecE OS=Aquifex aeolicus (strain VF5) OX=224324 GN=secE PE=1 SV=1
 
-# sample output defline: >D0VWU4 gene=secE product=Protein translocase subunit SecE
+# sample output defline: >D0VWU4 gene=D0VWU4 product=Protein translocase subunit SecE
 
-print STDERR "Processing input fasta file\n";
 while(<INPUT>) {
     my $line = $_;
     if ($line =~ /^>/) {
 	my $proteinName;
 	my $proteinProduct;
-	my $geneName;
 	if ($line =~ />\w\w\|([^|]+)\|\S+ (.+) OS=/) {
 	    $proteinName = $1;
 	    $proteinProduct = $2;
 	} else {
 	    die "unexpected defline format: $_";
 	}
-	if ($line =~ /GN=(\S+)/) {
-	    $geneName = $1;
-	} else {
-	    $geneName = $proteinName;
-	}
-
-	print OUT ">$proteinName gene=$geneName product=$proteinProduct\n"
+	print OUT ">$proteinName gene=$proteinName product=$proteinProduct\n";
     } else {
-      print OUT;
+	print OUT;
     }
 }
+
+exit;
 
 
 
 sub usage {
 
 die "
-Make a fasta file that is orthomcl compliant, for a uniprot proteome.
+Make a fasta file that is orthomcl compliant, for a uniprot reference proteome.
 
-Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file abbrev ncbi_taxon_id
+Usage: orthomclMakeCompliantUniprotFasta input_fasta_file output_fasta_file
 
 Where: 
   input_fasta_file:             uniprot fasta file
   output_fasta_file:            the file to write to
 
 sample input defline: >sp|D0VWU4|SECE_AQUAE Protein translocase subunit SecE OS=Aquifex aeolicus (strain VF5) OX=224324 GN=secE PE=1 SV=1          
-
-sample output defline: >D0VWU4 gene=secE product=Protein translocase subunit SecE  
-
+sample output defline: >D0VWU4 gene=D0VWU4 product=Protein translocase subunit SecE
 ";
 }
