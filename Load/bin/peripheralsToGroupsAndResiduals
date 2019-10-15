@@ -1,0 +1,144 @@
+#!/usr/bin/perl
+
+# for plan B
+
+# this script reads the ortholog group file created by tier 1, which contains
+# only proteins from "representative" taxa, and augments it with "secondary"
+# proteins (i.e. those not from representative taxa) by adding each secondary
+# protein to the same group as the protein to which it has greatest similarity
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+use DBI;
+
+my $groupsFile = $ARGV[0];
+my $outputGroupsFile = $ARGV[1];
+my $residualsFile = $ARGV[2];
+my $peripheralsSimSeqTable = $ARGV[3];
+my $abbrev = $ARGV[4];
+
+usage() unless scalar(@ARGV) == 5;
+
+$| = 1;
+
+my $groups;
+my %grouplist;
+
+my $dbh = getDbHandle();
+
+print STDERR "reading orthomclGroups.txt into hash at " . `date` . "\n";
+
+open(F, $groupsFile) || die "Can't open groups file '$groupsFile'\n";
+while (<F>) {
+    my @a = split(/\s+/);
+    my $groupName = $a[0];
+    shift(@a);
+    map {$groups->{$_} = $groupName} @a;
+    $grouplist{$groupName} = \@a;
+}
+close(F);
+
+my $pvalueExponentCutoff = 0; # no cutoff at all
+
+# open residuals file
+open(my $fh, ">", $residualsFile)
+  or die "cannot open residuals file \"$residualsFile\" for writing: $!";
+
+print STDERR "preparing secondary-protein query at " . `date` . "\n";
+# prepare query for secondary (that is, non-representative) protein IDs
+my $secondaryQuery = $dbh->prepare(<<SQL);
+select query_id
+from $peripheralsSimSeqTable
+SQL
+
+print STDERR "preparing query for representative for a given protein at " . `date` . "\n";
+# prepare the query that, for a given non-representative protein, finds its best match among representatives
+my $repQuery = $dbh->prepare(<<SQL);
+    select subject_id
+    from $peripheralsSimSeqTable
+    where query_id = ?
+      and evalue_exp <= $pvalueExponentCutoff
+    order by evalue_exp, evalue_mant desc
+SQL
+
+$secondaryQuery->execute();
+
+my $prevRep;
+my $count;
+while (my($secondary) = $secondaryQuery->fetchrow_array()) {
+  $count++;
+  if ($count == 10000) {
+    print STDERR '.';
+    $count = 0;
+  }
+  # find this protein's representative
+  $repQuery->execute($secondary);
+  my ($representative) = $repQuery->fetchrow_array();
+  $repQuery->finish();
+
+  next if $representative eq $prevRep;
+  $prevRep = $representative;
+  if ($representative) {
+    # we found a representative; update the hash
+    my $groupName = $groups->{$representative};
+    if ($groupName) {
+      # print STDERR "adding secondary protein \"$secondary\", represented by \"$representative\" to group \"$groupName\"\n";
+
+      push(@{$grouplist{$groupName}}, $secondary);
+    } else {
+      print STDERR "secondary protein \"$secondary\" is represented by \"$representative\", which has no group\n";
+    }
+  } else {
+    # no representative found; write this protein ID to the residuals file
+    print $fh "> $secondary\n";
+  }
+}
+
+print STDERR "finishing secondaryQuery at " . `date` . "\n";
+$secondaryQuery->finish();
+$dbh->disconnect();
+
+close($fh)
+  or warn "close failed: $!";
+
+print STDERR "writing out augmented groups at " . `date` . "\n";
+open(OUT, ">", $outputGroupsFile) || die "Can't open groups file '$outputGroupsFile'\n";
+foreach my $group (keys %grouplist) {
+  my @a = @{$grouplist{$group}};
+  print OUT "$group " . join(" ", @a) . "\n";
+}
+close(OUT);
+
+print STDERR "done. at " . `date` . "\n";
+
+sub getDbHandle {
+
+  my $gusConfigFile = $ENV{GUS_HOME} . "/config/gus.config";
+  my @properties = ();
+  my $gusconfig = CBIL::Util::PropertySet->new($gusConfigFile, \@properties, 1);
+
+  my $u = $gusconfig->{props}->{databaseLogin};
+  my $pw = $gusconfig->{props}->{databasePassword};
+  my $dsn = $gusconfig->{props}->{dbiDsn};
+
+  my $dbh = DBI->connect($dsn, $u, $pw) or die DBI::errstr;
+  $dbh->{RaiseError} = 1;
+  $dbh->{AutoCommit} = 0;
+
+  return $dbh;
+}
+
+sub usage() {
+  die "
+Add peripheral proteins to groups based on their blast match to representative proteins.
+
+Usage: augmentRepresentativeGroups inputGroupsFile outputGroupsFile outputResidualsFile peripheralSimSeqsTable
+
+Where:
+  inputGroupsFile: groups file to add to
+  outputGroupsFile:  groups file with peripherals added
+  outputResidualsFile: list of IDs of sequences that could not be added
+  peripheralSimSeqsTable: the full name of the sim seqs table holding the similarities between the peripheral and representative sequences
+";
+}
