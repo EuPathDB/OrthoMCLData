@@ -202,9 +202,9 @@ EOF
 sub processSeqsInGroup {
   my ($self,$seqIdArr, $groupId, $sth, $sth2) = @_;
 
-  my $num = @{$seqIdArr};
+  my $grpSize = @{$seqIdArr};
 
-  $self->log ("Processing $num seqs in $groupId\n");
+  $self->log ("Processing $grpSize seqs in $groupId\n");
 
   my $similarityCount = 0;
   my $sumPercentIdentity = 0;
@@ -213,12 +213,9 @@ sub processSeqsInGroup {
   my %connectivity;
   my %lengthHsh;
 
-  my $grpSize = @{$seqIdArr};
-
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + 1; $j < $grpSize ; $j++) {
       my @sequence1 = split (/,/, $seqIdArr->[$i]);
-
       my @sequence2 = split (/,/, $seqIdArr->[$j]);
 
       $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
@@ -230,11 +227,9 @@ sub processSeqsInGroup {
 	$sumEvalue +=  $row[0] . "e" . $row[1];
       }
 
-
       my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
       $connectivity{$seqIdArr->[$i]} += $isConnected;
       $connectivity{$seqIdArr->[$j]} += $isConnected;
-
     }
   }
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($seqIdArr, \%connectivity);
@@ -260,21 +255,21 @@ sub updateOrthologGroup {
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
-  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$similarityCount);
+  my $similarityCountNoZero = ($similarityCount == 0) ? 1 : $similarityCount;
 
-  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$similarityCount);
+  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$similarityCountNoZero);
+
+  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$similarityCountNoZero);
 
   my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
-  my $avgEvalue = $sumEvalue/$similarityCount;
+  my $avgEvalue = $sumEvalue/$similarityCountNoZero;
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
 
   my $fixedAvgEValue = sprintf("%e",$avgEvalue);
 
   my($avgMant,$avgExp) = split(/e/,$fixedAvgEValue);
-
-  my $numMatchPairs = $similarityCount / 2;
 
   $orthologGroup->retrieveFromDB();
 
@@ -290,12 +285,15 @@ sub updateOrthologGroup {
     $orthologGroup->set('avg_connectivity', $avgConnectivity);
   }
 
+  my $numMatchPairs = $similarityCount / 2;  # this is true because one full matched pair (e.g., proteins A and B) will have two (e.g., A-B and B-A) similarity scores
+ 
   if ($orthologGroup->get('number_of_match_pairs') != $numMatchPairs) {
     $orthologGroup->set('number_of_match_pairs', $numMatchPairs);
   }
 
-  if ($orthologGroup->get('percent_match_pairs') != 100 * $numMatchPairs /($grpSize * ($grpSize -1)) ) {
-    $orthologGroup->set('percent_match_pairs', 100 * $numMatchPairs /($grpSize * ($grpSize -1)) );
+  my $maxPossiblePairs = ($grpSize * ($grpSize -1)) / 2;
+  if ($orthologGroup->get('percent_match_pairs') != (100 * $numMatchPairs / $maxPossiblePairs) ) {
+    $orthologGroup->set('percent_match_pairs', 100 * $numMatchPairs / $maxPossiblePairs );
   }
 
   if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
