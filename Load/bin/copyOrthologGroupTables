@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+my ($orthoGroupTable, $orthoGroupAaTable, $undo) = @ARGV;
+
+usage() unless scalar(@ARGV >= 2);
+
+my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        0,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+my ($groupSql,$aaSql);
+if ($undo) {
+    
+} else {
+    $groupSql = <<SQL;
+        INSERT INTO $orthoGroupTable
+	(subclass_view, name, number_of_members, external_database_release_id, core_peripheral_residual)
+	SELECT subclass_view, name, number_of_members,
+	       external_database_release_id, 'P' as core_peripheral_residual
+	FROM $orthoGroupTable
+	SQL
+
+    $aaSql = <<SQL;
+        INSERT INTO $orthoGroupAaTable
+	(ortholog_group_id, aa_sequence_id)
+	SELECT og2.ortholog_group_id, first.aa_sequence_id
+	FROM $orthoGroupAaTable og2,
+	     (SELECT og.name, oga.aa_sequence_id
+	      FROM apidb.OrthologGroup og
+	         , apidb.OrthologGroupAaSequence oga
+	      WHERE og.ortholog_group_id = oga.ortholog_group_id) first
+	WHERE og2.name = first.name
+	      and og2.core_peripheral_residual = 'P'
+	SQL
+}
+
+print STDERR "executing sql: $groupSql\n";
+my $queryHandle = $dbh->prepare($groupSql) or die $dbh->errstr;
+$queryHandle->execute() or die $dbh->errstr;
+
+print STDERR "executing sql: $aaSql\n";
+my $queryHandle = $dbh->prepare($aaSql) or die $dbh->errstr;
+$queryHandle->execute() or die $dbh->errstr;
+
+
+sub usage {
+    die "
+
+Copy the rows from a set of orthomcl pairs tables (ortholog, inparalog, coortholog) to a new (empty) set.
+
+Usage: orthomclCopyPairsTables fromSuffix toSuffix [-undo]
+
+Copies from Apidb.orthologs\${fromSuffix} (etc) to Apidb.orthologs\${toSuffix}
+
+If undo is set, removes all rows from the destination tables.
+
+";
+}
+
