@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+usage() unless (@ARGV >= 1);
+my ($suffix, $undo) = @ARGV;
+
+my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        0,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+my @sqlStatements;
+if ($undo) {
+
+    my $sql = <<SQL;
+          BEGIN
+	      EXECUTE IMMEDIATE 'DROP TABLE ' || ApiDB.SimilarSequences$suffix;
+          EXCEPTION
+	      WHEN OTHERS THEN
+	         IF SQLCODE != -942 THEN
+		     RAISE;
+                 END IF;
+          END
+	  SQL
+
+    @sqlStatements = ($sql);
+
+} else {
+
+    my $sql1 = <<SQL;
+          CREATE TABLE ApiDB.SimilarSequences$suffix (
+	     QUERY_ID                 VARCHAR(60),
+	     SUBJECT_ID               VARCHAR(60),
+	     QUERY_TAXON_ID           VARCHAR(10),
+	     SUBJECT_TAXON_ID         VARCHAR(10),
+	     EVALUE_MANT              FLOAT,
+	     EVALUE_EXP               INT,
+	     PERCENT_IDENTITY         FLOAT,
+	     PERCENT_MATCH            FLOAT
+	  ) NOLOGGING
+	  SQL
+
+    my $sql2 = <<SQL;
+          CREATE INDEX ss_qtaxexp_ix$suffix
+	  ON ApiDB.SimilarSequences$suffix
+	     (query_id,subject_taxon_id,evalue_exp,evalue_mant,query_taxon_id,subject_id)
+	  NOLOGGING TABLESPACE indx
+	  SQL
+
+    my $sql3 = <<SQL;
+          CREATE INDEX ss_seqs_ix$suffix
+	  ON ApiDB.SimilarSequences$suffix
+	     (query_id,subject_id,evalue_exp,evalue_mant,percent_match)
+	  NOLOGGING TABLESPACE indx
+	  SQL
+
+	  @sqlStatements = ($sql1,$sql2,$sql3);
+
+}
+
+foreach (@sqlStatements) {
+    print STDERR "executing sql: $_\n";
+    my $queryHandle = $dbh->prepare($_) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+}
+
+sub usage {
+ print STDERR "
+Create an ApiDB.SimilarSequences table with indexes, for temporarily storing Blast results during
+
+the OrthoMCL peripheral workflow. This table will be used to find the best matched Core protein for
+
+every Peripheral protein.
+
+usage: createSimSeqTable table_suffix [-undo]
+
+If undo is set, removes this table, if it exists. It may have been dropped later in the workflow.
+
+";
+}
+
