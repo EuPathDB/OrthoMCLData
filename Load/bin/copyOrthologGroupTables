@@ -34,9 +34,8 @@ if ($undo) {
 } else {
     $sql1 = <<SQL;
         INSERT INTO $orthoGroupTable
-	(subclass_view, name, number_of_members, external_database_release_id, core_peripheral_residual)
-	SELECT subclass_view, name, number_of_members,
-	       external_database_release_id, 'P' as core_peripheral_residual
+	(subclass_view, name, external_database_release_id, core_peripheral_residual)
+	SELECT subclass_view, name, external_database_release_id, 'P' as core_peripheral_residual
 	FROM $orthoGroupTable
 	SQL
 
