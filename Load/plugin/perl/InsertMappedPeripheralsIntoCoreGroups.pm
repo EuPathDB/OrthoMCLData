@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertOrthologousGroupsFromMcl;
+package OrthoMCLData::Load::Plugin::InsertMappedPeripheralsIntoCoreGroups;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -45,7 +45,7 @@ my $argsDeclaration =
 ];
 
 my $purpose = <<PURPOSE;
-Insert an ApiDB::OrthologGroup and its members from an orthomcl groups file.
+Insert peripheral proteins into an exisiting core  ApiDB::OrthologGroup as described in an orthomcl groups file.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
@@ -163,62 +163,82 @@ sub getDbRls {
 sub _parseGroup {
     my ($self, $line, $dbReleaseId) = @_;
 
-    # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
+    # example line: OG6_1009: osat|ENS1222992 pfal|PF11_0844
     if ($line = /^(\S+)\: (.*)/) {
         my $groupName = $1;
         my @genes = split(/\s+/, $2);
 	my $geneCount = scalar(@genes);
 
-        # print "group=$groupName, #genes=$geneCount, #taxon=$taxonCount\n";
-
-        # create a OrthlogGroup instance
-        my $orthoGroup = GUS::Model::ApiDB::OrthologGroup->
-            new({name => $groupName,
-                 number_of_members => $geneCount,
-                 external_database_release_id => $dbReleaseId,
-                });
+        # get peripheral OrthlogGroup Id
+        my $orthoGroupId = $self->getOrthoGroupId($groupName,$dbReleaseId);
+	die "Can't find an ortholog_group_id for $groupName\n" if !$orthoGroupId;
 
         for (@genes) {
             if (/(\w+)\|(\S+)/) {
 		my $taxonAbbrev = $1;
 		my $sourceId = $2;
-		my $sequenceId = $self->getAASequenceId("$taxonAbbrev|$sourceId");
+		my $sequenceId = $self->getAASequenceId($taxonAbbrev,$sourceId);
 		die "Can't find an aa_sequence_id for abbrev:$taxonAbbrev source_id:$sourceId\n" if !$sequenceId;
-
-		# create a OrthologGroupAASequence instance
 		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
 		    new({aa_sequence_id => $sequenceId,
-		      })->setParent($orthoGroup);
+			 ortholog_group_id => $orthoGroupId
+		       });
+		$orthoGroupSequence->submit();
+		$orthoGroupSequence->undefPointerCache();
 	    } else {
                 $self->log("gene cannot be parsed: '$_'.");
             }
         }
-        $orthoGroup->submit();
-        $orthoGroup->undefPointerCache();
-
         return 1;
     } else {
         return 0;
     }
 }
 
-# use full form of input id "pfa|PF11_0344"
-sub getAASequenceId {
-  my ($self, $inputId) = @_;
 
-  if (!$self->{idMap}) {
+sub getOrthoGroupId {
+  my ($self, $inputGroupName, $dbReleaseId) = @_;
+
+  if (!$self->{groupMap}) {
     my $sql = "
-select aa_sequence_id, source_id, three_letter_abbrev
-from apidb.OrthomclTaxon ot, dots.ExternalAaSequence s
-where ot.taxon_id = s.taxon_id
+select name, ortholog_group_id
+from apidb.orthologgroup
+where core_peripheral_residual = 'P'
+and external_database_release_id = $dbReleaseId
 ";
-
     my $stmt = $self->prepareAndExecute($sql);
-    while (my ($sequenceId, $sourceId, $taxonId) = $stmt->fetchrow_array()) {
-      $self->{idMap}->{"$taxonId|$sourceId"} = $sequenceId;
+    while (my ($groupName, $groupId) = $stmt->fetchrow_array()) {
+      $self->{groupMap}->{$groupName} = $groupId;
     }
   }
-  return $self->{idMap}->{$inputId};
+  if ( exists $self->{groupMap}->{$inputGroupName} ) {
+      return $self->{groupMap}->{$inputGroupName};
+  } else {
+      die "Can't find ortholog group id for $inputGroupName";
+  }
+}
+
+
+# use full form of input id "pfal|PF11_0344"
+sub getAASequenceId {
+  my ($self, $taxon, $inputId) = @_;
+
+  if (!$self->{aaMap}) {
+    my $sql = "
+select aa_sequence_id, secondary_identifier
+from dots.ExternalAaSequence
+where secondary_identifier like '$taxon%'
+";
+    my $stmt = $self->prepareAndExecute($sql);
+    while (my ($sequenceId, $seqName) = $stmt->fetchrow_array()) {
+      $self->{aaMap}->{$seqName} = $sequenceId;
+    }
+  }
+  if ( exists $self->{aaMap}->{$inputId} ) {
+      return $self->{aaMap}->{$inputId};
+  } else {
+      die "Can't find AA sequence id for $inputId";
+  }
 }
 
 
@@ -227,8 +247,7 @@ where ot.taxon_id = s.taxon_id
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.OrthologGroupAASequence',
-          'ApiDB.OrthologGroup',
+  return ('ApiDB.OrthologGroupAASequence'
 	 );
 }
 
