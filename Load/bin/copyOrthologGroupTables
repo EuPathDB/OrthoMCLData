@@ -17,11 +17,22 @@ my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
                                         $gusconfig->getCoreSchemaName());
 my $dbh = $db->getQueryHandle();
 
-my ($groupSql,$aaSql);
+my ($sql1,$sql2);
 if ($undo) {
+    $sql2 = <<SQL;
+        DELETE FROM $orthoGroupTable
+	WHERE core_peripheral_residual = 'P'
+	SQL
+
+    $sql1 = <<SQL;
+        DELETE FROM $orthoGroupAaTable
+	WHERE ortholog_group_id IN 
+	(SELECT ortholog_group_id FROM $orthoGroupTable
+	 WHERE core_peripheral_residual = 'P')
+	SQL
     
 } else {
-    $groupSql = <<SQL;
+    $sql1 = <<SQL;
         INSERT INTO $orthoGroupTable
 	(subclass_view, name, number_of_members, external_database_release_id, core_peripheral_residual)
 	SELECT subclass_view, name, number_of_members,
@@ -29,39 +40,43 @@ if ($undo) {
 	FROM $orthoGroupTable
 	SQL
 
-    $aaSql = <<SQL;
+    $sql2 = <<SQL;
         INSERT INTO $orthoGroupAaTable
 	(ortholog_group_id, aa_sequence_id)
 	SELECT og2.ortholog_group_id, first.aa_sequence_id
-	FROM $orthoGroupAaTable og2,
+	FROM $orthoGroupTable og2,
 	     (SELECT og.name, oga.aa_sequence_id
-	      FROM apidb.OrthologGroup og
-	         , apidb.OrthologGroupAaSequence oga
+	      FROM $orthoGroupTable og
+	         , $orthoGroupAaTable oga
 	      WHERE og.ortholog_group_id = oga.ortholog_group_id) first
 	WHERE og2.name = first.name
 	      and og2.core_peripheral_residual = 'P'
 	SQL
 }
 
-print STDERR "executing sql: $groupSql\n";
-my $queryHandle = $dbh->prepare($groupSql) or die $dbh->errstr;
+print STDERR "executing sql: $sql1\n";
+my $queryHandle = $dbh->prepare($sql1) or die $dbh->errstr;
 $queryHandle->execute() or die $dbh->errstr;
 
-print STDERR "executing sql: $aaSql\n";
-my $queryHandle = $dbh->prepare($aaSql) or die $dbh->errstr;
+print STDERR "executing sql: $sql2\n";
+my $queryHandle = $dbh->prepare($sql2) or die $dbh->errstr;
 $queryHandle->execute() or die $dbh->errstr;
 
 
 sub usage {
     die "
 
-Copy the rows from a set of orthomcl pairs tables (ortholog, inparalog, coortholog) to a new (empty) set.
+Make a copy of each core orthogroup in the apidb.orthologgroup table. This copy will be called a 
 
-Usage: orthomclCopyPairsTables fromSuffix toSuffix [-undo]
+peripheral group and will contain all core proteins as well as peripheral proteins that map into
 
-Copies from Apidb.orthologs\${fromSuffix} (etc) to Apidb.orthologs\${toSuffix}
+the group. Also a copy is made of each of the links to the core proteins in the linking table
 
-If undo is set, removes all rows from the destination tables.
+apidb.OrthologGroupAaSequence
+
+Usage: copyOrthologGroupTables orthoGroupTable orthoGroupAaTable [-undo]
+
+If undo is set, removes the rows from the destination tables.
 
 ";
 }
