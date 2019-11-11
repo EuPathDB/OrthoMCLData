@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+usage() unless (@ARGV >= 1);
+my ($suffix, $undo) = @ARGV;
+
+my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+                                        $gusconfig->getDatabaseLogin(),
+                                        $gusconfig->getDatabasePassword(),
+                                        0,0,1,
+                                        $gusconfig->getCoreSchemaName());
+my $dbh = $db->getQueryHandle();
+
+exit if ($undo);
+
+my $sql = <<SQL;
+          BEGIN
+	      EXECUTE IMMEDIATE 'DROP TABLE ' || ApiDB.SimilarSequences$suffix;
+          EXCEPTION
+	      WHEN OTHERS THEN
+	         IF SQLCODE != -942 THEN
+		     RAISE;
+                 END IF;
+          END
+	  SQL
+
+print STDERR "executing sql: $sql\n";
+my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+$queryHandle->execute() or die $dbh->errstr;
+
+
+sub usage {
+ print STDERR "
+Drop a temporary ApiDB.SimilarSequences table after the Blast results are analyzed during
+
+the OrthoMCL peripheral workflow.
+
+usage: dropSimSeqTable table_suffix [-undo]
+
+If undo is set, this script does nothing to the table.
+";
+}
+
