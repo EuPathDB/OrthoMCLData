@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+
+usage() unless scalar(@ARGV) == 2;
+
+my ($residualFastaFilesDir, $combinedResidualsFile) = @ARGV;
+
+opendir(DIR, $residualFastaFilesDir) or die "Can't open $residualFastaFilesDir: $!";
+my @fastaFiles = map { "$_" } grep { /\.fasta$/ } readdir(DIR)
+my $numFiles = scalar @fastaFiles;
+die "There are no fasta files in $residualFastaFilesDir" if ($numFiles == 0);
+my $files = join(" ",@fastaFiles);
+print STDERR "Combining these $numFiles residual fasta files:\n";
+print STDERR "$files \n";
+closedir(DIR);
+
+my $cmd = "cat $residualFastaFilesDir/*.fasta > $combinedResidualsFile";
+system($cmd) && die "Failed running cmd\n$cmd";
+
+
+sub usage {
+die "
+Combine all the fasta files in the residuals directory into one fasta file.
+
+Usage: orthomclCombineResidualFiles residual_directory combined_file
+
+Where:
+  residual_directory:       the directory containing multiple fasta files. Each file contains the residual proteins of one organism.
+  combined_file:     the target fasta file which will be created by merging all of the fasta files above.
+
+";
+}
+
