@@ -107,13 +107,6 @@ sub run {
     my $speciesOrder = getSpeciesOrder();
     my ($parentId, $depthFirstIndex) = getCladeInfo($orthomclClade);
 
-    #get all existing clades from apidb.OrthomclTaxon, where taxon_id is null, test that the given clade is there and get the orthomcl_taxon_id, which will be the parent_id
-    #get taxon_id and species name from ncbiTaxonId using taxon tables
-    #is_species=1
-    # species_order = max(species_order)+1
-    # depth_first_index = depth_first_index of taxon
-    #create OrthomclTaxon object and add these things and submit
-
     my $species = GUS::Model::ApiDB::OrthomclTaxon->
 	new({parent_id => $parentId,
 	     taxon_id => $taxonId,
@@ -126,15 +119,16 @@ sub run {
     $species->submit();
     $species->undefPointerCache();
 
-    $self->log("The species '$taxonName' with abbrev '$abbrev' has been loaded.");
+    $self->log("The species '$taxonName' with abbrev '$abbrev' has been loaded into apidb.OrthomclTaxon.");
     
 }
 
 
 sub abbrevUnique {
     my ($abbrev) = @_;
+    $abbrev=lc($abbrev);
 
-    my $sql = "select three_letter_abbrev from apidb.orthomcltaxon";
+    my $sql = "SELECT LOWER(three_letter_abbrev) FROM apidb.orthomcltaxon";
     my $stmt = $self->prepareAndExecute($sql);
     my %abbrevs;
     while (my ($currentAbbrev) = $stmt->fetchrow_array()) {
@@ -148,115 +142,48 @@ sub abbrevUnique {
     }
 }
 
+sub getTaxonId {
+    my ($ncbiTaxonId) = @_;
 
-sub getDbRls {
-  my ($self) = @_;
-
-  my $name = $self->getArg('extDbName');
-
-  my $version = $self->getArg('extDbVersion');
-
-  my $externalDatabase = GUS::Model::SRes::ExternalDatabase->new({"name" => $name});
-  $externalDatabase->retrieveFromDB();
-
-  if (! $externalDatabase->getExternalDatabaseId()) {
-    $externalDatabase->submit();
-  }
-  my $external_db_id = $externalDatabase->getExternalDatabaseId();
-
-  my $externalDatabaseRel = GUS::Model::SRes::ExternalDatabaseRelease->new ({'external_database_id'=>$external_db_id,'version'=>$version});
-
-  $externalDatabaseRel->retrieveFromDB();
-
-  if (! $externalDatabaseRel->getExternalDatabaseReleaseId()) {
-    $externalDatabaseRel->submit();
-  }
-
-  my $external_db_rel_id = $externalDatabaseRel->getExternalDatabaseReleaseId();
-
-  return $external_db_rel_id;
-}
-
-
-sub _parseGroup {
-    my ($self, $line, $dbReleaseId) = @_;
-
-    # example line: OG6_1009: osat|ENS1222992 pfal|PF11_0844
-    if ($line = /^(\S+)\: (.*)/) {
-        my $groupName = $1;
-        my @genes = split(/\s+/, $2);
-	my $geneCount = scalar(@genes);
-
-        # get peripheral OrthlogGroup Id
-        my $orthoGroupId = $self->getOrthoGroupId($groupName,$dbReleaseId);
-	die "Can't find an ortholog_group_id for $groupName\n" if !$orthoGroupId;
-
-        for (@genes) {
-            if (/(\w+)\|(\S+)/) {
-		my $taxonAbbrev = $1;
-		my $sourceId = $2;
-		my $sequenceId = $self->getAASequenceId($taxonAbbrev,$sourceId);
-		die "Can't find an aa_sequence_id for abbrev:$taxonAbbrev source_id:$sourceId\n" if !$sequenceId;
-		my $orthoGroupSequence = GUS::Model::ApiDB::OrthologGroupAaSequence->
-		    new({aa_sequence_id => $sequenceId,
-			 ortholog_group_id => $orthoGroupId
-		       });
-		$orthoGroupSequence->submit();
-		$orthoGroupSequence->undefPointerCache();
-	    } else {
-                $self->log("gene cannot be parsed: '$_'.");
-            }
-        }
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-
-sub getOrthoGroupId {
-  my ($self, $inputGroupName, $dbReleaseId) = @_;
-
-  if (!$self->{groupMap}) {
     my $sql = "
-select name, ortholog_group_id
-from apidb.orthologgroup
-where core_peripheral_residual = 'P'
-and external_database_release_id = $dbReleaseId
+SELECT t.taxon_id, tn.name
+FROM sres.taxon t, sres.taxonname tn
+WHERE t.ncbi_tax_id = $ncbiTaxonId
+AND t.taxon_id = tn.taxon_id
+AND tn.name_class = 'scientific name'
 ";
     my $stmt = $self->prepareAndExecute($sql);
-    while (my ($groupName, $groupId) = $stmt->fetchrow_array()) {
-      $self->{groupMap}->{$groupName} = $groupId;
-    }
-  }
-  if ( exists $self->{groupMap}->{$inputGroupName} ) {
-      return $self->{groupMap}->{$inputGroupName};
-  } else {
-      die "Can't find ortholog group id for $inputGroupName";
-  }
+    my ($taxonId, $taxonName) = $stmt->fetchrow_array();
+    die "Failed to obtain taxonId or taxonName for ncbiTaxonId $ncbiTaxonId" if (! $taxonId || ! $taxonName);
+    my ($testIfMore1, $testIfMore2) = $stmt->fetchrow_array();
+    die "There is more than one entry for ncbiTaxonId $ncbiTaxonId" if ($testIfMore1 || $testIfMore2);
+    return ($taxonId, $taxonName);
 }
 
+sub getSpeciesOrder {
+    my $sql = "SELECT MAX(species_order) FROM apidb.OrthomclTaxon";
+    my $stmt = $self->prepareAndExecute($sql);
+    my ($maxOrder) = $stmt->fetchrow_array();
+    die "Failed to obtain maximum species_order from apidb.OrthomclTaxon" if (! $maxOrder);
+    return $maxOrder+1;
+}
 
-# use full form of input id "pfal|PF11_0344"
-sub getAASequenceId {
-  my ($self, $taxon, $inputId) = @_;
+sub getCladeInfo {
+    my ($orthomclClade) = @_;
+    $orthomclClade = lc($orthomclClade);
 
-  if (!$self->{aaMap}) {
     my $sql = "
-select aa_sequence_id, secondary_identifier
-from dots.ExternalAaSequence
-where secondary_identifier like '$taxon%'
+SELECT orthomcl_taxon_id, depth_first_index
+FROM apidb.OrthomclTaxon
+WHERE LOWER(three_letter_abbrev) = '$orthomclClade'
+AND taxon_id IS NULL
 ";
     my $stmt = $self->prepareAndExecute($sql);
-    while (my ($sequenceId, $seqName) = $stmt->fetchrow_array()) {
-      $self->{aaMap}->{$seqName} = $sequenceId;
-    }
-  }
-  if ( exists $self->{aaMap}->{$inputId} ) {
-      return $self->{aaMap}->{$inputId};
-  } else {
-      die "Can't find AA sequence id for $inputId";
-  }
+    my ($parentId, $depthFirstIndex) = $stmt->fetchrow_array();
+    die "Failed to obtain parentId or depthFirstIndex for orthomclClade $orthomclClade" if (! $parentId || ! $depthFirstIndex);
+    my ($testIfMore1, $testIfMore2) = $stmt->fetchrow_array();
+    die "There is more than one entry for orthomclClade $orthomclClade" if ($testIfMore1 || $testIfMore2);
+    return ($parentId, $depthFirstIndex);
 }
 
 
