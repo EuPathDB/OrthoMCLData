@@ -313,12 +313,12 @@ sub updateOrthologGroup {
 
 
 sub getAvgConnectivity {
-  my ($self,$connectivity,$grpSize) =@_;
+  my ($self,$connectivity,$grpSize) = @_;
 
   my $totalConnectivity = 0;
 
   foreach my $aaId (keys %{$connectivity}) {
-    $totalConnectivity += $connectivity ->{$aaId};
+    $totalConnectivity += $connectivity->{$aaId};
   }
 
   my $avgConnectivity = $totalConnectivity / $grpSize;

@@ -26,6 +26,12 @@ my $argsDeclaration =
             constraintFunc => undef,
             isList         => 0, }),
 
+ stringArg({ descr => 'core peripheral or residual group',
+	     name  => 'corePeripheralResidual',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
 
  stringArg({ descr => 'Name of the External Database',
 	     name  => 'extDbName',
@@ -109,17 +115,20 @@ sub run {
 
     my $orthologFile = $self->getArg('orthoFile');
 
+    my $corePeripheralResidual = $self->getArg('corePeripheralResidual');
+    $corePeripheralResidual = uc($corePeripheralResidual);
+    die "The corePeripheralResidual variable must be C or P or R. It is currently set to '$corePeripheralResidual'" if ($corePeripheralResidual !~ /^[CPR]$/);
+	
     my $dbReleaseId = $self->getDbRls();
 
     open ORTHO_FILE, "<$orthologFile";
     my $groupCount = 0;
     my $lineCount = 0;
-    my $notFound;
     while (<ORTHO_FILE>) {
         chomp;
         $lineCount++;
 
-        if ($self->_parseGroup($_, $dbReleaseId)) {
+        if ($self->_parseGroup($_, $dbReleaseId, $corePeripheralResidual)) {
             $groupCount++;
             if (($groupCount % 1000) == 0) {
                 $self->log("$groupCount ortholog groups loaded.");
@@ -161,7 +170,7 @@ sub getDbRls {
 
 
 sub _parseGroup {
-    my ($self, $line, $dbReleaseId) = @_;
+    my ($self, $line, $dbReleaseId, $corePeripheralResidual) = @_;
 
     # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
     if ($line = /^(\S+)\: (.*)/) {
@@ -176,6 +185,7 @@ sub _parseGroup {
             new({name => $groupName,
                  number_of_members => $geneCount,
                  external_database_release_id => $dbReleaseId,
+		 core_peripheral_residual => $corePeripheralResidual
                 });
 
         for (@genes) {
