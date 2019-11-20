@@ -28,38 +28,38 @@ if ($undo) {
 		     RAISE;
                  END IF;
           END
-	  SQL
+SQL
 
     @sqlStatements = ($sql);
 
 } else {
 
     my $sql1 = <<SQL;
-          CREATE TABLE ApiDB.SimilarSequences$suffix (
-	     QUERY_ID                 VARCHAR(60),
-	     SUBJECT_ID               VARCHAR(60),
-	     QUERY_TAXON_ID           VARCHAR(10),
-	     SUBJECT_TAXON_ID         VARCHAR(10),
-	     EVALUE_MANT              FLOAT,
-	     EVALUE_EXP               INT,
-	     PERCENT_IDENTITY         FLOAT,
-	     PERCENT_MATCH            FLOAT
-	  ) NOLOGGING
-	  SQL
+CREATE TABLE ApiDB.SimilarSequences$suffix (
+QUERY_ID                 VARCHAR(60),
+SUBJECT_ID               VARCHAR(60),
+QUERY_TAXON_ID           VARCHAR(10),
+SUBJECT_TAXON_ID         VARCHAR(10),
+EVALUE_MANT              FLOAT,
+EVALUE_EXP               INT,
+PERCENT_IDENTITY         FLOAT,
+PERCENT_MATCH            FLOAT
+) NOLOGGING
+SQL
 
     my $sql2 = <<SQL;
-          CREATE INDEX ss_qtaxexp_ix$suffix
-	  ON ApiDB.SimilarSequences$suffix
-	     (query_id,subject_taxon_id,evalue_exp,evalue_mant,query_taxon_id,subject_id)
-	  NOLOGGING TABLESPACE indx
-	  SQL
+CREATE INDEX ss_qtaxexp_ix$suffix
+ON ApiDB.SimilarSequences$suffix
+(query_id,subject_taxon_id,evalue_exp,evalue_mant,query_taxon_id,subject_id)
+NOLOGGING TABLESPACE indx
+SQL
 
     my $sql3 = <<SQL;
-          CREATE INDEX ss_seqs_ix$suffix
-	  ON ApiDB.SimilarSequences$suffix
-	     (query_id,subject_id,evalue_exp,evalue_mant,percent_match)
-	  NOLOGGING TABLESPACE indx
-	  SQL
+CREATE INDEX ss_seqs_ix$suffix
+ON ApiDB.SimilarSequences$suffix
+(query_id,subject_id,evalue_exp,evalue_mant,percent_match)
+NOLOGGING TABLESPACE indx
+SQL
 
 	  @sqlStatements = ($sql1,$sql2,$sql3);
 

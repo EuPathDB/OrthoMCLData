@@ -27,7 +27,7 @@ my $sql = <<SQL;
 		     RAISE;
                  END IF;
           END
-	  SQL
+SQL
 
 print STDERR "executing sql: $sql\n";
 my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
