@@ -20,37 +20,40 @@ my $dbh = $db->getQueryHandle();
 my ($sql1,$sql2);
 if ($undo) {
     $sql2 = <<SQL;
-        DELETE FROM $orthoGroupTable
-	WHERE core_peripheral_residual = 'P'
-	SQL
+DELETE FROM $orthoGroupTable
+WHERE core_peripheral_residual = 'P'
+SQL
 
     $sql1 = <<SQL;
-        DELETE FROM $orthoGroupAaTable
-	WHERE ortholog_group_id IN 
-	(SELECT ortholog_group_id FROM $orthoGroupTable
-	 WHERE core_peripheral_residual = 'P')
-	SQL
+DELETE FROM $orthoGroupAaTable
+WHERE ortholog_group_id IN
+(SELECT ortholog_group_id FROM $orthoGroupTable
+WHERE core_peripheral_residual = 'P')
+SQL
     
 } else {
+    my $groupNextVal = $orthoGroupTable . "_sq.nextval";
+    my $aaNextVal = $orthoGroupAaTable . "_sq.nextval";
+
     $sql1 = <<SQL;
-        INSERT INTO $orthoGroupTable
-	(subclass_view, name, external_database_release_id, core_peripheral_residual)
-	SELECT subclass_view, name, external_database_release_id, 'P' as core_peripheral_residual
-	FROM $orthoGroupTable
-	SQL
+INSERT INTO $orthoGroupTable
+(ortholog_group_id, subclass_view, name, external_database_release_id, modification_date, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, row_alg_invocation_id, core_peripheral_residual)
+SELECT $groupNextVal, subclass_view, name, external_database_release_id, sysdate, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, 0, 'P'
+FROM $orthoGroupTable
+SQL
 
     $sql2 = <<SQL;
-        INSERT INTO $orthoGroupAaTable
-	(ortholog_group_id, aa_sequence_id)
-	SELECT og2.ortholog_group_id, first.aa_sequence_id
-	FROM $orthoGroupTable og2,
-	     (SELECT og.name, oga.aa_sequence_id
-	      FROM $orthoGroupTable og
-	         , $orthoGroupAaTable oga
-	      WHERE og.ortholog_group_id = oga.ortholog_group_id) first
-	WHERE og2.name = first.name
-	      and og2.core_peripheral_residual = 'P'
-	SQL
+INSERT INTO $orthoGroupAaTable
+(ortholog_group_aa_sequence_id, ortholog_group_id, aa_sequence_id, modification_date, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, row_alg_invocation_id)
+SELECT $aaNextVal, og2.ortholog_group_id, first.aa_sequence_id, sysdate, first.user_read, first.user_write, first.group_read, first.group_write, first.other_read, first.other_write, first.row_user_id, first.row_group_id, first.row_project_id, 0
+FROM $orthoGroupTable og2,
+(SELECT og.name, oga.aa_sequence_id, oga.user_read, oga.user_write, oga.group_read, oga.group_write, oga.other_read, oga.other_write, oga.row_user_id, oga.row_group_id, oga.row_project_id
+FROM $orthoGroupTable og
+, $orthoGroupAaTable oga
+WHERE og.ortholog_group_id = oga.ortholog_group_id) first
+WHERE og2.name = first.name
+and og2.core_peripheral_residual = 'P'
+SQL
 }
 
 print STDERR "executing sql: $sql1\n";
