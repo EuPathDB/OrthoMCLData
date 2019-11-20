@@ -114,7 +114,8 @@ sub run {
 	     three_letter_abbrev => $abbrev,
 	     is_species => 1,
 	     species_order => $speciesOrder,
-	     depth_first_index => $depthFirstIndex
+	     depth_first_index => $depthFirstIndex,
+	     core_peripheral => 'P'
 	    });
     $species->submit();
     $species->undefPointerCache();
