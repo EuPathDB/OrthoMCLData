@@ -20,13 +20,13 @@ exit if ($undo);
 
 my $sql = <<SQL;
           BEGIN
-	      EXECUTE IMMEDIATE 'DROP TABLE ' || ApiDB.SimilarSequences$suffix;
+	      EXECUTE IMMEDIATE 'DROP TABLE ' || 'ApiDB.SimilarSequences$suffix';
           EXCEPTION
 	      WHEN OTHERS THEN
 	         IF SQLCODE != -942 THEN
 		     RAISE;
                  END IF;
-          END
+           END;
 SQL
 
 print STDERR "executing sql: $sql\n";

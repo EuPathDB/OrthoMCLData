@@ -101,11 +101,11 @@ sub run {
     my $ncbiTaxonId = $self->getArg('ncbiTaxonId');
 
     die "species abbreviation $abbrev must have 4 letters" if (length($abbrev) != 4);
-    die "species abbreviation $abbrev already exists in the database" if (! abbrevUnique($abbrev));
+    die "species abbreviation $abbrev already exists in the database" if (! $self->abbrevUnique($abbrev));
     
-    my ($taxonId, $taxonName) = getTaxonId($ncbiTaxonId);
-    my $speciesOrder = getSpeciesOrder();
-    my ($parentId, $depthFirstIndex) = getCladeInfo($orthomclClade);
+    my ($taxonId, $taxonName) = $self->getTaxonId($ncbiTaxonId);
+    my $speciesOrder = $self->getSpeciesOrder();
+    my ($parentId, $depthFirstIndex) = $self->getCladeInfo($orthomclClade);
 
     my $species = GUS::Model::ApiDB::OrthomclTaxon->
 	new({parent_id => $parentId,
@@ -126,17 +126,17 @@ sub run {
 
 
 sub abbrevUnique {
-    my ($abbrev) = @_;
+    my ($self, $abbrev) = @_;
     $abbrev=lc($abbrev);
 
     my $sql = "SELECT LOWER(three_letter_abbrev) FROM apidb.orthomcltaxon";
     my $stmt = $self->prepareAndExecute($sql);
     my %abbrevs;
     while (my ($currentAbbrev) = $stmt->fetchrow_array()) {
-	$abbrevs->{$currentAbbrev} = 1;
+	$abbrevs{$currentAbbrev} = 1;
     }
 
-    if ( exists $abbrevs->{$abbrev} ) {
+    if ( exists $abbrevs{$abbrev} ) {
 	return 0;
     } else {
 	return 1;
@@ -144,7 +144,7 @@ sub abbrevUnique {
 }
 
 sub getTaxonId {
-    my ($ncbiTaxonId) = @_;
+    my ($self, $ncbiTaxonId) = @_;
 
     my $sql = "
 SELECT t.taxon_id, tn.name
@@ -162,6 +162,7 @@ AND tn.name_class = 'scientific name'
 }
 
 sub getSpeciesOrder {
+    my ($self) = @_;
     my $sql = "SELECT MAX(species_order) FROM apidb.OrthomclTaxon";
     my $stmt = $self->prepareAndExecute($sql);
     my ($maxOrder) = $stmt->fetchrow_array();
@@ -170,7 +171,7 @@ sub getSpeciesOrder {
 }
 
 sub getCladeInfo {
-    my ($orthomclClade) = @_;
+    my ($self, $orthomclClade) = @_;
     $orthomclClade = lc($orthomclClade);
 
     my $sql = "

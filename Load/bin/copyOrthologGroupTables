@@ -37,8 +37,8 @@ SQL
 
     $sql1 = <<SQL;
 INSERT INTO $orthoGroupTable
-(ortholog_group_id, subclass_view, name, external_database_release_id, modification_date, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, row_alg_invocation_id, core_peripheral_residual)
-SELECT $groupNextVal, subclass_view, name, external_database_release_id, sysdate, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, 0, 'P'
+(ortholog_group_id, subclass_view, name, number_of_members, external_database_release_id, modification_date, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, row_alg_invocation_id, core_peripheral_residual)
+SELECT $groupNextVal, subclass_view, name, 0, external_database_release_id, sysdate, user_read, user_write, group_read, group_write, other_read, other_write, row_user_id, row_group_id, row_project_id, 0, 'P'
 FROM $orthoGroupTable
 SQL
 
@@ -64,6 +64,7 @@ print STDERR "executing sql: $sql2\n";
 my $queryHandle = $dbh->prepare($sql2) or die $dbh->errstr;
 $queryHandle->execute() or die $dbh->errstr;
 
+$dbh->commit();
 
 sub usage {
     die "

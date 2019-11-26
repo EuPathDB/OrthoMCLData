@@ -17,8 +17,10 @@ my $inputFastaFile = $ARGV[1];
 my $residualFastaFile = $ARGV[2];
 my $peripheralsSimSeqTable = $ARGV[3];
 my $abbrev = $ARGV[4];
+my $pvalueExponentCutoff = $ARGV[5];
+my $percentMatch = $ARGV[6];
 
-usage() unless scalar(@ARGV) == 5;
+usage() unless scalar(@ARGV) == 7;
 
 $| = 1;
 
@@ -47,14 +49,12 @@ while (my($coreProtein,$groupName) = $orthogroupQuery->fetchrow_array()) {
 }
 $orthogroupQuery->finish();
 
-my $pvalueExponentCutoff = 0; # no cutoff at all
-
 print STDERR "preparing query to obtain all peripheral protein Ids for organism $abbrev at " . `date` . "\n";
 # prepare query to obtain protein IDs from the current peripheral proteome
 my $peripheralQuery = $dbh->prepare(<<SQL);
 select query_id
 from $peripheralsSimSeqTable
-where query_taxon_id = $abbrev
+where query_taxon_id = '$abbrev'
 SQL
 
 print STDERR "preparing query to obtain core protein Id that best matches a given peripheral protein at " . `date` . "\n";
@@ -64,14 +64,18 @@ my $coreQuery = $dbh->prepare(<<SQL);
     from $peripheralsSimSeqTable
     where query_id = ?
       and evalue_exp <= $pvalueExponentCutoff
+      and percent_match >= $percentMatch
     order by evalue_exp, evalue_mant desc
 SQL
 
 $peripheralQuery->execute();
 
 my %residualProteins;
+my %peripheralSeen;
 my $count=0;
 while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
+  next if (exists $peripheralSeen{$peripheralProtein});
+  $peripheralSeen{$peripheralProtein}=1;
   $count++;
   if ($count == 10000) {
     print STDERR '.';
@@ -84,7 +88,7 @@ while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
 
   if ($coreTopHit) {
     # we found a top hit in the core; update the hash
-    my $groupName = $groups->{$coreTopHit};
+    my $groupName = $groups{$coreTopHit};
     if ($groupName) {
       # print STDERR "adding peripheral protein \"$peripheralProtein\", which best matched \"$coreTopHit\" to group \"$groupName\"\n";
       push(@{$grouplist{$groupName}}, $peripheralProtein);
@@ -115,7 +119,7 @@ close(OUT);
 # create residuals fasta file
 open(IN, $inputFastaFile) or die "Cannot open $inputFastaFile for reading.\n";
 open(OUT, ">", $residualFastaFile)
-  or die "cannot open residuals file \"$residualsFile\" for writing: $!";
+  or die "cannot open residuals file \"$residualFastaFile\" for writing: $!";
 
 my $inProtein = 0;
 while (<IN>) {

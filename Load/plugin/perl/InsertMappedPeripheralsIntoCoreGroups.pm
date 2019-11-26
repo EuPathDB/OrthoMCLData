@@ -222,7 +222,7 @@ and external_database_release_id = $dbReleaseId
 # use full form of input id "pfal|PF11_0344"
 sub getAASequenceId {
   my ($self, $taxon, $inputId) = @_;
-
+  $inputId=$taxon."|".$inputId;
   if (!$self->{aaMap}) {
     my $sql = "
 select aa_sequence_id, secondary_identifier
