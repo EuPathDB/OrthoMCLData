@@ -162,7 +162,7 @@ sub usage() {
   die "
 Add peripheral proteins to groups based on their blast match to core proteins. The group names and peripheral proteins are written to a groups file. Also identify unmapped 'residual' proteins and create a fasta file containing only sequences of residual proteins.
 
-Usage: peripheralsToGroupsAndResiduals outputGroupsFile inputFastaFile residualFastaFile inputSimilarSequencesTable abbrev
+Usage: peripheralsToGroupsAndResiduals outputGroupsFile inputFastaFile residualFastaFile inputSimilarSequencesTable abbrev pvalueExponentCutoff percentMatch
 
 Where:
   outputGroupsFile:  groups file with just peripheral proteins
@@ -170,5 +170,7 @@ Where:
   residualFastaFile:  the fasta file to be created containing only sequences of residual proteins
   inputSimilarSequencesTable:  the database table from which blast results will be taken to identify peripheral proteins mapping to core proteins
   abbrev: the orthomcl taxon abbreviation of the peripheral species
+  pvalueExponentCutoff: only pairs with a pvalue exponent of this value or lower will be kept (e.g., -5)
+  percentMatch: only pairs with a percent match of this score or higher is kept (e.g. 50)  
 ";
 }

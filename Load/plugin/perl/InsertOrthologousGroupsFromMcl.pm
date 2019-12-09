@@ -26,7 +26,7 @@ my $argsDeclaration =
             constraintFunc => undef,
             isList         => 0, }),
 
- stringArg({ descr => 'core peripheral or residual group',
+ stringArg({ descr => 'core peripheral or residual group (C, P or R)',
 	     name  => 'corePeripheralResidual',
 	     isList    => 0,
 	     reqd  => 1,
