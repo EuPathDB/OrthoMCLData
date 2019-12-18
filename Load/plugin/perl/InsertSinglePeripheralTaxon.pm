@@ -129,7 +129,7 @@ sub abbrevUnique {
     my ($self, $abbrev) = @_;
     $abbrev=lc($abbrev);
 
-    my $sql = "SELECT LOWER(three_letter_abbrev) FROM apidb.orthomcltaxon";
+    my $sql = "SELECT three_letter_abbrev FROM apidb.orthomcltaxon";
     my $stmt = $self->prepareAndExecute($sql);
     my %abbrevs;
     while (my ($currentAbbrev) = $stmt->fetchrow_array()) {
@@ -177,7 +177,7 @@ sub getCladeInfo {
     my $sql = "
 SELECT orthomcl_taxon_id, depth_first_index
 FROM apidb.OrthomclTaxon
-WHERE LOWER(three_letter_abbrev) = '$orthomclClade'
+WHERE three_letter_abbrev = '$orthomclClade'
 AND taxon_id IS NULL
 ";
     my $stmt = $self->prepareAndExecute($sql);
