@@ -127,7 +127,6 @@ sub run {
 
 sub abbrevUnique {
     my ($self, $abbrev) = @_;
-    $abbrev=lc($abbrev);
 
     my $sql = "SELECT three_letter_abbrev FROM apidb.orthomcltaxon";
     my $stmt = $self->prepareAndExecute($sql);
@@ -172,7 +171,6 @@ sub getSpeciesOrder {
 
 sub getCladeInfo {
     my ($self, $orthomclClade) = @_;
-    $orthomclClade = lc($orthomclClade);
 
     my $sql = "
 SELECT orthomcl_taxon_id, depth_first_index
