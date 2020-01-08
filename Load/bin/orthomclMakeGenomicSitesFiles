@@ -1,0 +1,176 @@
+#!/usr/bin/perl
+
+# This script reads in each core proteinId with its corresponding orthogroup.
+# It then reads in peripherals for the current proteome and finds the best hit
+# among the core proteins. Then it assigns the peripheral protein to an orthogroup.
+# The orthrogroup names and corresponding  peripheral proteins are written out to a file.
+# Peripheral proteins that do not map to a core orthogroup are termed "residuals".
+# A fasta file is created with only sequences of residual proteins.
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+use DBI;
+
+my $outputGroupsFile = $ARGV[0];
+my $inputFastaFile = $ARGV[1];
+my $residualFastaFile = $ARGV[2];
+my $peripheralsSimSeqTable = $ARGV[3];
+my $abbrev = $ARGV[4];
+my $pvalueExponentCutoff = $ARGV[5];
+my $percentMatch = $ARGV[6];
+
+usage() unless scalar(@ARGV) == 7;
+
+$| = 1;
+
+my $dbh = getDbHandle();
+
+print STDERR "reading core protein Ids and orthogroups from database into hash at " . `date` . "\n";
+my %groups;
+my %grouplist;
+
+# prepare query to obtain core protein Ids and orthogroups
+my $orthogroupQuery = $dbh->prepare(<<SQL);
+select eas.secondary_identifier, og.name
+from DoTS.externalaasequence eas
+    , APIDB.OrthologGroupAaSequence ogas
+    , apidb.orthologgroup og
+where eas.aa_sequence_id = ogas.aa_sequence_id
+    and ogas.ortholog_group_id = og.ortholog_group_id
+SQL
+
+$orthogroupQuery->execute();
+while (my($coreProtein,$groupName) = $orthogroupQuery->fetchrow_array()) {
+    $groups{$coreProtein}=$groupName;
+    if (! exists $grouplist{$groupName}) {
+	$grouplist{$groupName}=[];
+    }
+}
+$orthogroupQuery->finish();
+
+print STDERR "preparing query to obtain all peripheral protein Ids for organism $abbrev at " . `date` . "\n";
+# prepare query to obtain protein IDs from the current peripheral proteome
+my $peripheralQuery = $dbh->prepare(<<SQL);
+select query_id
+from $peripheralsSimSeqTable
+where query_taxon_id = '$abbrev'
+SQL
+
+print STDERR "preparing query to obtain core protein Id that best matches a given peripheral protein at " . `date` . "\n";
+# prepare query to obtain the core protein ID that best matches the peripheral protein
+my $coreQuery = $dbh->prepare(<<SQL);
+    select subject_id
+    from $peripheralsSimSeqTable
+    where query_id = ?
+      and evalue_exp <= $pvalueExponentCutoff
+      and percent_match >= $percentMatch
+    order by evalue_exp, evalue_mant desc
+SQL
+
+$peripheralQuery->execute();
+
+my %residualProteins;
+my %peripheralSeen;
+my $count=0;
+while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
+  next if (exists $peripheralSeen{$peripheralProtein});
+  $peripheralSeen{$peripheralProtein}=1;
+  $count++;
+  if ($count == 10000) {
+    print STDERR '.';
+    $count = 0;
+  }
+  # find this protein's top hit in the core
+  $coreQuery->execute($peripheralProtein);
+  my ($coreTopHit) = $coreQuery->fetchrow_array();
+  $coreQuery->finish();
+
+  if ($coreTopHit) {
+    # we found a top hit in the core; update the hash
+    my $groupName = $groups{$coreTopHit};
+    if ($groupName) {
+      # print STDERR "adding peripheral protein \"$peripheralProtein\", which best matched \"$coreTopHit\" to group \"$groupName\"\n";
+      push(@{$grouplist{$groupName}}, $peripheralProtein);
+    } else {
+      print STDERR "peripheral protein \"$peripheralProtein\" best matched \"$coreTopHit\", which has no group\n";
+    }
+  } else {
+    # no core top hit found so this protein is a residual
+    $residualProteins{$peripheralProtein}=1;
+  }
+}
+
+print STDERR "Finishing peripheralQuery at " . `date` . "\n";
+$peripheralQuery->finish();
+$dbh->disconnect();
+
+print STDERR "writing out orthogroups and mapped peripheral proteins at " . `date` . "\n";
+open(OUT, ">", $outputGroupsFile) || die "Can't open groups file '$outputGroupsFile'\n";
+foreach my $group (keys %grouplist) {
+  my @a = @{$grouplist{$group}};
+  print OUT "$group: " . join(" ", @a) . "\n";
+}
+close(OUT);
+
+
+
+
+# create residuals fasta file
+open(IN, $inputFastaFile) or die "Cannot open $inputFastaFile for reading.\n";
+open(OUT, ">", $residualFastaFile)
+  or die "cannot open residuals file \"$residualFastaFile\" for writing: $!";
+
+my $inProtein = 0;
+while (<IN>) {
+    my $line = $_;
+    if ($line =~ /^>(\S+)\s/) {
+	my $protein = $1;
+	$inProtein = 0;
+	if ( exists $residualProteins{$protein} ) {
+	    print OUT $line;
+	    $inProtein = 1;
+	}
+    } elsif ( $inProtein == 1 ) {
+	print OUT $line;
+    }
+}
+
+close(IN);
+close(OUT);
+
+print STDERR "Finished at " . `date` . "\n";
+
+sub getDbHandle {
+
+  my $gusConfigFile = $ENV{GUS_HOME} . "/config/gus.config";
+  my @properties = ();
+  my $gusconfig = CBIL::Util::PropertySet->new($gusConfigFile, \@properties, 1);
+
+  my $u = $gusconfig->{props}->{databaseLogin};
+  my $pw = $gusconfig->{props}->{databasePassword};
+  my $dsn = $gusconfig->{props}->{dbiDsn};
+
+  my $dbh = DBI->connect($dsn, $u, $pw) or die DBI::errstr;
+  $dbh->{RaiseError} = 1;
+  $dbh->{AutoCommit} = 0;
+
+  return $dbh;
+}
+
+sub usage() {
+  die "
+Add peripheral proteins to groups based on their blast match to core proteins. The group names and peripheral proteins are written to a groups file. Also identify unmapped 'residual' proteins and create a fasta file containing only sequences of residual proteins.
+
+Usage: peripheralsToGroupsAndResiduals outputGroupsFile inputFastaFile residualFastaFile inputSimilarSequencesTable abbrev pvalueExponentCutoff percentMatch
+
+Where:
+  outputGroupsFile:  groups file with just peripheral proteins
+  inputFastaFile:  the fasta file containing all sequences of the peripheral proteome
+  residualFastaFile:  the fasta file to be created containing only sequences of residual proteins
+  inputSimilarSequencesTable:  the database table from which blast results will be taken to identify peripheral proteins mapping to core proteins
+  abbrev: the orthomcl taxon abbreviation of the peripheral species
+  pvalueExponentCutoff: only pairs with a pvalue exponent of this value or lower will be kept (e.g., -5)
+  percentMatch: only pairs with a percent match of this score or higher is kept (e.g. 50)  
+";
+}
