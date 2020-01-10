@@ -1,145 +1,111 @@
 #!/usr/bin/perl
 
-# This script reads in each core proteinId with its corresponding orthogroup.
-# It then reads in peripherals for the current proteome and finds the best hit
-# among the core proteins. Then it assigns the peripheral protein to an orthogroup.
-# The orthrogroup names and corresponding  peripheral proteins are written out to a file.
-# Peripheral proteins that do not map to a core orthogroup are termed "residuals".
-# A fasta file is created with only sequences of residual proteins.
+# This script generates three files that are needed by Data Loaders to update ortholog data on the
+# genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
 
-use strict;
+Use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 use DBI;
 
-my $outputGroupsFile = $ARGV[0];
-my $inputFastaFile = $ARGV[1];
-my $residualFastaFile = $ARGV[2];
-my $peripheralsSimSeqTable = $ARGV[3];
-my $abbrev = $ARGV[4];
-my $pvalueExponentCutoff = $ARGV[5];
-my $percentMatch = $ARGV[6];
+my $outputDir = $ARGV[0];
+my $peripheralDir = $ARGV[1];
+my $peripheralMapFileName = $ARGV[2];
+my $coreMapFile = $ARGV[3];
+my $residualMapFile = $ARGV[4];
+my $cladeFile = $ARGV[5];
 
-usage() unless scalar(@ARGV) == 7;
+usage() unless scalar(@ARGV) == 6;
 
 $| = 1;
 
+print STDERR "Creating $outputDir directory at " . `date` . "\n";
+my $cmd = "mkdir -p $outputDir";
+system($cmd) && die "Failed running cmd\n$cmd";
+
+
+print STDERR "Copying $cladeFile to $outputDir at" . `date` . "\n";
+my $cmd = "cp $cladeFile $outputDir";
+system($cmd) && die "Failed running cmd\n$cmd";
+
+
+print STDERR "Creating orthomclTaxons.txt file in $outputDir using data from database at " . `date` . "\n";
+my $taxonFile = $outputDir."/orthomclTaxons.txt";
+open(OUT, ">", $taxonFile)
+    or die "cannot open residuals file \"$taxonFile\" for writing: $!";
 my $dbh = getDbHandle();
-
-print STDERR "reading core protein Ids and orthogroups from database into hash at " . `date` . "\n";
-my %groups;
-my %grouplist;
-
-# prepare query to obtain core protein Ids and orthogroups
-my $orthogroupQuery = $dbh->prepare(<<SQL);
-select eas.secondary_identifier, og.name
-from DoTS.externalaasequence eas
-    , APIDB.OrthologGroupAaSequence ogas
-    , apidb.orthologgroup og
-where eas.aa_sequence_id = ogas.aa_sequence_id
-    and ogas.ortholog_group_id = og.ortholog_group_id
+my $query = $dbh->prepare(<<SQL);
+select ot1.three_letter_abbrev,ot2.three_letter_abbrev,t.ncbi_tax_id
+from sres.taxon t,
+     (select parent_id,taxon_id,three_letter_abbrev
+        from apidb.orthomcltaxon) ot1,
+     (select orthomcl_taxon_id,three_letter_abbrev
+        from apidb.orthomcltaxon) ot2
+where ot1.parent_id=ot2.orthomcl_taxon_id
+    and t.taxon_id=ot1.taxon_id
 SQL
 
-$orthogroupQuery->execute();
-while (my($coreProtein,$groupName) = $orthogroupQuery->fetchrow_array()) {
-    $groups{$coreProtein}=$groupName;
-    if (! exists $grouplist{$groupName}) {
-	$grouplist{$groupName}=[];
-    }
+$query->execute();
+while (my($abbrev,$clade,$ncbiId) = $query->fetchrow_array()) {
+    print OUT "$abbrev\t$clade\t$ncbiId\n";
 }
-$orthogroupQuery->finish();
+$query->finish();
 
-print STDERR "preparing query to obtain all peripheral protein Ids for organism $abbrev at " . `date` . "\n";
-# prepare query to obtain protein IDs from the current peripheral proteome
-my $peripheralQuery = $dbh->prepare(<<SQL);
-select query_id
-from $peripheralsSimSeqTable
-where query_taxon_id = '$abbrev'
-SQL
-
-print STDERR "preparing query to obtain core protein Id that best matches a given peripheral protein at " . `date` . "\n";
-# prepare query to obtain the core protein ID that best matches the peripheral protein
-my $coreQuery = $dbh->prepare(<<SQL);
-    select subject_id
-    from $peripheralsSimSeqTable
-    where query_id = ?
-      and evalue_exp <= $pvalueExponentCutoff
-      and percent_match >= $percentMatch
-    order by evalue_exp, evalue_mant desc
-SQL
-
-$peripheralQuery->execute();
-
-my %residualProteins;
-my %peripheralSeen;
-my $count=0;
-while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
-  next if (exists $peripheralSeen{$peripheralProtein});
-  $peripheralSeen{$peripheralProtein}=1;
-  $count++;
-  if ($count == 10000) {
-    print STDERR '.';
-    $count = 0;
-  }
-  # find this protein's top hit in the core
-  $coreQuery->execute($peripheralProtein);
-  my ($coreTopHit) = $coreQuery->fetchrow_array();
-  $coreQuery->finish();
-
-  if ($coreTopHit) {
-    # we found a top hit in the core; update the hash
-    my $groupName = $groups{$coreTopHit};
-    if ($groupName) {
-      # print STDERR "adding peripheral protein \"$peripheralProtein\", which best matched \"$coreTopHit\" to group \"$groupName\"\n";
-      push(@{$grouplist{$groupName}}, $peripheralProtein);
-    } else {
-      print STDERR "peripheral protein \"$peripheralProtein\" best matched \"$coreTopHit\", which has no group\n";
-    }
-  } else {
-    # no core top hit found so this protein is a residual
-    $residualProteins{$peripheralProtein}=1;
-  }
-}
-
-print STDERR "Finishing peripheralQuery at " . `date` . "\n";
-$peripheralQuery->finish();
+close(OUT);
 $dbh->disconnect();
 
-print STDERR "writing out orthogroups and mapped peripheral proteins at " . `date` . "\n";
-open(OUT, ">", $outputGroupsFile) || die "Can't open groups file '$outputGroupsFile'\n";
-foreach my $group (keys %grouplist) {
-  my @a = @{$grouplist{$group}};
-  print OUT "$group: " . join(" ", @a) . "\n";
-}
-close(OUT);
 
+print STDERR "Getting groups from:\n$coreMapFile\n$residualMapFile\n$peripheralMapFileName files in $peripheralDir\n";
+my %orthoGroups;
 
+# GROUP FILE FORMAT:   OG6_100000: cbra|A0A388L692 cbra|A0A388LB57
 
+my @peripheralFolders = glob( $peripheralDir."/*_orthomclPeripheralProteome_RSRC" );
+my @peripheralMapFiles = map { $_."/".$peripheralMapFileName } @peripheralFolders;
+my @groupFiles = ($coreMapFile,@peripheralMapFiles); # need to add $residualMapFile once made by workflow
 
-# create residuals fasta file
-open(IN, $inputFastaFile) or die "Cannot open $inputFastaFile for reading.\n";
-open(OUT, ">", $residualFastaFile)
-  or die "cannot open residuals file \"$residualFastaFile\" for writing: $!";
+my $filePresent=0;
+my $fileAbsent=0;
 
-my $inProtein = 0;
-while (<IN>) {
-    my $line = $_;
-    if ($line =~ /^>(\S+)\s/) {
-	my $protein = $1;
-	$inProtein = 0;
-	if ( exists $residualProteins{$protein} ) {
-	    print OUT $line;
-	    $inProtein = 1;
-	}
-    } elsif ( $inProtein == 1 ) {
-	print OUT $line;
+foreach my $file (@groupFiles) {
+    if (-e $file) {
+	$filePresent++;
+    } else {
+	$fileAbsent++;
+	next;
     }
+    open(IN, $file) or die "cannot open file '$file' for reading: $!";
+    while (<IN>) {
+    	my $line = $_;
+    	chomp $line;
+    	if ( $line =~ /^([^:]+):\s(.+)$/ ) {
+    	    my ($group,$genes) = ($1,$2);
+    	    my @geneArray = split(" ",$genes);
+    	    $group =~ s/://g;
+    	    if ( exists $orthoGroups{$group} ) {
+    		push @{$orthoGroups{$group}}, @geneArray;
+    	    } else {
+    		$orthoGroups{$group} = [@geneArray]; 
+    	    }
+    	}
+    }
+    close(IN);   
 }
 
-close(IN);
+print STDERR "Number of expected group files present: $filePresent\n";
+print STDERR "Number of expected group files absent:  $fileAbsent\n";
+
+print STDERR "Writing out orthogroups into '$outputDir/orthomclGroups.txt' at " . `date` . "\n";
+open(OUT, ">", $outputDir."/orthomclGroups.txt") || die "Can't open groups file '$outputDir/orthomclGroups.txt' for writing\n";
+foreach my $group (sort keys %orthoGroups) {
+    my @a = sort @{$orthoGroups{$group}};
+    print OUT "$group: " . join(" ", @a) . "\n";
+}
 close(OUT);
+
 
 print STDERR "Finished at " . `date` . "\n";
+
 
 sub getDbHandle {
 
@@ -160,17 +126,27 @@ sub getDbHandle {
 
 sub usage() {
   die "
-Add peripheral proteins to groups based on their blast match to core proteins. The group names and peripheral proteins are written to a groups file. Also identify unmapped 'residual' proteins and create a fasta file containing only sequences of residual proteins.
+This script generates three files that are needed by Data Loaders to update ortholog data on the
+genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
 
-Usage: peripheralsToGroupsAndResiduals outputGroupsFile inputFastaFile residualFastaFile inputSimilarSequencesTable abbrev pvalueExponentCutoff percentMatch
+Usage: orthomclMakeGenomicSitesFiles outputDir peripheralDir peripheralMapFileName coreMapFile residualMapFile cladeFile
 
 Where:
-  outputGroupsFile:  groups file with just peripheral proteins
-  inputFastaFile:  the fasta file containing all sequences of the peripheral proteome
-  residualFastaFile:  the fasta file to be created containing only sequences of residual proteins
-  inputSimilarSequencesTable:  the database table from which blast results will be taken to identify peripheral proteins mapping to core proteins
-  abbrev: the orthomcl taxon abbreviation of the peripheral species
-  pvalueExponentCutoff: only pairs with a pvalue exponent of this value or lower will be kept (e.g., -5)
-  percentMatch: only pairs with a percent match of this score or higher is kept (e.g. 50)  
+  outputDirectory: the directory that will contain all output files. This is inded to be a sub-directory of the workflow
+       data directory (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/6r1/)
+
+  peripheralDir: the directory that contains all of the peripheral genomes and group files
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/getPeripheralProteins/proteomeDatasets)
+
+  peripheralMapFileName: the common name of each group file (e.g., peripheralsMapToCoreGroup)
+
+  coreMapFile: the full path and name of the Core group file
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/coreGroups/orthomclGroups.txt)
+
+  residualMapFile: the full path and name of the Residual group file
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/residualGroups/orthomclGroups.txt)
+
+  cladeFile: the full path and name of the clade file that will be copied into the new directory
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/orthomclClades_RSRC/OrthoMCL6/orthomclClades.txt)
 ";
 }
