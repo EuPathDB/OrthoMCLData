@@ -1,4 +1,4 @@
-#!@perl@
+#!/usr/bin/perl
 
 ## dumps sequences from dots.aasequence for each ortho group into individual files 
 
@@ -11,7 +11,7 @@ use GUS::ObjRelP::DbiDatabase;
 use CBIL::Bio::SequenceUtils;
 use GUS::Supported::GusConfig;
 
-my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $peripheralsOnly);
+my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $groupTypesCPR);
 
 $minGroupSize =1;
 $maxGroupSize =10000000;
@@ -20,11 +20,15 @@ $maxGroupSize =10000000;
             "gusConfigFile=s" => \$gusConfigFile,
             "minGroupSize=i" => \$minGroupSize,
             "maxGroupSize=i" => \$maxGroupSize,
-            "peripheralsOnly!" => \$peripheralsOnly,
+            "groupTypesCPR=s" => \$groupTypesCPR,
 	    "tarBall=i" => \$tarBallSize);
 
 if(!$outDir){
-	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] [--peripheralsOnly] --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] --groupTypesCPR $groupTypesCPR --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+}
+
+if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
+    die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
 }
 
 my $cmd = "mkdir -p $outDir";
@@ -44,9 +48,9 @@ my $dbh = $db->getQueryHandle();
 
 $dbh->{LongReadLen} = 8192 * 1024;
 
-my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize);
+my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize, $groupTypesCPR);
 
-&makeFiles($fileNames, $peripheralsOnly, $outDir);
+&makeFiles($fileNames, $outDir);
 
 &makeTarBalls($fileNames, $tarBallSize, $outDir) if $tarBallSize;
 
@@ -55,9 +59,13 @@ my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize);
 
 
 sub getGroupNames {
-  my ($minGroupSize, $maxGroupSize) = @_;
+  my ($minGroupSize, $maxGroupSize, $groupTypesCPR) = @_;
 
-  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members > $minGroupSize";
+  my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
+  my $text = join("','",keys %types);
+  $text = "('$text')";
+
+  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members > $minGroupSize and core_peripheral_residual in $text";
 
   my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
@@ -68,7 +76,6 @@ sub getGroupNames {
     $files{$row[0]}{'num'} = $row[2];
   }
 
-
   my $num = scalar (keys %files);
   print STDERR ("$groupSQL\n   $num groups returned\n");
 
@@ -76,27 +83,13 @@ sub getGroupNames {
 }
 
 sub makeFiles {
-  my ($fileNames, $peripheralsOnly, $outDir) = @_;
-
-my $peripheralsOnlyFromClause= "";
-my $peripheralsOnlyWhereClause = "";
-
-  if ($peripheralsOnly) {
-    $peripheralsOnlyFromClause = ", sres.externaldatabaserelease edr, sres.externaldatabase ed, apidb.datasource ds";
-
-    $peripheralsOnlyWhereClause =
-"and x.external_database_release_id = edr.external_database_release_id
-and ed.external_database_id = edr.external_database_id
-and ds.external_database_name = ed.name
-and ds.subtype = 'peripheral'";
-  }
+  my ($fileNames, $outDir) = @_;
 
   my $seqSQL = "
 select ot.three_letter_abbrev || '|' || x.source_id, x.sequence
-from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g $peripheralsOnlyFromClause
+from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g
 where g.aa_sequence_id = x.aa_sequence_id
 and x.taxon_id = ot.taxon_id
-$peripheralsOnlyWhereClause
 and g.ortholog_group_id = ?";
 
   my $seqStmt = $dbh->prepare($seqSQL);
