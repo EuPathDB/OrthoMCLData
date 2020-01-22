@@ -18,16 +18,29 @@ use GUS::Model::SRes::ExternalDatabaseRelease;
 my $argsDeclaration =
 [
  stringArg({ descr => 'Suffix for SimilarSequences table',
-	     name  => 'simSeqsTableSuffix',
+	     name  => 'simSeqTableSuffix',
 	     isList    => 0,
-	     reqd  => 0,
-	     default  => "",
+	     reqd  => 1,
 	     constraintFunc => undef,
 	   }),
+ stringArg({ descr => 'Suffix for Ortholog, CoOrtholog, and InParalog tables',
+	     name  => 'orthologTableSuffix',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+ stringArg({ descr => 'OrthoGroup types to edit (P=Peripheral,C=Core,R=Residual)',
+	     name  => 'groupTypesCPR',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+
+
 ];
 
 my $purpose = <<PURPOSE;
-update ApiDB::OrthologGroup and ApiDB::OrthologGroupAaSequence tablesxs.
+update ApiDB::OrthologGroup and ApiDB::OrthologGroupAaSequence tables.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
@@ -90,28 +103,39 @@ sub new {
 sub run {
     my ($self) = @_;
 
-    my $suffix = $self->getArg('simSeqsTableSuffix');
+    my $simSeqTableSuffix = $self->getArg('simSeqTableSuffix');
+    my $orthologTableSuffix = $self->getArg('orthologTableSuffix');
+    my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
 
-    my $unfinished = $self->getUnfinishedOrthologGroups();
+    if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
+	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
+    }
 
-    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $suffix);
+    my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR);
+
+    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
 
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
 }
 
 
 sub getUnfinishedOrthologGroups {
-  my ($self) = @_;
+  my ($self,$groupTypesCPR) = @_;
 
   $self->log ("Getting the ids of groups not yet updated\n");
 
-  my @unfinished;
+  my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
+  my $text = join("','",keys %types);
+  $text = "('$text')";
+
+  my %unfinished;
 
   my $sqlGetUnfinishedGroups = <<"EOF";
-     SELECT
-       ortholog_group_id
+     SELECT ortholog_group_id, core_peripheral_residual
      FROM apidb.OrthologGroup
      WHERE number_of_match_pairs IS NULL
+           AND core_peripheral_residual in $text
+	   AND number_of_members > 1
 EOF
 
   my $dbh = $self->getQueryHandle();
@@ -119,18 +143,18 @@ EOF
   my $sth = $dbh->prepareAndExecute($sqlGetUnfinishedGroups);
 
   while (my @row = $sth->fetchrow_array()) {
-    push (@unfinished, $row[0]);
+      $unfinished{$row[0]}=$row[1];
   }
 
-  my $num = scalar @unfinished;
+  my $num = keys %unfinished;
 
   $self->log ("   There are $num unfinished groups\n");
 
-  return \@unfinished;
+  return \%unfinished;
 }
 
 sub processUnfinishedGroups {
-  my ($self, $unfinished, $suffix) = @_;
+  my ($self, $unfinished, $simSeqTableSuffix, $orthologTableSuffix) = @_;
 
   my $updatedGrps;
 
@@ -139,8 +163,7 @@ sub processUnfinishedGroups {
   my $dbh = $self->getQueryHandle();
 
   my $sqlSelectOrthGrpAASeq = <<"EOF";
-     SELECT
-       oga.aa_sequence_id, x.secondary_identifier
+     SELECT oga.aa_sequence_id, x.secondary_identifier
        FROM apidb.OrthologGroupAaSequence oga, dots.ExternalAASequence x
        WHERE oga.ortholog_group_id = ? and oga.aa_sequence_id = x.aa_sequence_id
 EOF
@@ -148,10 +171,9 @@ EOF
   my $sth = $dbh->prepare($sqlSelectOrthGrpAASeq);
 
   my $sqlSelectSimSeqs = "
-     SELECT
-       s.evalue_mant, s.evalue_exp,
+     SELECT s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
-     FROM apidb.SimilarSequences$suffix s
+     FROM apidb.SimilarSequences$simSeqTableSuffix s
      WHERE (s.query_id = ? AND s.subject_id = ?)
             OR (s.subject_id = ? AND s.query_id = ?)
 ";
@@ -160,19 +182,19 @@ EOF
 
   my $conCount = <<"EOF";
      select count(*) from
-     (SELECT sequence_id_a FROM apidb.ortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
+     (SELECT sequence_id_a FROM apidb.ortholog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
 and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.coortholog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+     SELECT sequence_id_a FROM apidb.coortholog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
      UNION
-     SELECT sequence_id_a FROM apidb.inparalog$suffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+     SELECT sequence_id_a FROM apidb.inparalog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
 
   my $sth3 = $dbh->prepare($conCount);
 
 
-  foreach my $groupId (@{$unfinished}) {
-    $self->log ("Processing group_id: $groupId\n");
+  foreach my $groupId (keys %{$unfinished}) {
+    $self->log("Processing group_id: $groupId\n");
 
     my @seqIdArr;
 
@@ -221,10 +243,10 @@ sub processSeqsInGroup {
       $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
       while (my @row = $sth->fetchrow_array()) {
-	$similarityCount++;
-	$sumPercentMatch += $row[3];
-	$sumPercentIdentity += $row[2];
-	$sumEvalue +=  $row[0] . "e" . $row[1];
+	  $similarityCount++;
+	  $sumPercentMatch += $row[3];
+	  $sumPercentIdentity += $row[2];
+	  $sumEvalue +=  $row[0] . "e" . $row[1];
       }
 
       my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
@@ -232,7 +254,7 @@ sub processSeqsInGroup {
       $connectivity{$seqIdArr->[$j]} += $isConnected;
     }
   }
-  my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($seqIdArr, \%connectivity);
+  my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity);
 
   my $groupsUpdated += $self->updateOrthologGroup($groupId, $similarityCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
 
@@ -330,7 +352,7 @@ sub getAvgConnectivity {
 }
 
 sub updateOrthologGroupAaSequences {
-  my ($self, $seqIdArr, $connectivity) = @_;
+  my ($self, $groupId, $seqIdArr, $connectivity) = @_;
 
   $self->log ("Updating orthologgroupaasequence rows\n");
 
@@ -340,12 +362,16 @@ sub updateOrthologGroupAaSequences {
 
     my @ids = split (/,/, $idents);
 
-    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$ids[0]});
+    my $orthGrpAaSeq = GUS::Model::ApiDB::OrthologGroupAaSequence->new({'aa_sequence_id'=>$ids[0],'ortholog_group_id'=>$groupId});
 
-    $orthGrpAaSeq->retrieveFromDB();
+    my $groupExists = $orthGrpAaSeq->retrieveFromDB();
 
-    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$ids[0]}) {
-      $orthGrpAaSeq->set('connectivity', $connectivity->{$ids[0]});
+    if (! $groupExists) {
+	die "Trying to get only one row for 'aa_sequence_id' $ids[0] and 'ortholog_group_id' $groupId but failed.\n";
+    }
+
+    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$idents}) {
+      $orthGrpAaSeq->set('connectivity', $connectivity->{$idents});
     }
 
     $submitted = $orthGrpAaSeq->submit();

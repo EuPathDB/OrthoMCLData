@@ -3,7 +3,7 @@
 # This script generates three files that are needed by Data Loaders to update ortholog data on the
 # genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
 
-Use strict;
+use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 use DBI;
@@ -62,7 +62,7 @@ my %orthoGroups;
 
 my @peripheralFolders = glob( $peripheralDir."/*_orthomclPeripheralProteome_RSRC" );
 my @peripheralMapFiles = map { $_."/".$peripheralMapFileName } @peripheralFolders;
-my @groupFiles = ($coreMapFile,@peripheralMapFiles); # need to add $residualMapFile once made by workflow
+my @groupFiles = ($coreMapFile,@peripheralMapFiles,$residualMapFile);
 
 my $filePresent=0;
 my $fileAbsent=0;
