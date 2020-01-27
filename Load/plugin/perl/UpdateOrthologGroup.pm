@@ -228,12 +228,12 @@ sub processSeqsInGroup {
 
   $self->log ("Processing $grpSize seqs in $groupId\n");
 
-  my $similarityCount = 0;
+  my $numMatchPairs = 0;     # A<->B and B<->A will be counted as 1
+  my $numOneWays = 0;      # A<->B and B<->A will be counted as 2
   my $sumPercentIdentity = 0;
   my $sumPercentMatch = 0;
   my $sumEvalue = 0;
   my %connectivity;
-  my %lengthHsh;
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
     for (my $j = $i + 1; $j < $grpSize ; $j++) {
@@ -242,12 +242,15 @@ sub processSeqsInGroup {
 
       $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
+      my $isPair=0;
       while (my @row = $sth->fetchrow_array()) {
-	  $similarityCount++;
+	  $isPair=1;
+	  $numOneWays++;
 	  $sumPercentMatch += $row[3];
 	  $sumPercentIdentity += $row[2];
 	  $sumEvalue +=  $row[0] . "e" . $row[1];
       }
+      $numMatchPairs++ if ($isPair==1);
 
       my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
       $connectivity{$seqIdArr->[$i]} += $isConnected;
@@ -256,7 +259,7 @@ sub processSeqsInGroup {
   }
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity);
 
-  my $groupsUpdated += $self->updateOrthologGroup($groupId, $similarityCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
+  my $groupsUpdated += $self->updateOrthologGroup($groupId, $numOneWays, $numMatchPairs, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
 
   return ($groupsUpdated,$grpAaSeqUpdated);
 
@@ -273,19 +276,22 @@ sub getPairIsConnected {
 }
 
 sub updateOrthologGroup {
-  my ($self, $groupId, $similarityCount, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
+  my ($self, $groupId, $numOneWays, $numMatchPairs, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
-  my $similarityCountNoZero = ($similarityCount == 0) ? 1 : $similarityCount;
+  my $numOneWaysNoZero = ($numOneWays == 0) ? 1 : $numOneWays;
 
-  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$similarityCountNoZero);
+  my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$numOneWaysNoZero);
 
-  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$similarityCountNoZero);
+  my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$numOneWaysNoZero);
 
   my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
-  my $avgEvalue = $sumEvalue/$similarityCountNoZero;
+  my $avgEvalue = $sumEvalue/$numOneWaysNoZero;
+
+  my $maxPossiblePairs = ($grpSize * ($grpSize -1)) / 2;
+  my $percentMatchPairs = sprintf("%.1f",100 * $numMatchPairs / $maxPossiblePairs);
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
 
@@ -307,15 +313,12 @@ sub updateOrthologGroup {
     $orthologGroup->set('avg_connectivity', $avgConnectivity);
   }
 
-  my $numMatchPairs = $similarityCount / 2;  # this is true because one full matched pair (e.g., proteins A and B) will have two (e.g., A-B and B-A) similarity scores
- 
   if ($orthologGroup->get('number_of_match_pairs') != $numMatchPairs) {
     $orthologGroup->set('number_of_match_pairs', $numMatchPairs);
   }
 
-  my $maxPossiblePairs = ($grpSize * ($grpSize -1)) / 2;
-  if ($orthologGroup->get('percent_match_pairs') != (100 * $numMatchPairs / $maxPossiblePairs) ) {
-    $orthologGroup->set('percent_match_pairs', 100 * $numMatchPairs / $maxPossiblePairs );
+  if ($orthologGroup->get('percent_match_pairs') != $percentMatchPairs) ) {
+    $orthologGroup->set('percent_match_pairs', $percentMatchPairs );
   }
 
   if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
@@ -345,10 +348,7 @@ sub getAvgConnectivity {
 
   my $avgConnectivity = $totalConnectivity / $grpSize;
 
-  my $percentAvgConnectivity = ($avgConnectivity / ($grpSize - 1)) * 100; 
-
-  #####return $avgConnectivity;
-  return $percentAvgConnectivity;
+  return $avgConnectivity;
 }
 
 sub updateOrthologGroupAaSequences {
