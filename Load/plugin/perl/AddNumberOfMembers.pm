@@ -104,7 +104,7 @@ sub run {
 sub getUnfinishedOrthologGroups {
   my ($self,$groupTypesCPR) = @_;
 
-  $self->log ("Getting the ids of groups where number_of_members = 0\n");
+  $self->log ("Getting the ids of groups to add number_of_members\n");
 
   my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
   my $text = join("','",keys %types);
@@ -115,8 +115,7 @@ sub getUnfinishedOrthologGroups {
   my $sqlGetUnfinishedGroups = <<"EOF";
      SELECT ortholog_group_id, core_peripheral_residual
      FROM apidb.OrthologGroup
-     WHERE number_of_members = 0
-           AND core_peripheral_residual in $text
+     WHERE core_peripheral_residual in $text
 EOF
 
   my $dbh = $self->getQueryHandle();
@@ -129,7 +128,7 @@ EOF
 
   my $num = keys %unfinished;
 
-  $self->log ("   There are $num groups where number_of_members = 0\n");
+  $self->log ("   There are $num groups\n");
 
   return \%unfinished;
 }
