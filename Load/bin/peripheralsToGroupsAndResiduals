@@ -38,6 +38,7 @@ from DoTS.externalaasequence eas
     , apidb.orthologgroup og
 where eas.aa_sequence_id = ogas.aa_sequence_id
     and ogas.ortholog_group_id = og.ortholog_group_id
+    and og.core_peripheral_residual='C'
 SQL
 
 $orthogroupQuery->execute();
@@ -52,18 +53,29 @@ $orthogroupQuery->finish();
 print STDERR "preparing query to obtain all peripheral protein Ids for organism $abbrev at " . `date` . "\n";
 # prepare query to obtain protein IDs from the current peripheral proteome
 my $peripheralQuery = $dbh->prepare(<<SQL);
-select query_id
-from $peripheralsSimSeqTable
-where query_taxon_id = '$abbrev'
+select secondary_identifier
+from DoTS.externalaasequence
+where secondary_identifier like '$abbrev|%'
 SQL
 
-print STDERR "preparing query to obtain core protein Id that best matches a given peripheral protein at " . `date` . "\n";
+print STDERR "preparing first query to obtain core protein Id that PERFECTLY match (p value=0) a given peripheral protein at " . `date` . "\n";
 # prepare query to obtain the core protein ID that best matches the peripheral protein
-my $coreQuery = $dbh->prepare(<<SQL);
+my $coreQueryZero = $dbh->prepare(<<SQL);
     select subject_id
     from $peripheralsSimSeqTable
     where query_id = ?
-      and evalue_exp <= $pvalueExponentCutoff
+      and evalue_exp = 0
+      and percent_match >= $percentMatch
+    order by percent_match desc
+SQL
+
+print STDERR "preparing second query to obtain core protein Id that best matches a given peripheral protein at " . `date` . "\n";
+# prepare query to obtain the core protein ID that best matches the peripheral protein
+my $coreQuery2 = $dbh->prepare(<<SQL);
+    select subject_id
+    from $peripheralsSimSeqTable
+    where query_id = ?
+      and evalue_exp < $pvalueExponentCutoff
       and percent_match >= $percentMatch
     order by evalue_exp, evalue_mant desc
 SQL
@@ -81,10 +93,17 @@ while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
     print STDERR '.';
     $count = 0;
   }
-  # find this protein's top hit in the core
-  $coreQuery->execute($peripheralProtein);
-  my ($coreTopHit) = $coreQuery->fetchrow_array();
-  $coreQuery->finish();
+  # find this protein's perfect hit in the core (p value = 0)
+  $coreQueryZero->execute($peripheralProtein);
+  my ($coreTopHit) = $coreQueryZero->fetchrow_array();
+  $coreQueryZero->finish();
+
+  # if we didn't find perfect hit, let's look for next best
+  if (! $coreTopHit) {
+      $coreQuery2->execute($peripheralProtein);
+      ($coreTopHit) = $coreQuery2->fetchrow_array();
+      $coreQuery2->finish();
+  }
 
   if ($coreTopHit) {
     # we found a top hit in the core; update the hash
