@@ -13,8 +13,8 @@ use GUS::Supported::GusConfig;
 
 my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $groupTypesCPR);
 
-$minGroupSize =1;
-$maxGroupSize =10000000;
+$minGroupSize = 2;
+$maxGroupSize = 10000000;
 &GetOptions("verbose!"=> \$verbose,
             "outputDir=s" => \$outDir,
             "gusConfigFile=s" => \$gusConfigFile,
@@ -65,7 +65,7 @@ sub getGroupNames {
   my $text = join("','",keys %types);
   $text = "('$text')";
 
-  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members > $minGroupSize and core_peripheral_residual in $text";
+  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members >= $minGroupSize and core_peripheral_residual in $text";
 
   my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
