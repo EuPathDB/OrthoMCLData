@@ -29,13 +29,18 @@ my $argsDeclaration =
 	     reqd  => 1,
 	     constraintFunc => undef,
 	   }),
- stringArg({ descr => 'OrthoGroup types to edit (P=Peripheral,C=Core,R=Residual)',
+ stringArg({ descr => 'overwrite existing statistics or only add statistics where number_of_match_pairs is null',
+	     name  => 'overwriteExisting',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+ stringArg({ descr => 'specify core (C), peripheral (P), and/or residual (R) groups',
 	     name  => 'groupTypesCPR',
 	     isList    => 0,
 	     reqd  => 1,
 	     constraintFunc => undef,
 	   }),
-
 
 ];
 
@@ -106,12 +111,16 @@ sub run {
     my $simSeqTableSuffix = $self->getArg('simSeqTableSuffix');
     my $orthologTableSuffix = $self->getArg('orthologTableSuffix');
     my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
+    my $overwriteExisting = uc($self->getArg('overwriteExisting'));
 
     if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
 	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
     }
+    if ( $overwriteExisting !~ /^[YyNn]/ ) {
+	die "The overwriteExisting variable must start with Y, y, N or n. The value is currently '$overwriteExisting'\n";
+    }
 
-    my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR);
+    my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR,$overwriteExisting);
 
     my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
 
@@ -120,7 +129,7 @@ sub run {
 
 
 sub getUnfinishedOrthologGroups {
-  my ($self,$groupTypesCPR) = @_;
+  my ($self,$groupTypesCPR,$overwriteExisting) = @_;
 
   $self->log ("Getting the ids of groups not yet updated\n");
 
@@ -128,14 +137,19 @@ sub getUnfinishedOrthologGroups {
   my $text = join("','",keys %types);
   $text = "('$text')";
 
+  my $overwriteText="";
+  if ( $overwriteExisting =~ /^[Nn]/ ) {
+      $overwriteText = "AND number_of_match_pairs IS NULL";
+  }
+
   my %unfinished;
 
   my $sqlGetUnfinishedGroups = <<"EOF";
      SELECT ortholog_group_id, core_peripheral_residual
      FROM apidb.OrthologGroup
-     WHERE number_of_match_pairs IS NULL
-           AND core_peripheral_residual in $text
+     WHERE core_peripheral_residual in $text
 	   AND number_of_members > 1
+	   $overwriteText
 EOF
 
   my $dbh = $self->getQueryHandle();
@@ -317,7 +331,7 @@ sub updateOrthologGroup {
     $orthologGroup->set('number_of_match_pairs', $numMatchPairs);
   }
 
-  if ($orthologGroup->get('percent_match_pairs') != $percentMatchPairs) ) {
+  if ($orthologGroup->get('percent_match_pairs') != $percentMatchPairs) {
     $orthologGroup->set('percent_match_pairs', $percentMatchPairs );
   }
 

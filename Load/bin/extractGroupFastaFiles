@@ -11,7 +11,7 @@ use GUS::ObjRelP::DbiDatabase;
 use CBIL::Bio::SequenceUtils;
 use GUS::Supported::GusConfig;
 
-my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $groupTypesCPR);
+my ($gusConfigFile,$debug,$verbose,$outDir,$tarBallSize, $minGroupSize, $maxGroupSize, $groupTypesCPR, $samplingOfSeqs);
 
 $minGroupSize = 2;
 $maxGroupSize = 10000000;
@@ -21,14 +21,20 @@ $maxGroupSize = 10000000;
             "minGroupSize=i" => \$minGroupSize,
             "maxGroupSize=i" => \$maxGroupSize,
             "groupTypesCPR=s" => \$groupTypesCPR,
+            "samplingOfSeqs=s" => \$samplingOfSeqs,
 	    "tarBall=i" => \$tarBallSize);
 
 if(!$outDir){
-	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] --groupTypesCPR $groupTypesCPR --verbose --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
+	die "usage: extractgroupFastaFiles --outputDir <outputDirectory> --tarBall <number of seqs per tarball, default no tarballs> [--minGroupSize minSz] [--maxGroupSize maxSz] --groupTypesCPR $groupTypesCPR --verbose --samplingOfSeqs $samplingOfSeqs --gusConfigFile [\$GUS_HOME/config/gus.config]\n";
 }
 
 if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
     die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
+}
+if ( $samplingOfSeqs =~ /^[Yy]/ ) {
+    $samplingOfSeqs = 1;
+} else {
+    $samplingOfSeqs = 0;
 }
 
 my $cmd = "mkdir -p $outDir";
@@ -48,9 +54,9 @@ my $dbh = $db->getQueryHandle();
 
 $dbh->{LongReadLen} = 8192 * 1024;
 
-my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize, $groupTypesCPR);
+my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize, $groupTypesCPR, $samplingOfSeqs);
 
-&makeFiles($fileNames, $outDir);
+&makeFiles($fileNames, $outDir, $maxGroupSize, $samplingOfSeqs);
 
 &makeTarBalls($fileNames, $tarBallSize, $outDir) if $tarBallSize;
 
@@ -59,13 +65,18 @@ my $fileNames = &getGroupNames($minGroupSize, $maxGroupSize, $groupTypesCPR);
 
 
 sub getGroupNames {
-  my ($minGroupSize, $maxGroupSize, $groupTypesCPR) = @_;
+  my ($minGroupSize, $maxGroupSize, $groupTypesCPR, $samplingOfSeqs) = @_;
 
   my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
   my $text = join("','",keys %types);
   $text = "('$text')";
 
-  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where number_of_members <= $maxGroupSize and number_of_members >= $minGroupSize and core_peripheral_residual in $text";
+  my $maxText = "number_of_members <= $maxGroupSize and ";
+  if ($samplingOfSeqs) {
+      $maxText = "";
+  }
+
+  my $groupSQL = "select name, ortholog_group_id, number_of_members from apidb.OrthologGroup where ".$maxText."number_of_members >= $minGroupSize and core_peripheral_residual in $text";
 
   my $idStmt = $dbh->prepareAndExecute($groupSQL);
 
@@ -83,77 +94,81 @@ sub getGroupNames {
 }
 
 sub makeFiles {
-  my ($fileNames, $outDir) = @_;
+    my ($fileNames, $outDir, $maxGroupSize, $samplingOfSeqs) = @_;
 
-  my $seqSQL = "
-select ot.three_letter_abbrev || '|' || x.source_id, x.sequence
-from dots.externalaasequence x, apidb.orthomcltaxon ot, apidb.orthologgroupaasequence g
-where g.aa_sequence_id = x.aa_sequence_id
-and x.taxon_id = ot.taxon_id
-and g.ortholog_group_id = ?";
+    my $seqSQL = "
+select eas.secondary_identifier, eas.sequence                                                                               
+from dots.externalaasequence eas, apidb.orthologgroupaasequence ogas                                                       
+where ogas.aa_sequence_id = eas.aa_sequence_id
+    and ogas.ortholog_group_id = ?";
 
   my $seqStmt = $dbh->prepare($seqSQL);
 
-  my $num = 0;
+  my $numFiles = 0;
 
   foreach my $name (keys %{$fileNames}) {
 
-    open(FILE, ">$outDir/$name");
+      next if ( !$samplingOfSeqs && ($fileNames->{$name}->{'num'} > $maxGroupSize) );
+    
+      open(FILE, ">$outDir/$name");
 
-    $seqStmt->execute($fileNames->{$name}->{'id'});
+      $seqStmt->execute($fileNames->{$name}->{'id'});
 
-    while(my (@row) = $seqStmt->fetchrow_array()){
+      my $numSeqs = 1;
 
-      my $defline = "\>".$row[0]."\n";
-      my $sequence = $row[1];
-
-      print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
-
-    }
-
-    $num++;
-
-    print STDERR ("$num fasta files printed\n") if $num % 1000 == 0;
-
-    close(FILE);
-
+      while(my (@row) = $seqStmt->fetchrow_array()){
+	  last if ( $numSeqs > $maxGroupSize );
+	  $numSeqs++;
+	  my $defline = "\>".$row[0]."\n";
+	  my $sequence = $row[1];
+	  print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+      }
+      
+      $numFiles++;
+      
+      print STDERR ("$numFiles fasta files printed\n") if $numFiles % 1000 == 0;
+      
+      close(FILE);
+      
   }
 
-  print STDERR ("$num fasta files printed\n");
+    print STDERR ("$numFiles fasta files printed\n");
 }
 
 sub makeTarBalls {
   my ($fileNames, $tarBallSize, $outDir) = @_;
-  my $num = 0;
+  my $numSeqs = 0;
 
   my @tarFiles;
 
   my $tarNum = 1;
 
-  my $fileNum;
+  my $fileNum = 0;
 
   chdir $outDir || die "Can't change directory to $outDir\n";
   foreach  my $file (keys %{$fileNames}) {
-    $num += $fileNames->{$file}->{'num'};
+    $numSeqs += $fileNames->{$file}->{'num'};
     push (@tarFiles,"$file");
-    if ($num >= $tarBallSize || scalar(@tarFiles) > 1000) {      # limit tar size by number of seqs and, number of files (to not overrun command line)
+    if ( ($numSeqs >= $tarBallSize) || (scalar(@tarFiles) >= 50) ) {      # limit tar size by number of seqs and, number of files (to not overrun command line)
       my $list = join (' ',@tarFiles);
       my $cmd = "tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list";
       system($cmd) && die "Failed running cmd\n$cmd";
       $cmd = "rm -f $list";
       system($cmd) && die "Failed running cmd\n$cmd";
       @tarFiles=();
-      $num = 0;
+      $numSeqs = 0;
       $tarNum++;
     }
     $fileNum++;
   }
 
-  my $list = join (' ',@tarFiles);
-  my $cmd = "tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list";
-  system($cmd) && die "Failed running cmd\n$cmd";
-  $cmd = "rm -f $list";
-  system($cmd) && die "Failed running cmd\n$cmd";
+  if (scalar(@tarFiles)>0) {
+      my $list = join (' ',@tarFiles);
+      my $cmd = "tar -zcf $outDir/tarBall_${tarNum}.tar.gz $list";
+      system($cmd) && die "Failed running cmd\n$cmd";
+      $cmd = "rm -f $list";
+      system($cmd) && die "Failed running cmd\n$cmd";
+  }
 
   print STDERR ("$fileNum fasta files used to make tar balls\n");
 }

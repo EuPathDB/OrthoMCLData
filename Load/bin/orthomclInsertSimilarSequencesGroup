@@ -5,9 +5,11 @@ use lib "$ENV{GUS_HOME}/lib/perl";
 use GUS::ObjRelP::DbiDatabase;
 use GUS::Supported::GusConfig;
 
-my ($undo) = @ARGV;
+my $simSeqTableSuffix = $ARGV[0];
+my $simSeqGroupTableSuffix = $ARGV[1];
+my $undo = $ARGV[2];
 
-usage() unless (scalar(@ARGV)==0 || scalar(@ARGV)==1);
+usage() unless (scalar(@ARGV)==2 || scalar(@ARGV)==3);
 
 my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
 my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
@@ -18,13 +20,13 @@ my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
 my $dbh = $db->getQueryHandle();
 
 my $sql;
-if ($undo) {
-    $sql = "truncate table apidb.SimilarSequencesGroup";
+if ($undo eq "undo") {
+    $sql = "truncate table apidb.SimilarSequencesGroup".$simSeqGroupTableSuffix;
 } else {
     $sql = "
-INSERT INTO apidb.SimilarSequencesGroup(ortholog_group_id, query_id, subject_id, evalue_mant, evalue_exp)
+INSERT INTO apidb.SimilarSequencesGroup".$simSeqGroupTableSuffix."(ortholog_group_id, query_id, subject_id, evalue_mant, evalue_exp)
 SELECT ogsq.ortholog_group_id, ss.query_id, ss.subject_id, ss.evalue_mant, ss.evalue_exp
-FROM apidb.SimilarSequences ss, dots.ExternalAaSequence easq, dots.ExternalAaSequence eass, 
+FROM apidb.SimilarSequences".$simSeqTableSuffix." ss, dots.ExternalAaSequence easq, dots.ExternalAaSequence eass, 
      APIDB.ORTHOLOGGROUPAASEQUENCE ogsq, apidb.ORTHOLOGGROUPAASEQUENCE ogss
 WHERE ss.query_id = easq.secondary_identifier AND easq.aa_sequence_id = ogsq.aa_sequence_id
   AND ogsq.ortholog_group_id = ogss.ortholog_group_id
@@ -40,11 +42,13 @@ $queryHandle->execute() or die $dbh->errstr;
 sub usage {
     die "
 
-Insert rows into the table apidb.SimilarSequencesGroup
+Insert rows into the table apidb.SimilarSequencesGroup{simSeqGroupTableSuffix} using
 
-Usage: orthomclInsertSimilarSequencesGroup [-undo]
+data from the table apidb.SimilarSequences{simSeqTableSuffix}.
 
-If undo is set, removes all rows from the table apidb.SimilarSequencesGroup
+Usage: orthomclInsertSimilarSequencesGroup {simSeqTableSuffix} {simSeqGroupTableSuffix} [undo]
+
+If undo is set, removes all rows from the table apidb.SimilarSequencesGroup{simSeqGroupTableSuffix}
 
 ";
 }
