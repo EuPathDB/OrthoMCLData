@@ -93,7 +93,7 @@ sub new {
   bless($self,$class);
 
   $self->initialize({ requiredDbVersion => 4,
-                      cvsRevision       => 'mark-orthomcl',
+                      cvsRevision       => '$Revision$',
                       name              => ref($self),
 		      argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
