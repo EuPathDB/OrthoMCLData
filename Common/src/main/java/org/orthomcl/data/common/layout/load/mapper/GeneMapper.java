@@ -20,4 +20,8 @@ public interface GeneMapper {
   List<GenePair> selectCoorthologs(Group group);
 
   List<GenePair> selectInparalogs(Group group);
+
+  List<GenePair> selectPeripheralCore(Group group);
+
+
 }

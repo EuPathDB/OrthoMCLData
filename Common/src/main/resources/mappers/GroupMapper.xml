@@ -14,9 +14,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<select id="selectGroups" parameterType="int" resultMap="GroupMap" fetchSize="5000">
   <![CDATA[
       SELECT ortholog_group_id, name FROM apidb.OrthologGroup
-      WHERE ortholog_group_id NOT IN (SELECT ortholog_group_id FROM apidb.OrthologGroupLayout)
-        AND number_of_members <= #{max}
-        -- AND ortholog_group_id IN (SELECT ortholog_group_id FROM ${apidb-schema}SimilarSequencesGroup)
+      WHERE ortholog_group_id NOT IN (SELECT ortholog_group_id FROM apidb.OrthologGroupLayoutCore)
+        AND number_of_members > 1 AND number_of_members <= #{max} AND core_peripheral_residual in ('P','R')
       ORDER BY number_of_members DESC
   ]]>
 	</select>
@@ -30,32 +29,32 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
   <select id="selectLayout" parameterType="Group" resultType="string">
   <![CDATA[
-    SELECT layout FROM apidb.OrthologGroupLayout WHERE ortholog_group_id = #{id}
+    SELECT layout FROM apidb.OrthologGroupLayoutCore WHERE ortholog_group_id = #{id}
   ]]>
   </select>
 
   <select id="selectGroupByName" parameterType="string" resultMap="GroupMap">
   <![CDATA[
     SELECT ortholog_group_id, name FROM apidb.OrthologGroup
-    WHERE name = #{name}
+    WHERE name = #{name} AND core_peripheral_residual in ('P','R')
   ]]>
   </select>
 
 	<insert id="insertLayout" parameterType="Group">
   <![CDATA[
-      INSERT INTO apidb.OrthologGroupLayout (ortholog_group_id, layout) VALUES (#{id}, #{layout})
+      INSERT INTO apidb.OrthologGroupLayoutCore (ortholog_group_id, layout) VALUES (#{id}, #{layout})
   ]]>
 	</insert>
 
   <delete id="deleteLayout" parameterType="Group">
   <![CDATA[
-      DELETE FROM apidb.OrthologGroupLayout WHERE ortholog_group_id = #{id}
+      DELETE FROM apidb.OrthologGroupLayoutCore WHERE ortholog_group_id = #{id}
   ]]>
   </delete>
 
   <delete id="deleteLayouts">
   <![CDATA[
-      DELETE FROM apidb.OrthologGroupLayout
+      DELETE FROM apidb.OrthologGroupLayoutCore
   ]]>
   </delete>
 

@@ -123,15 +123,21 @@ public class GroupFactory {
     setEdgeType(group, mapper.selectOrthologs(group), EdgeType.Ortholog);
     setEdgeType(group, mapper.selectCoorthologs(group), EdgeType.Coortholog);
     setEdgeType(group, mapper.selectInparalogs(group), EdgeType.Inparalog);
+    setEdgeType(group, mapper.selectPeripheralCore(group), EdgeType.PeripheralCore);
   }
 
   private void setEdgeType(Group group, List<GenePair> edges, EdgeType type) throws OrthoMCLDataException {
     Map<GenePair, BlastScore> scores = group.getScores();
     for (GenePair edge : edges) {
       BlastScore score = scores.get(edge);
-      if (score == null || score.getType() != EdgeType.Normal)
-        throw new OrthoMCLDataException("Blast score doesn't exist or already have a different type than " +
-            type + ": " + edge);
+
+      if (score == null)
+        throw new OrthoMCLDataException("Blast score doesn't exist for edge type '" +
+	       type + "' and gene pair '" + edge.getQueryId() + "' and '" + edge.getSubjectId() + "'");
+      if (score.getType() != EdgeType.Normal)
+        throw new OrthoMCLDataException("Blast score already has a different edge type '" +
+	       type + "' for gene pair '" + edge.getQueryId() + "' and '" + edge.getSubjectId() + "'");
+
       score.setType(type);
     }
   }

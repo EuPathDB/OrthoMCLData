@@ -1,7 +1,7 @@
 package org.orthomcl.data.common.layout.core;
 
 public enum EdgeType {
-  Ortholog("O"), Coortholog("C"), Inparalog("P"), Normal("N");
+    Ortholog("O"), Coortholog("C"), Inparalog("P"), PeripheralCore("M"),  Normal("N");
   
   private final String code;
   
