@@ -120,6 +120,10 @@ sub run {
 	die "The overwriteExisting variable must start with Y, y, N or n. The value is currently '$overwriteExisting'\n";
     }
 
+    if ( lc($orthologTableSuffix) eq "peripheral" ) {
+	$orthologTableSuffix = "peripheral";
+    }
+
     my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR,$overwriteExisting);
 
     my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
@@ -194,18 +198,24 @@ EOF
 
   my $sth2 = $dbh->prepare($sqlSelectSimSeqs);
 
-  my $conCount = <<"EOF";
-     select count(*) from
-     (SELECT sequence_id_a FROM apidb.ortholog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? 
-and sequence_id_b = ?)
-     UNION
-     SELECT sequence_id_a FROM apidb.coortholog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
-     UNION
-     SELECT sequence_id_a FROM apidb.inparalog$orthologTableSuffix where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+  my $sth3="";
+  if ($orthologTableSuffix ne "peripheral") {
+      my $conCount = <<"EOF";
+select count(*) from
+     (SELECT sequence_id_a
+      FROM apidb.ortholog$orthologTableSuffix
+      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+      UNION
+      SELECT sequence_id_a
+      FROM apidb.coortholog$orthologTableSuffix
+      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+      UNION
+      SELECT sequence_id_a
+      FROM apidb.inparalog$orthologTableSuffix
+      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
 EOF
-
-  my $sth3 = $dbh->prepare($conCount);
-
+      $sth3 = $dbh->prepare($conCount);
+  }
 
   foreach my $groupId (keys %{$unfinished}) {
     $self->log("Processing group_id: $groupId\n");
@@ -222,7 +232,7 @@ EOF
 
     next if @seqIdArr < 2;
 
-    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3);
+    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3,$orthologTableSuffix);
 
     $updatedGrps += $grps;
 
@@ -236,7 +246,7 @@ EOF
 }
 
 sub processSeqsInGroup {
-  my ($self,$seqIdArr, $groupId, $sth, $sth2) = @_;
+  my ($self,$seqIdArr, $groupId, $sth, $sth2, $orthologTableSuffix) = @_;
 
   my $grpSize = @{$seqIdArr};
 
@@ -258,22 +268,27 @@ sub processSeqsInGroup {
 
       my $isPair=0;
       while (my @row = $sth->fetchrow_array()) {
-	  $isPair=1;
-	  $numOneWays++;
+	  my $eValue = $row[0] . "e" . $row[1];
+	  if ($eValue <= 1e-5) {
+	      $numOneWays++;
+	      $isPair=1;
+	  }
 	  $sumPercentMatch += $row[3];
 	  $sumPercentIdentity += $row[2];
-	  $sumEvalue +=  $row[0] . "e" . $row[1];
+	  $sumEvalue += $eValue;;
       }
       $numMatchPairs++ if ($isPair==1);
-
-      my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
-      $connectivity{$seqIdArr->[$i]} += $isConnected;
-      $connectivity{$seqIdArr->[$j]} += $isConnected;
+      
+      if ($orthologTableSuffix ne "peripheral") {
+	  my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
+	  $connectivity{$seqIdArr->[$i]} += $isConnected;
+	  $connectivity{$seqIdArr->[$j]} += $isConnected;
+      }
     }
   }
-  my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity);
+  my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity, $orthologTableSuffix);
 
-  my $groupsUpdated += $self->updateOrthologGroup($groupId, $numOneWays, $numMatchPairs, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, \%connectivity, $grpSize);
+  my $groupsUpdated += $self->updateOrthologGroup($groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$sumEvalue,\%connectivity,$grpSize,$orthologTableSuffix);
 
   return ($groupsUpdated,$grpAaSeqUpdated);
 
@@ -290,7 +305,7 @@ sub getPairIsConnected {
 }
 
 sub updateOrthologGroup {
-  my ($self, $groupId, $numOneWays, $numMatchPairs, $sumPercentIdentity, $sumPercentMatch, $sumEvalue, $connectivity, $grpSize) = @_;
+  my ($self,$groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$sumEvalue,$connectivity,$grpSize,$orthologTableSuffix) = @_;
 
   $self->log ("Updating row for ortholog group_id $groupId\n");
 
@@ -299,8 +314,6 @@ sub updateOrthologGroup {
   my $avgPercentIdentity = sprintf("%.1f", $sumPercentIdentity/$numOneWaysNoZero);
 
   my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$numOneWaysNoZero);
-
-  my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
 
   my $avgEvalue = $sumEvalue/$numOneWaysNoZero;
 
@@ -323,8 +336,11 @@ sub updateOrthologGroup {
     $orthologGroup->set('avg_percent_match', $avgPercentMatch);
   }
 
-  if ($orthologGroup->get('avg_connectivity') != $avgConnectivity) {
-    $orthologGroup->set('avg_connectivity', $avgConnectivity);
+  if ($orthologTableSuffix ne "peripheral") {
+      my $avgConnectivity = sprintf("%.1f", $self->getAvgConnectivity($connectivity,$grpSize));
+      if ($orthologGroup->get('avg_connectivity') != $avgConnectivity) {
+	  $orthologGroup->set('avg_connectivity', $avgConnectivity);
+      }
   }
 
   if ($orthologGroup->get('number_of_match_pairs') != $numMatchPairs) {
@@ -366,7 +382,7 @@ sub getAvgConnectivity {
 }
 
 sub updateOrthologGroupAaSequences {
-  my ($self, $groupId, $seqIdArr, $connectivity) = @_;
+  my ($self, $groupId, $seqIdArr, $connectivity, $orthologTableSuffix) = @_;
 
   $self->log ("Updating orthologgroupaasequence rows\n");
 
@@ -384,8 +400,10 @@ sub updateOrthologGroupAaSequences {
 	die "Trying to get only one row for 'aa_sequence_id' $ids[0] and 'ortholog_group_id' $groupId but failed.\n";
     }
 
-    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$idents}) {
-      $orthGrpAaSeq->set('connectivity', $connectivity->{$idents});
+    if ($orthologTableSuffix ne "peripheral") {
+	if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$idents}) {
+	    $orthGrpAaSeq->set('connectivity', $connectivity->{$idents});
+	}
     }
 
     $submitted = $orthGrpAaSeq->submit();

@@ -1,0 +1,153 @@
+#!/usr/bin/perl
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use GUS::ObjRelP::DbiDatabase;
+use GUS::Supported::GusConfig;
+
+my $dir = $ARGV[0];
+my $simSeqTableSuffix = $ARGV[1];
+my $simSeqGroupTableSuffix = $ARGV[2];
+my $undo = $ARGV[3];
+usage() unless (scalar(@ARGV)==3 || scalar(@ARGV)==4);
+
+my $tempFile = "$dir/simSeqGroup.tmp";
+my $dbh = getDbHandle();
+my $ctlFile = "$dir/blast.ctl";
+my $sqlldrLog = "$dir/sqlldr.log";
+
+if ($undo eq "undo") {
+    truncateTable($dbh,$simSeqGroupTableSuffix);
+} else {
+    mkdir($dir) || die "could not create directory '$dir' \n";
+    createTempFile($dbh,$tempFile,$simSeqTableSuffix);
+    writeToGroupTable($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix);
+    system("rm -rf $dir");
+    print "deleting temporary directory $dir\n";
+}
+
+exit;
+
+
+
+
+sub getDbCredentials {
+    my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+    my $dbInstance = $gusconfig->getDbiDsn();
+    $dbInstance =~ s/dbi:\S+://g;
+    my $dbLogin = $gusconfig->getDatabaseLogin();
+    my $dbPassword = $gusconfig->getDatabasePassword();
+    return ($dbInstance,$dbLogin,$dbPassword);
+}
+
+sub getDbHandle {
+    my $gusconfig = GUS::Supported::GusConfig->new("$ENV{GUS_HOME}/config/gus.config");
+    my $db = GUS::ObjRelP::DbiDatabase->new($gusconfig->getDbiDsn(),
+					    $gusconfig->getDatabaseLogin(),
+					    $gusconfig->getDatabasePassword(),
+					    0,0,1,
+					    $gusconfig->getCoreSchemaName());
+    return  $db->getQueryHandle();
+}
+
+sub truncateTable {
+    my ($dbh,$simSeqGroupTableSuffix) = @_;
+    my $sql = "truncate table apidb.SimilarSequencesGroup".$simSeqGroupTableSuffix;
+    print STDERR "executing sql: $sql\n";
+    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+    $sql = "select count(*) from apidb.SimilarSequencesGroup".$simSeqGroupTableSuffix;
+    $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+    my @count = $queryHandle->fetchrow_array();
+    die "Truncate of apidb.SimilarSequencesGroup$simSeqGroupTableSuffix did not succeed. Table is not empty ($count[0] rows)" if $count[0]>0;
+}
+
+sub createTempFile {
+    my ($dbh,$tempFile,$simSeqTableSuffix) = @_;
+    my @suffixes = split(',',$simSeqTableSuffix);
+    open(OUT,">$tempFile") || die "Can't open '$tempFile' for writing";
+    foreach my $suffix (@suffixes) {
+	my $sql = "
+SELECT ogsq.ortholog_group_id, ss.query_id, ss.subject_id, ss.evalue_mant, ss.evalue_exp
+FROM apidb.SimilarSequences".$suffix." ss, dots.ExternalAaSequence easq, dots.ExternalAaSequence eass, 
+     APIDB.ORTHOLOGGROUPAASEQUENCE ogsq, apidb.ORTHOLOGGROUPAASEQUENCE ogss, apidb.ORTHOLOGGROUP og
+WHERE ss.query_id = easq.secondary_identifier AND easq.aa_sequence_id = ogsq.aa_sequence_id
+      AND ogsq.ortholog_group_id = ogss.ortholog_group_id
+      AND ss.subject_id = eass.secondary_identifier AND eass.aa_sequence_id = ogss.aa_sequence_id
+      AND ogsq.ortholog_group_id = og.ortholog_group_id 
+      AND og.core_peripheral_residual in ('P','R')
+";
+    print STDERR "executing sql: $sql\n";
+    print STDERR "saving results in file: $tempFile\n";
+    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+	while (my @row = $queryHandle->fetchrow_array()) {
+	    my $text = join(" ",@row)."\n";
+	    print OUT $text;
+	}
+    }
+    close(OUT);
+}	
+
+sub writeToGroupTable {
+    my ($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix) = @_;
+
+    # confirm that the target table is empty.  this is required so that our undo strategy (truncating) will work
+    my $sql = "select count(*) from apidb.SimilarSequencesGroup$simSeqGroupTableSuffix";
+    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+    my @count = $queryHandle->fetchrow_array();
+    die "Table apidb.SimilarSequencesGroup$simSeqGroupTableSuffix is not empty ($count[0] rows)" if $count[0]>0;
+
+    # run sqlldr (after writing its control file)
+    print STDERR "Writing from file $tempFile to table apidb.SimilarSequencesGroup$simSeqGroupTableSuffix \n";
+    writeControlFile($ctlFile, $simSeqGroupTableSuffix);
+    my ($dbInstance,$dbLogin,$dbPassword) = getDbCredentials();
+    my $cmd = "sqlldr $dbLogin/$dbPassword\@$dbInstance data=$tempFile control=$ctlFile log=$sqlldrLog rows=25000 direct=TRUE";
+    print STDERR "Running: $cmd \n";
+    system($cmd);
+}
+
+sub writeControlFile {
+  my ($ctlFile, $suffix) = @_;
+
+  open(CTL, ">$ctlFile") || die "Can't open '$ctlFile' for writing";
+  print CTL <<"EOF";
+     LOAD DATA
+     INFILE *
+     INTO TABLE apidb.SimilarSequencesGroup$suffix
+     FIELDS TERMINATED BY " " OPTIONALLY ENCLOSED BY '"'
+     TRAILING NULLCOLS
+    (ortholog_group_id,
+     query_id,
+     subject_id,
+     evalue_mant,
+     evalue_exp
+    )
+EOF
+
+  close(CTL);
+}
+
+
+
+
+
+
+sub usage {
+    die "
+
+Insert rows into the table apidb.SimilarSequencesGroup{simSeqGroupTableSuffix} using
+
+data from the table apidb.SimilarSequences{simSeqTableSuffix}. A temporary file is created
+
+in {directory} and then data is loaded from the file using Sql Loader.
+
+Usage: orthomclInsertSimilarSequencesGroup {directory} {simSeqTableSuffix} {simSeqGroupTableSuffix} [undo]
+
+If undo is set, removes all rows from the table apidb.SimilarSequencesGroup{simSeqGroupTableSuffix}
+
+";
+}
+

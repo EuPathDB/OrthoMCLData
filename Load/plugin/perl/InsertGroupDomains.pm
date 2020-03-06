@@ -17,6 +17,12 @@ require Exporter;
 
 my $argsDeclaration =
 [
+ stringArg({ descr => 'OrthoGroup types to edit (P=Peripheral,C=Core,R=Residual)',
+	     name  => 'groupTypesCPR',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
 ];
 
 
@@ -131,53 +137,65 @@ sub new {
 sub run {
     my ($self) = @_;
 
+    my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
+    if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
+	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
+    }
+    my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
+    my $text = join("','",keys %types);
+    $text = "('$text')";
+
     # read sequence descriptions from db per group
     my $dbh = $self->getQueryHandle();
+
     my $sql_groups = "SELECT og.ortholog_group_id, og.number_of_members
-                      FROM apidb.OrthologGroup og";
-    my $sql_domains_per_group = "SELECT ogs.aa_sequence_id, 
-                                        dbaf.db_ref_id, dbref.remark 
-                                 FROM apidb.OrthologGroupAaSequence ogs, 
+                      FROM apidb.OrthologGroup og
+                      WHERE og.core_peripheral_residual in $text";
+    my $ps_groups = $dbh->prepare($sql_groups);
+    $ps_groups->execute();
+    my %orthIdToNum;
+    while (my ($groupId, $numSeqs) = $ps_groups->fetchrow_array()) {
+	$orthIdToNum{$groupId} = $numSeqs;
+    }
+
+    my $sql_domains_per_group = "SELECT og.ortholog_group_id, ogs.aa_sequence_id, 
+                                        dbref.remark 
+                                 FROM apidb.OrthologGroup og,
+                                      apidb.OrthologGroupAaSequence ogs, 
                                       dots.DomainFeature df,
                                       dots.DbRefAaFeature dbaf,
                                       sres.DbRef
                                  WHERE ogs.aa_sequence_id = df.aa_sequence_id
                                    AND df.aa_feature_id = dbaf.aa_feature_id
                                    AND dbaf.db_ref_id = dbref.db_ref_id
-                                   AND ogs.ortholog_group_id = ?";
-    my $ps_groups = $dbh->prepare($sql_groups);
+                                   AND ogs.ortholog_group_id = og.ortholog_group_id
+                                   AND dbref.remark IS NOT NULL
+                                   AND og.core_peripheral_residual in $text";
     my $ps_domains_per_group = $dbh->prepare($sql_domains_per_group);
-    
-    my $count = 0;
-    
-    $ps_groups->execute();
-    while (my ($group_id, $num_seqs) = $ps_groups->fetchrow_array()) {
-        my %sequence_domain;
-        my %domain_texts;
+    $ps_domains_per_group->execute();
+    my %sequenceDomain;
+    while (my ($orthId, $seqId, $domain) = $ps_domains_per_group->fetchrow_array()) {
+	if (exists $sequenceDomain{$orthId}->{$seqId}->{$domain} ) {
+	    $sequenceDomain{$orthId}->{$seqId}->{$domain}++;
+	} else {
+	    $sequenceDomain{$orthId}->{$seqId}->{$domain} = 1;
+	}
+    }
 
-        $ps_domains_per_group->execute($group_id);
-        while (my ($seq_id, $dbref_id, $remark) = $ps_domains_per_group->fetchrow_array()) {
-	        $sequence_domain{$seq_id}->{$dbref_id}=1;
-	        if ($remark) {
-                $domain_texts{$dbref_id} = $remark;
-            }
-        }
-        my %domains = %{DomainFreq($num_seqs, \%sequence_domain)};
-        foreach my $d (keys %domains) {
-            if ($domain_texts{$d}) {
-                my $domain = GUS::Model::ApiDB::OrthomclGroupDomain->new();
-
-                $domain->setOrthologGroupId($group_id);
-                $domain->setDescription($domain_texts{$d});
-                $domain->setFrequency($domains{$d});
-
-                $domain->submit();
-	            $self->undefPointerCache();  
-            }
-        }
-        $count++;
-        if ($count % 1000 == 0) {
-            print STDERR "$count groups processed.\n";
+    my $groupNum = 0;
+    foreach my $group (keys %sequenceDomain) { 
+        my $domains = DomainFreq($orthIdToNum{$group}, $sequenceDomain{$group});
+        foreach my $d (keys %{$domains}) {
+	    my $domain = GUS::Model::ApiDB::OrthomclGroupDomain->new();
+	    $domain->setOrthologGroupId($group);
+	    $domain->setDescription($d);
+	    $domain->setFrequency($domains->{$d});
+	    $domain->submit();
+	    $self->undefPointerCache();  
+	}
+        $groupNum++;
+        if ($groupNum % 1000 == 0) {
+            print STDERR "$groupNum groups processed.\n";
         }
     }
 
@@ -199,30 +217,31 @@ sub DomainFreq {
 
 # SELECT description FROM domain WHERE domain_id = ?;
 
-	my $group_size=$_[0];
-	my %sequence_domain = %{$_[1]};
-
-	my $return_dom_num=3;
-	my $freq_cutoff=0.5;
-
-	my %dom_freq;
-	foreach my $s (keys %sequence_domain) {
-		foreach my $d (keys %{$sequence_domain{$s}}) {
-			$dom_freq{$d}++;
-		}
+    my ($groupSize, $sequenceDomain) = @_;     
+    my $maxDomains=3;
+    my $minFreq=0.5;
+    
+    my %domainFrequency;
+    foreach my $seq (keys %{$sequenceDomain}) {
+	foreach my $domain (keys %{$sequenceDomain->{$seq}}) {
+	    if (exists $domainFrequency{$domain}) {
+		$domainFrequency{$domain} += $sequenceDomain->{$seq}->{$domain};
+	    } else {
+		$domainFrequency{$domain} = $sequenceDomain->{$seq}->{$domain};
+	    }
 	}
+    }
 
-	my %return_freq;
-	my $return_dom_count=0;
-
-	foreach my $d (sort {$dom_freq{$b}<=>$dom_freq{$a}} keys %dom_freq) {
-		my $f = $dom_freq{$d}/$group_size;
-		next unless ($f>$freq_cutoff);
-		$return_dom_count++;
-		last if ($return_dom_count>$return_dom_num);
-		$return_freq{$d}=$f;
-	}
-	return \%return_freq;
+    my %finalFreq;
+    my $numDomains=0;
+    foreach my $d (sort {$domainFrequency{$b}<=>$domainFrequency{$a}} keys %domainFrequency) {
+	my $f = $domainFrequency{$d}/$groupSize;
+	next unless ($f>$minFreq);
+	$numDomains++;
+	last if ($numDomains>$maxDomains);
+	$finalFreq{$d}=$f;
+    }
+    return \%finalFreq;
 }
 
 1;

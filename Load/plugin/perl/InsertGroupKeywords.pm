@@ -17,6 +17,13 @@ require Exporter;
 
 my $argsDeclaration =
 [
+ stringArg({ descr => 'OrthoGroup types to edit (P=Peripheral,C=Core,R=Residual)',
+	     name  => 'groupTypesCPR',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+
 ];
 
 
@@ -125,13 +132,24 @@ sub new {
 
 sub run {
     my ($self) = @_;
+
+    my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
+    if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
+	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
+    }
+    my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
+    my $text = join("','",keys %types);
+    $text = "('$text')";
     
     # read sequence descriptions from db per group
     my $dbh = $self->getQueryHandle();
     my $sql = "SELECT ogs.ortholog_group_id, eas.description
                FROM ApiDB.OrthologGroupAaSequence ogs,
-                    DoTS.ExternalAaSequence eas
+                    DoTS.ExternalAaSequence eas,
+                    ApiDB.OrthologGroup og
                WHERE ogs.aa_sequence_id = eas.aa_sequence_id
+                    and ogs.ortholog_group_id = og.ortholog_group_id
+                    and og.core_peripheral_residual in $text
                ORDER BY ogs.ortholog_group_id ASC";
     my $stmt = $dbh->prepare($sql);
     
