@@ -7,12 +7,7 @@ package OrthoMCLData::Load::Plugin::InsertOrthomclGroupTaxonMatrix;
 use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
-
-use GUS::Model::ApiDB::GroupTaxonMatrix;
-use OrthoMCLModel::Ppe::MatrixColumnManager;
-#use ApiCommonData::Load::Util;
 use Data::Dumper;
-
 
 my $argsDeclaration =
 [
@@ -20,11 +15,11 @@ my $argsDeclaration =
 ];
 
 my $purpose = <<PURPOSE;
-Insert a matrix of groups v. taxa. Each group gets a row.  Each species gets two columns, one with count of proteins in that group, and the other with 1 if there are any proteins, and 0 if none.  Each clade gets similar columns. The matrix is inserted into apidb.GroupTaxonMatrix. This table has 500 generic columns to hold the species and clades (column1, column2, ...).  the plugin uses ColumnManager to correctly map the species and clades into the generic columns.
+Calculate number of proteins and number of taxa per orthogroup per species, including for each clade. This creates a new table for this: ApiDB.OrthologGroupTaxon
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
-Insert a matrix of groups v. taxa.
+Creates a new table: ApiDB.OrthologGroupTaxon, which houses number of proteins and taxa per orthogroup
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
@@ -32,12 +27,11 @@ my $notes = <<NOTES;
 NOTES
 
 my $tablesAffected = <<TABLES_AFFECTED;
-ApiDB.GroupTaxonMatrix,
+ApiDB.OrthologGroupTaxon,
 TABLES_AFFECTED
 
 my $tablesDependedOn = <<TABLES_DEPENDED_ON;
-ApiDB.OrthomclTaxon, ApiDB.OrthologGroup
-
+ApiDB.OrthomclTaxon, ApiDB.OrthologGroup, ApiDB.OrthologGroupAaSequence, Dots.ExternalAaSequence,
 TABLES_DEPENDED_ON
 
 my $howToRestart = <<RESTART;
@@ -81,154 +75,161 @@ sub run {
 
     my $dbh = $self->getDbHandle();
 
-    my $columnManager = OrthoMCLModel::Ppe::MatrixColumnManager->new($dbh);
+    $self->log("creating table apidb.orthologgrouptaxon with number of proteins per species per orthologgroup");
+    my $numSpeciesRows = $self->createTable($dbh);
+    $self->log("created table with $numSpeciesRows rows");
 
-    $self->log("getting species and clades");
-    ($self->{speciesClades}, $self->{taxaCount}) = $self->getSpeciesClades($dbh);
+    $self->log("adding rows for number of proteins per clade per orthogroup");
+    my $speciesToClades = $self->getSpeciesToClades($dbh);
+    my $numCladeRows = $self->addCladeRows($dbh,$speciesToClades);
+    $self->log("added $numCladeRows rows");
 
-    $self->log("inserting rows");
-    my $count = $self->insertRows($dbh, $columnManager);
-    return "inserted $count rows"
 }
 
-# get a map of species to clades (transitive), plus a total count of species
-# and clades
-sub getSpeciesClades {
-  my ($self, $dbh) = @_;
 
-  my $taxaCount = 0;
+sub createTable {
+    my ($self, $dbh) = @_;
 
-  my $sql= "
-SELECT three_letter_abbrev, depth_first_index, sibling_depth_first_index
-FROM apidb.orthomcltaxon
-WHERE is_species = 0
-";
-  my $stmt = $dbh->prepareAndExecute($sql);
+    my $sql = <<EOF;
+CREATE TABLE apidb.orthologgrouptaxon (
+    three_letter_abbrev,
+    number_of_proteins,
+    number_of_taxa,
+    ortholog_group_id,
+    CONSTRAINT orthoGroupTax_pk1 PRIMARY KEY (three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id)
+    )
+ORGANIZATION index
+NOLOGGING
+AS    
+SELECT substr(eas.secondary_identifier,1,4),
+       count(ogas.aa_sequence_id),
+       1 as number_of_taxa, og.ortholog_group_id
+FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.ExternalAaSequence eas        
+WHERE ogas.ortholog_group_id = og.ortholog_group_id
+  AND og.core_peripheral_residual in ('P','R')
+  AND eas.aa_sequence_id = ogas.aa_sequence_id                                                    
+GROUP BY substr(eas.secondary_identifier,1,4), og.ortholog_group_id 
+EOF
 
-  my $clades;
-  while (my ($tla, $index, $sibIndex) = $stmt->fetchrow_array()) {
-    $taxaCount++;
-    $clades->{$tla} = [$index, $sibIndex];
-  }
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
 
-  my $sql= "
-SELECT three_letter_abbrev, depth_first_index, sibling_depth_first_index
-FROM apidb.orthomcltaxon
-WHERE is_species != 0
-";
-  my $stmt = $dbh->prepareAndExecute($sql);
 
-  my $species;
-  while (my ($tla, $index) = $stmt->fetchrow_array()) {
-    $taxaCount++;
-    foreach my $clade (keys(%$clades)) {
-      push(@{$species->{$tla}}, $clade)
-	if ($index >= $clades->{$clade}->[0]
-	    && $index < $clades->{$clade}->[1]);
-    }
-  }
-  return ($species,$taxaCount);
-}
-
-sub insertRows {
-    my ($self, $dbh, $columnManager) = @_;
-    my $sql = "
-SELECT g.ortholog_group_id, t.three_letter_abbrev, gs.aa_sequence_id
-FROM apidb.orthologgroup g, apidb.orthomcltaxon t,
-     apidb.orthologgroupaasequence gs, dots.aasequence s
-WHERE gs.ortholog_group_id = g.ortholog_group_id
-  AND s.aa_sequence_id = gs.aa_sequence_id
-  AND t.taxon_id = s.taxon_id
-ORDER BY g.ortholog_group_id
-";
-
-    my $prevGroupId;
-    my $firstRow = 1;
-    my $groupProteinsPerSpecies;
-    my $rowCount;
-    my $proteinCount;
+    $sql = "SELECT count(*) from apidb.orthologgrouptaxon";
     my $stmt = $dbh->prepareAndExecute($sql);
-    while (my ($groupId,$species) = $stmt->fetchrow_array()) {
-      if ($firstRow) {
-	$prevGroupId = $groupId;
-	$firstRow = 0;
-      }
+    my @row = $stmt->fetchrow_array();
+    return $row[0];
+}
 
-      elsif ($groupId != $prevGroupId) {
-#	return if $count == 2;
-	$self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
-				     $columnManager);
-	$rowCount++;
-	$self->log("inserted $rowCount rows") if $rowCount % 1000 == 0;
-	$prevGroupId = $groupId;
-	$groupProteinsPerSpecies = {};
-      }
+sub getSpeciesToClades {
+    my ($self,$dbh) = @_;
 
-      $groupProteinsPerSpecies->{$species} += 1;
+    my %tree;
+    my %clades;
+    my %species;
+
+    my $sql = <<EOF;
+SELECT orthomcl_taxon_id, parent_id, three_letter_abbrev, core_peripheral
+FROM apidb.orthomcltaxon
+EOF
+
+    my $stmt = $dbh->prepareAndExecute($sql);
+    while ( my ($id, $parent, $name, $type) = $stmt->fetchrow_array() ) {
+	$tree{$id}=$parent if ($parent);
+	if ($type eq 'Z') {
+	    $clades{$id}=$name;
+	} else {
+	    $species{$id}=$name;
+	}
     }
-    $self->insertGroupIntoMatrix($prevGroupId, $groupProteinsPerSpecies,
-				 $columnManager);
-    return $rowCount+1;
-}
 
-sub insertGroupIntoMatrix {
-  my($self, $groupId, $groupProteinsPerSpecies, $columnManager) = @_;
-
-  # initialized so all counts are 0 (not null)
-  my $dbRow = $self->getInitializedRow($groupId);
-
-  # populate clades with accumulated count of proteins
-  # and while we're at it, populate species columns in db row
-  my $cladesT;
-  my $cladesP;
-
-  foreach my $species (keys(%$groupProteinsPerSpecies)) {
-    foreach my $cladeWithThisSpecies (@{$self->{speciesClades}->{$species}}) {
-      $cladesP->{$cladeWithThisSpecies} += $groupProteinsPerSpecies->{$species};
-      $cladesT->{$cladeWithThisSpecies} += 1;
+    my $speciesToClades;
+    foreach my $speciesId (keys %species) {
+	my $parents=[];
+	getParents($parents,$speciesId,\%tree);
+	my @parentNames = map { $clades{$_} } @{$parents};
+	$speciesToClades->{$species{$speciesId}} = [];
+	push $speciesToClades->{$species{$speciesId}}, @parentNames;
     }
-    my $speciesPCol = $columnManager->getColumnNumber($species, 'P');
-    my $speciesTCol = $columnManager->getColumnNumber($species, 'T');
-    my $methodP = "setColumn$speciesPCol";
-    my $methodT = "setColumn$speciesTCol";
-    $dbRow->$methodP($groupProteinsPerSpecies->{$species});
-    $dbRow->$methodT(1);
-  }
 
-
-  # now populate clade columns with accumulated counts
-  foreach my $cladeWithThisSpecies (keys(%$cladesP)) {
-    my $cladePCol = $columnManager->getColumnNumber($cladeWithThisSpecies, 'P');
-    my $cladeTCol = $columnManager->getColumnNumber($cladeWithThisSpecies, 'T');
-    my $methodP = "setColumn$cladePCol";
-    my $methodT = "setColumn$cladeTCol";
-    $dbRow->$methodP($cladesP->{$cladeWithThisSpecies});
-    $dbRow->$methodT($cladesT->{$cladeWithThisSpecies});
-  }
-  $dbRow->submit();
-  $self->undefPointerCache();
+    return $speciesToClades;
 }
 
-sub getInitializedRow {
-  my ($self, $groupId) = @_;
-  my $row = GUS::Model::ApiDB::GroupTaxonMatrix->new();
-  $row->setOrthologGroupId($groupId);
-
-  for (my $i=0; $i<$self->{taxaCount}*2; $i++) {
-    my $colNum = $i + 1;
-    my $method = "setColumn$colNum";
-    $row->$method(0);
-  }
-  return $row;
+sub getParents {
+    my ($parents, $speciesId, $tree) = @_;    
+    if (exists $tree->{$speciesId}) {
+	push @{$parents}, $tree->{$speciesId};
+	getParents($parents, $tree->{$speciesId}, $tree);
+    }
 }
+
+sub addCladeRows {
+    my ($self, $dbh, $speciesToClades) = @_;
+
+    my $clades;
+    my $sql = <<EOF;
+SELECT three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id
+FROM apidb.orthologgrouptaxon
+EOF
+
+    my $stmt = $dbh->prepareAndExecute($sql);
+    while (my ($name, $numProteins, $numTaxa, $orthoId) = $stmt->fetchrow_array()) {
+	foreach my $clade (@{$speciesToClades->{$name}}) {
+	    $clades->{$clade}->{$orthoId}->{numTaxa} += $numTaxa;
+	    $clades->{$clade}->{$orthoId}->{numProteins} += $numProteins;
+	}
+    }
+
+    my $numCladeRows = 0;
+    $sql = <<EOF;
+INSERT INTO apidb.orthologgrouptaxon (three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id)
+VALUES (?,?,?,?)
+EOF
+    $stmt = $dbh->prepare($sql);
+    foreach my $clade (keys %{$clades}) {
+	foreach my $orthoId (keys %{$clades->{$clade}}) {
+	    my $numProteins = $clades->{$clade}->{$orthoId}->{numProteins};
+	    my $numTaxa = $clades->{$clade}->{$orthoId}->{numTaxa};
+	    $stmt->execute($clade,$numProteins,$numTaxa,$orthoId);
+	    $dbh->commit();
+	    $numCladeRows++;
+	}
+    }
+
+    return $numCladeRows;
+}
+
+# ----------------------------------------------------------------
+
 
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.GroupTaxonMatrix',
-	 );
+  return ( );
 }
 
+
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+
+    my $sql = "DROP TABLE ApiDB.OrthologGroupTaxon PURGE";
+
+    my $sql = <<SQL;
+          BEGIN
+	      EXECUTE IMMEDIATE 'DROP TABLE ApiDB.OrthologGroupTaxon PURGE';
+          EXCEPTION
+	      WHEN OTHERS THEN
+	         IF SQLCODE != -942 THEN
+		     RAISE;
+                 END IF;
+           END;
+SQL
+
+    print STDERR "executing sql: $sql\n";
+    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+
+}
 
 
 1;
