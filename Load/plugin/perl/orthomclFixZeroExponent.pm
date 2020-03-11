@@ -81,6 +81,8 @@ sub run {
     my ($self) = @_;
 
     my $simSeqTableSuffix = $self->getArg('simSeqTableSuffix');
+    $self->log("Updating table: removing rows with e-value > 1e-5 and protein similarity cutoff < 20% \n");
+    $self->removeRows($simSeqTableSuffix);
     $self->log("Getting the minimum exponent in table apidb.similarSequences$simSeqTableSuffix \n");
     my $minExponent = $self->getMinExponent($simSeqTableSuffix);
     $self->log("The minimum exponent is $minExponent \n");
@@ -130,6 +132,29 @@ SQL
 
 }
 
+sub removeRows {
+  my ($self, $simSeqTableSuffix) = @_;
+
+  my $chunkSize = 100000;
+
+  my $sql = <<SQL;
+      DELETE FROM apidb.similarSequences$simSeqTableSuffix
+      WHERE ((evalue_exp=-5 AND evalue_mant>1) OR evalue_exp>-5 OR percent_match<20) AND rownum <= $chunkSize
+SQL
+
+  my $dbh = $self->getQueryHandle();
+  my $updateStmt = $dbh->prepare($sql);
+  my $numRowsUpdated = 0;
+
+  while (1) {
+      my $rtnVal = $updateStmt->execute() or die $dbh->errstr;
+      $numRowsUpdated += $rtnVal;
+      $self->log("Updated $numRowsUpdated rows");
+      $dbh->commit() || die "Committing updates failed: " . $dbh->errstr() . "\n";
+      last if $rtnVal < $chunkSize;
+  }
+
+}
 
 
 # ----------------------------------------------------------------------
