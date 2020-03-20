@@ -39,20 +39,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
   <select id="selectBlastScores" parameterType="Group" resultMap="BlastScoreMap" fetchSize="5000">
     <![CDATA[
-      WITH proteins AS (SELECT eas.secondary_identifier AS source_id
-                        FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs, apidb.OrthologGroup og
-                        WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-			    AND og.ortholog_group_id = ogs.ortholog_group_id
-                            AND og.ortholog_group_id = #{id} )
       SELECT query_id, subject_id, evalue_mant, evalue_exp
-      FROM apidb.SimilarSequencesSelfBlast
-      WHERE query_id IN (SELECT source_id FROM proteins)
-        AND subject_id IN (SELECT source_id FROM proteins)
-      UNION
-      SELECT query_id, subject_id, evalue_mant, evalue_exp
-      FROM apidb.SimilarSequencesResiduals
-      WHERE query_id IN (SELECT source_id FROM proteins)
-        AND subject_id IN (SELECT source_id FROM proteins)
+      FROM apidb.SimilarSequencesGroupCore
+      WHERE ortholog_group_id = #{id}
     ]]>
   </select>
 
@@ -60,99 +49,103 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   <!-- This is true for the SelfBlast table but not the Residuals table. Thus, MarkH modified the query --> 
   <select id="selectBlastScoresEx" parameterType="Group" resultMap="BlastScoreMap" fetchSize="5000">
     <![CDATA[
-      SELECT query_id, subject_id, evalue_mant, evalue_exp
-      FROM apidb.orthologgroupaasequence o, dots.externalaasequence e, apidb.similarsequencesSelfBlast s, apidb.orthologgroup og
-      WHERE og.ortholog_group_id = #{id}
-        AND og.ortholog_group_id = o.ortholog_group_id
-        AND e.aa_sequence_id = o.aa_sequence_id
-        AND e.secondary_identifier = s.query_id
-      UNION
-      WITH proteins AS (SELECT eas.secondary_identifier AS source_id
-                        FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs, apidb.OrthologGroup og
-                        WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-			    AND og.ortholog_group_id = ogs.ortholog_group_id
-                            AND og.ortholog_group_id = #{id} )
-      SELECT query_id, subject_id, evalue_mant, evalue_exp
-      FROM apidb.SimilarSequencesResiduals
-      WHERE query_id IN (SELECT source_id FROM proteins)
-        AND subject_id IN (SELECT source_id FROM proteins)
+     SELECT query_id, subject_id, evalue_mant, evalue_exp
+      FROM apidb.SimilarSequencesGroupCore
+      WHERE ortholog_group_id = #{id}
     ]]>
   </select>
   
   <select id="selectOrthologs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
     <![CDATA[
-      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
-                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
-                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-                            AND ogs.ortholog_group_id = #{id})
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.OrthologCore
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
-      UNION
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.OrthologResiduals
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.OrthologCore og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
+	     UNION
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.OrthologResiduals og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
     ]]>
   </select>
   
   <select id="selectCoorthologs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
     <![CDATA[
-      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
-                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
-                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-                            AND ogs.ortholog_group_id = #{id})
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.CoorthologCore
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
-      UNION
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.CoorthologResiduals
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.CoOrthologCore og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
+	     UNION
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.CoOrthologResiduals og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
     ]]>
   </select>
   
   <select id="selectInparalogs" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
     <![CDATA[
-      WITH sequences AS (SELECT eas.secondary_identifier AS source_id
-                         FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogs
-                          WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-                            AND ogs.ortholog_group_id = #{id})
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.InparalogCore
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
-      UNION
-      SELECT sequence_id_a AS query_id, sequence_id_b AS subject_id
-      FROM apidb.InparalogResiduals
-      WHERE sequence_id_a IN (SELECT source_id FROM sequences)
-        AND sequence_id_b IN (SELECT source_id FROM sequences)
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.InparalogCore og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
+	     UNION
+	     SELECT DISTINCT 
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.query_id
+		         ELSE ssgc.subject_id END AS query_id,
+	            CASE WHEN ssgc.query_id > ssgc.subject_id THEN ssgc.subject_id
+		         ELSE ssgc.query_id END AS subject_id
+	     FROM apidb.InparalogResiduals og, apidb.SimilarSequencesGroupCore ssgc
+	     WHERE ssgc.ortholog_group_id = #{id}
+	           AND ((ssgc.query_id = og.sequence_id_a AND ssgc.subject_id = og.sequence_id_b)   
+		       OR (ssgc.query_id = og.sequence_id_b AND ssgc.subject_id = og.sequence_id_a))
     ]]>
   </select>
 
   <select id="selectPeripheralCore" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
     <![CDATA[
-	     WITH coreProteins AS ( SELECT eas.secondary_identifier AS query_id
-	                            FROM dots.ExternalAaSequence eas
-                                        , apidb.OrthologGroupAaSequence ogs
-					, apidb.OrthomclTaxon ot
-                                    WHERE eas.aa_sequence_id = ogs.aa_sequence_id 
-				         AND ogs.ortholog_group_id = #{id}
-					 AND substr(eas.secondary_identifier,1,4) = ot.three_letter_abbrev
-					 AND ot.core_peripheral = 'C' ),  
-                  peripheralProteins AS ( SELECT eas.secondary_identifier AS subject_id
-                                          FROM dots.ExternalAaSequence eas
-					       , apidb.OrthologGroupAaSequence ogs
-					       , apidb.OrthomclTaxon ot
-					  WHERE eas.aa_sequence_id = ogs.aa_sequence_id
-					       AND ogs.ortholog_group_id = #{id}
-					       AND substr(eas.secondary_identifier,1,4) = ot.three_letter_abbrev
-					       AND ot.core_peripheral = 'P' )  
-             SELECT query_id, subject_id
-	     FROM coreProteins, peripheralProteins
+	     SELECT DISTINCT 
+	            CASE WHEN query_id > subject_id THEN query_id ELSE subject_id END AS query_id,
+		    CASE WHEN query_id > subject_id THEN subject_id ELSE query_id END AS subject_id
+             FROM apidb.SimilarSequencesGroupCore                                                        
+	     WHERE ortholog_group_id = #{id}
+	           AND ((query_core_peripheral='C' AND subject_core_peripheral='P')   
+		   OR (query_core_peripheral='P' AND subject_core_peripheral='C'))
+    ]]>
+  </select>
+
+  <select id="selectPeripheralPeripheral" parameterType="Group" resultMap="GenePairMap" fetchSize="5000">
+    <![CDATA[
+	     SELECT DISTINCT
+	            CASE WHEN query_id > subject_id THEN query_id ELSE subject_id END AS query_id,
+		    CASE WHEN query_id > subject_id THEN subject_id ELSE query_id END AS subject_id
+	     FROM apidb.SimilarSequencesGroupCore
+	     WHERE ortholog_group_id = #{id} AND query_core_peripheral='P' AND subject_core_peripheral='P'
     ]]>
   </select>
 

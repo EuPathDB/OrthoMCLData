@@ -275,7 +275,7 @@ sub processSeqsInGroup {
 	  }
 	  $sumPercentMatch += $row[3];
 	  $sumPercentIdentity += $row[2];
-	  $sumEvalue += $eValue;;
+	  $sumEvalue += $eValue;
       }
       $numMatchPairs++ if ($isPair==1);
       

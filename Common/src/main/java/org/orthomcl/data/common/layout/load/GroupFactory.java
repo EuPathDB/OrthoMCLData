@@ -124,6 +124,7 @@ public class GroupFactory {
     setEdgeType(group, mapper.selectCoorthologs(group), EdgeType.Coortholog);
     setEdgeType(group, mapper.selectInparalogs(group), EdgeType.Inparalog);
     setEdgeType(group, mapper.selectPeripheralCore(group), EdgeType.PeripheralCore);
+    setEdgeType(group, mapper.selectPeripheralPeripheral(group), EdgeType.PeripheralPeripheral);
   }
 
   private void setEdgeType(Group group, List<GenePair> edges, EdgeType type) throws OrthoMCLDataException {

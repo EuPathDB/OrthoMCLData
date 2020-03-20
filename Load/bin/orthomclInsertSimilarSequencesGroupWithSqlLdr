@@ -16,19 +16,21 @@ my $dbh = getDbHandle();
 my $ctlFile = "$dir/blast.ctl";
 my $sqlldrLog = "$dir/sqlldr.log";
 
+my @temp=split(",",$simSeqTableSuffix);
+my %suffixes=@temp;
+
+
 if ($undo eq "undo") {
     truncateTable($dbh,$simSeqGroupTableSuffix);
 } else {
     mkdir($dir) || die "could not create directory '$dir' \n";
-    createTempFile($dbh,$tempFile,$simSeqTableSuffix);
+    createTempFile($dbh,$tempFile,\%suffixes);
     writeToGroupTable($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix);
-    system("rm -rf $dir");
-    print "deleting temporary directory $dir\n";
+#    system("rm -rf $dir");
+#    print STDERR "deleting temporary directory $dir\n";
 }
 
 exit;
-
-
 
 
 sub getDbCredentials {
@@ -64,31 +66,78 @@ sub truncateTable {
 }
 
 sub createTempFile {
-    my ($dbh,$tempFile,$simSeqTableSuffix) = @_;
-    my @suffixes = split(',',$simSeqTableSuffix);
+    my ($dbh,$tempFile,$suffixes) = @_;
+
+    my $aaInfo = getAaInfo($dbh);
+
     open(OUT,">$tempFile") || die "Can't open '$tempFile' for writing";
-    foreach my $suffix (@suffixes) {
-	my $sql = "
-SELECT ogsq.ortholog_group_id, ss.query_id, ss.subject_id, ss.evalue_mant, ss.evalue_exp
-FROM apidb.SimilarSequences".$suffix." ss, dots.ExternalAaSequence easq, dots.ExternalAaSequence eass, 
-     APIDB.ORTHOLOGGROUPAASEQUENCE ogsq, apidb.ORTHOLOGGROUPAASEQUENCE ogss, apidb.ORTHOLOGGROUP og
-WHERE ss.query_id = easq.secondary_identifier AND easq.aa_sequence_id = ogsq.aa_sequence_id
-      AND ogsq.ortholog_group_id = ogss.ortholog_group_id
-      AND ss.subject_id = eass.secondary_identifier AND eass.aa_sequence_id = ogss.aa_sequence_id
-      AND ogsq.ortholog_group_id = og.ortholog_group_id 
-      AND og.core_peripheral_residual in ('P','R')
-";
-    print STDERR "executing sql: $sql\n";
-    print STDERR "saving results in file: $tempFile\n";
-    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
-    $queryHandle->execute() or die $dbh->errstr;
+
+    foreach my $suffix (keys %{$suffixes}) {
+	my $sql = "SELECT query_id, subject_id, evalue_mant, evalue_exp, percent_match
+                   FROM apidb.SimilarSequences".$suffix;
+
+	print STDERR "executing sql: $sql\n\n";
+	my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+	$queryHandle->execute() or die $dbh->errstr;
+	print STDERR "saving results in file: $tempFile\n\n";
+
 	while (my @row = $queryHandle->fetchrow_array()) {
-	    my $text = join(" ",@row)."\n";
-	    print OUT $text;
+	    my $queryGroup = $aaInfo->{$row[0]}->{groupId};
+	    my $subjectGroup = $aaInfo->{$row[1]}->{groupId};
+	    if ($queryGroup eq $subjectGroup && $row[4]>=20) {
+		if ($row[3] < -5 || ( $row[3] == -5 && $row[2] == 1 ) ) {
+		    my @text = ($queryGroup,$row[0],$aaInfo->{row[0]}->{aaType});
+		    push @text, ($row[1],$aaInfo->{row[1]}->{aaType},$row[2],$row[3]);
+		    print OUT join(" ",@text)."\n";
+		}
+	    }
 	}
     }
+    
     close(OUT);
 }	
+
+sub getAaInfo {
+    my ($dbh) = @_;
+    
+    my $aaInfo;
+
+    my $sql = "SELECT eas.secondary_identifier, ogas.ortholog_group_id, 'R' as core_peripheral_residual
+               FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogas,
+                    apidb.OrthologGroup og   
+               WHERE eas.aa_sequence_id = ogas.aa_sequence_id
+                     AND ogas.ortholog_group_id = og.ortholog_group_id
+                     AND og.core_peripheral_residual = 'R'"; 
+
+    my $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+
+    while (my @row = $queryHandle->fetchrow_array()) {
+	$aaInfo->{$row[0]}->{groupId} = $row[1];
+	$aaInfo->{$row[0]}->{aaType} = $row[2];
+    }
+    
+    $sql = "SELECT eas.secondary_identifier, ogas.ortholog_group_id,
+                      ot.core_peripheral as core_peripheral_residual
+               FROM dots.ExternalAaSequence eas, apidb.OrthologGroupAaSequence ogas,
+                    apidb.OrthologGroup og, apidb.OrthomclTaxon ot
+               WHERE eas.aa_sequence_id = ogas.aa_sequence_id
+                     AND ogas.ortholog_group_id = og.ortholog_group_id
+                     AND og.core_peripheral_residual = 'P'
+                     AND substr(eas.secondary_identifier,1,4) = ot.three_letter_abbrev"; 
+
+    $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
+    $queryHandle->execute() or die $dbh->errstr;
+
+    while (my @row = $queryHandle->fetchrow_array()) {
+	$aaInfo->{$row[0]}->{groupId} = $row[1];
+	$aaInfo->{$row[0]}->{aaType} = $row[2];
+    }
+
+    return $aaInfo;
+}
+
+
 
 sub writeToGroupTable {
     my ($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix) = @_;
@@ -121,7 +170,9 @@ sub writeControlFile {
      TRAILING NULLCOLS
     (ortholog_group_id,
      query_id,
+     query_core_peripheral,
      subject_id,
+     subject_core_peripheral,
      evalue_mant,
      evalue_exp
     )

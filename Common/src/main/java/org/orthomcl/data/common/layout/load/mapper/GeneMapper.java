@@ -23,5 +23,6 @@ public interface GeneMapper {
 
   List<GenePair> selectPeripheralCore(Group group);
 
+  List<GenePair> selectPeripheralPeripheral(Group group);
 
 }
