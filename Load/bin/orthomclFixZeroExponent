@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+
+# this script edits blast results, so that 0e0 is set to the lowest e_value minus 1, rows are deleted that have <20% protein similarity or e-value > 1e-5
+
+use strict;
+use lib "$ENV{GUS_HOME}/lib/perl";
+use CBIL::Util::PropertySet;
+use DBI;
+
+my $inputFile = $ARGV[0];
+my $outputFile = $ARGV[1];
+my $deleteInputFile = $ARGV[2];
+
+usage() unless scalar(@ARGV) == 3;
+
+$| = 1;
+
+print STDERR "Finding the lowest e-value in the file $inputFile at " . `date` . "\n";
+open(IN,$inputFile) or die "cannot open file '$inputFile' for reading: $!";
+my $lowest_mant=9;
+my $lowest_exp=1;
+while (<IN>) {
+    my $line = $_;
+    chomp $line;
+    my @line = split(" ",$line);
+    my $evalue_mant=$line[4];
+    my $evalue_exp=$line[5];
+    if ($evalue_exp<$lowest_exp) {
+	$lowest_exp = $evalue_exp;
+	$lowest_mant = $evalue_mant;
+    } elsif ($evalue_exp==$lowest_exp) {
+	if ($evalue_mant<$lowest_mant) {
+	    $lowest_exp = $evalue_exp;
+	    $lowest_mant = $evalue_mant;
+	}
+    }
+}
+close(IN);
+
+print STDERR "The lowest e-value is ".$lowest_mant."e".$lowest_exp."\n";
+$lowest_exp = $lowest_exp - 1;
+print STDERR `date` . "\n";
+print STDERR "All zero exponents will be changed to ".$lowest_mant."e".$lowest_exp."\n";
+print STDERR "Also, rows will be removed that do not meet 1e-5 and 20% protein simlarity thresholds\n";
+
+open(IN,$inputFile) or die "cannot open file '$inputFile' for reading: $!";
+open(OUT,">",$outputFile) or die "cannot open file '$outputFile' for writing: $!";
+while (<IN>) {
+    my $line = $_;
+    chomp $line;
+    my @line = split(" ",$line);  # evalue_mant in pos4, evalue_exp in pos5, percent_match in pos7
+    if ($line[4] == 0 || $line[5] == 0) {
+	$line[5] = $lowest_exp;
+	$line[4] = $lowest_mant;
+    }
+    next if ( $line[7]<20 || $line[5]>-5 || ($line[5]==-5 && $line[4]>1) );
+    print OUT join(" ",@line)."\n";
+}
+close(IN);
+close(OUT);
+
+if ($deleteInputFile =~ /^[Yy]/ ) {
+    print STDERR "Deleting input file $inputFile at " . `date` . "\n";
+    my $cmd = "rm $inputFile";
+    system($cmd) && die "Failed running cmd\n$cmd";
+}
+
+print STDERR "Finished at " . `date` . "\n";
+
+
+sub usage() {
+  die "
+This script edits blast results, so that 0e0 is set to the lowest e_value minus 1, rows are deleted that have <20% protein similarity or e-value > 1e-5
+
+Usage: orthomclFixZeroExponent inputFile outputFile deleteInputFile
+
+Where:
+   inputFile:  the blast results file
+   outputFile:  the outputted blast file with e_values changed and rows deleted where threshold is not met
+   deleteInputFile:  yes or no, whether the inputFile should be deleted after finishing
+";
+}
