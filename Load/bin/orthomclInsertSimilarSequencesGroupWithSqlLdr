@@ -86,14 +86,13 @@ sub createTempFile {
 	    my $subjectGroup = $aaInfo->{$row[1]}->{groupId};
 	    if ($queryGroup eq $subjectGroup && $row[4]>=20) {
 		if ($row[3] < -5 || ( $row[3] == -5 && $row[2] == 1 ) ) {
-		    my @text = ($queryGroup,$row[0],$aaInfo->{row[0]}->{aaType});
-		    push @text, ($row[1],$aaInfo->{row[1]}->{aaType},$row[2],$row[3]);
+		    my @text = ($queryGroup,$row[0],$aaInfo->{$row[0]}->{aaType});
+		    push @text, ($row[1],$aaInfo->{$row[1]}->{aaType},$row[2],$row[3]);
 		    print OUT join(" ",@text)."\n";
 		}
 	    }
 	}
     }
-    
     close(OUT);
 }	
 
