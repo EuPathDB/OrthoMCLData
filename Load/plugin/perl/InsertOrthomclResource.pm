@@ -163,13 +163,14 @@ SQL
     if ( $numPast == 0) {
 	$self->log("There are no rows in ApiDB.OrthomclResource. Adding rows.\n");
     } else {
-	$self->log("There are $numPast rows in ApiDB.OrthomclResource. Adding and updating rows.\n");
+	$self->log("There are $numPast rows in ApiDB.OrthomclResource. Adding rows for new proteomes.\n");
     }
 
     my $projects = getProjects($proteomesFromBuild);
 
     foreach my $abbrev (keys %{$species}) {
 	my $id = $species->{$abbrev}->{id};
+	next if (exists $pastResources{$id});
 	my $version = $species->{$abbrev}->{version};
 	my $resourceName = getResourceNameFromUrl($species->{$abbrev}->{url});
 	my $formattedResourceName=$resourceName;

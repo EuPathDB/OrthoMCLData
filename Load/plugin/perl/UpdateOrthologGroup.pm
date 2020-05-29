@@ -269,10 +269,9 @@ sub processSeqsInGroup {
       my $isPair=0;
       while (my @row = $sth->fetchrow_array()) {
 	  my $eValue = $row[0] . "e" . $row[1];
-	  if ($eValue <= 1e-5) {
-	      $numOneWays++;
-	      $isPair=1;
-	  }
+	  next if ($eValue > 1e-5);
+	  $numOneWays++;
+	  $isPair=1;
 	  $sumPercentMatch += $row[3];
 	  $sumPercentIdentity += $row[2];
 	  $sumEvalue += $eValue;

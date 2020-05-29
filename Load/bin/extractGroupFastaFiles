@@ -118,10 +118,12 @@ where ogas.aa_sequence_id = eas.aa_sequence_id
 
       while(my (@row) = $seqStmt->fetchrow_array()){
 	  last if ( $numSeqs > $maxGroupSize );
-	  $numSeqs++;
 	  my $defline = "\>".$row[0]."\n";
 	  my $sequence = $row[1];
+	  my $seqLength = length($sequence);
+	  next if (($fileNames->{$name}->{'num'} > 10) && ($seqLength > 20000)); #MUSCLE has difficulty aligning many big sequences
 	  print FILE $defline . CBIL::Bio::SequenceUtils::breakSequence($sequence,60);
+	  $numSeqs++;
       }
       
       $numFiles++;
