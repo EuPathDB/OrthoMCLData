@@ -104,7 +104,7 @@ SQL
     }
 
     $sql = <<SQL;
-SELECT substr(ed.name,1,4), edr.version, edr.id_url
+SELECT ed.name, edr.version, edr.id_url
 FROM Sres.ExternalDatabase ed,
      Sres.ExternalDatabaseRelease edr
 WHERE ed.name like '%orthomcl%Proteome_RSRC'
@@ -114,11 +114,13 @@ SQL
     $sth = $dbh->prepareAndExecute($sql);
 
     while (my @row = $sth->fetchrow_array()) {
-	if (! exists $species->{$row[0]} ) {
-	    $self->error("Abbreviation '$row[0]' not in orthomcltaxon table.\n");
+	my @array = split(/\|/, $row[0]);
+	my $currentAbbrev = shift @array;
+	if (! exists $species->{$currentAbbrev} ) {
+	    $self->error("Abbreviation '$currentAbbrev' not in orthomcltaxon table.\n");
 	}
-	$species->{$row[0]}->{version} = $row[1];
-	$species->{$row[0]}->{url} = $row[2];
+	$species->{$currentAbbrev}->{version} = $row[1];
+	$species->{$currentAbbrev}->{url} = $row[2];
     }
     
     foreach my $abbrev (keys %{$species}) {

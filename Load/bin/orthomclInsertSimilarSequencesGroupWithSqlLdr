@@ -26,8 +26,8 @@ if ($undo eq "undo") {
     mkdir($dir) || die "could not create directory '$dir' \n";
     createTempFile($dbh,$tempFile,\%suffixes);
     writeToGroupTable($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix);
-#    system("rm -rf $dir");
-#    print STDERR "deleting temporary directory $dir\n";
+    system("rm -rf $dir");
+    print STDERR "deleting temporary directory $dir\n";
 }
 
 exit;
@@ -123,7 +123,8 @@ sub getAaInfo {
                WHERE eas.aa_sequence_id = ogas.aa_sequence_id
                      AND ogas.ortholog_group_id = og.ortholog_group_id
                      AND og.core_peripheral_residual = 'P'
-                     AND substr(eas.secondary_identifier,1,4) = ot.three_letter_abbrev"; 
+                     AND NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1),
+                             eas.secondary_identifier) = ot.three_letter_abbrev"; 
 
     $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
     $queryHandle->execute() or die $dbh->errstr;
