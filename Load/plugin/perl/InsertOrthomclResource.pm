@@ -235,6 +235,7 @@ sub undoTables {
     my ($self) = @_;
 
     return (
+	ApiDB.OrthomclResource
 	    );
 }
 

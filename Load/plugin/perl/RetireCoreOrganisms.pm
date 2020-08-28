@@ -8,15 +8,6 @@ use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
 
-use GUS::Model::ApiDB::OrthomclTaxon;
-use GUS::Model::DoTS::ExternalAaSequence;
-use GUS::Model::SRes::DbRef;
-use GUS::Model::SRes::ExternalDatabase;
-use GUS::Model::SRes::ExternalDatabaseRelease;
-use GUS::Model::ApiDB::InparalogCore;
-use GUS::Model::ApiDB::CoOrthologCore;
-use GUS::Model::ApiDB::OrthologCore;
-
 my $argsDeclaration =
 [
  stringArg({ descr => 'comma-delimited list of core abbreviations to be changed to xxxx-old',
@@ -112,11 +103,11 @@ sub run {
     my $abbrevList = $self->getArg('abbrevList');
     
     my $abbrevsToChange = $self->getProperAbbrevs($abbrevList);
-    my $num = keys %{$properAbbrevs};
+    my $num = keys %{$abbrevsToChange};
     if ($num == 0) {
 	$self->log("There are no proper abbreviations. Not updating anything.\n");
     } else {
-	my $text = join(",",keys %{$properAbbrevs});
+	my $text = join(",",keys %{$abbrevsToChange});
 	$self->log("There are $num proper abbreviations. Changing these:\n  $text\n");
 	$self->updateTables($abbrevsToChange);
 	$self->updateFiles($abbrevsToChange,$mainDataDir);
@@ -139,7 +130,7 @@ sub getProperAbbrevs {
 	my $oldAbbrev = $abbrev."-old";
 	if (exists $currentCore->{$oldAbbrev}) {
 	    die "You are trying to change '$abbrev' to '$oldAbbrev', but $oldAbbrev already exists.\n";
-	} elsif {! exists $currentCore->{$abbrev}) {
+	} elsif (! exists $currentCore->{$abbrev}) {
 	    die "'$abbrev' does not exist as a Core organism (or at all). Skipping '$abbrev'.\n";
 	} else {
 	    $properAbbrevs->{$abbrev} = $currentCore->{$abbrev};
@@ -178,14 +169,14 @@ SQL
 sub updateTables {
    my ($self,$abbrevsToChange) = @_;
    $self->log("Updating database tables.\n");
-   my $sqls = getSql();
    foreach my $abbrev (keys %{$abbrevsToChange}) {
+       my $sqls = getSql();
        foreach my $sql (@{$sqls}) {
 	   $sql =~ s/#abbrev#/$abbrev/g;
 	   my $name = $abbrevsToChange->{$abbrev};
 	   $sql =~ s/#name#/$name/g;
 	   $self->log("$sql\n");	   
-	   my $dbh = $self->>getQueryHandle();
+	   my $dbh = $self->getQueryHandle();
 	   $dbh->{RaiseError} = 1;
 	   $dbh->{AutoCommit} = 1;
 	   my $sth = $dbh->prepareAndExecute($sql);
@@ -233,7 +224,7 @@ sub getFiles {
 sub getSql {
 
     my @sql = (
-	"UPDATE apidb.OrthomclTaxon SET name = #name#, abbrev = #abbrev#-old WHERE three_letter_abbrev = #abbrev#"
+	"UPDATE apidb.OrthomclTaxon SET name = '#name#', three_letter_abbrev = '#abbrev#-old' WHERE three_letter_abbrev = '#abbrev#'"
 	,
 	"UPDATE dots.ExternalAaSequence SET secondary_identifier = '#abbrev#-old' || SUBSTR(secondary_identifier, INSTR(secondary_identifier,'|')) WHERE secondary_identifier LIKE '#abbrev#|%'"
 	,
