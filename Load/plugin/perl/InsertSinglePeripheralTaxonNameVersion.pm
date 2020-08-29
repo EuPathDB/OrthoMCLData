@@ -114,8 +114,6 @@ sub run {
     my $version = $self->getArg('version');
     my $organismName = $self->getArg('organismName');
 
-    $organismName .= " (genome version $version)";
-
     die "species abbreviation '$abbrev' must have 4 letters" if (length($abbrev) != 4);
     die "species abbreviation '$abbrev' already exists in the database" if (! $self->abbrevUnique($abbrev));
     
