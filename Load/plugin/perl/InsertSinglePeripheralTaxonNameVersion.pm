@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertSinglePeripheralTaxon;
+package OrthoMCLData::Load::Plugin::InsertSinglePeripheralTaxonNameVersion;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
