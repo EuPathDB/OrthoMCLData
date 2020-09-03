@@ -14,7 +14,7 @@ use CBIL::Util::PropertySet;
 
 my $databaseName = "core";
 
-my ($help, $containerName, $initDir, $dataDir, $outputDir, $orthomclAbbrev, $proteomeFileName, $ecFileName);
+my ($help, $containerName, $initDir, $dataDir, $outputDir, $orthomclAbbrev, $proteomeFileName, $ecFileName, $ebi2gusVersion);
 
 &GetOptions('help|h' => \$help,
             'container_name=s' => \$containerName,
@@ -24,6 +24,7 @@ my ($help, $containerName, $initDir, $dataDir, $outputDir, $orthomclAbbrev, $pro
             'orthomclAbbrev=s' => \$orthomclAbbrev,
             'proteome_file_name=s' => \$proteomeFileName,
             'ec_file_name=s' => \$ecFileName,
+	    'ebi2gus_tag=s' => \$ebi2gusVersion,
             );
 
 foreach($initDir,$dataDir,$outputDir) {
