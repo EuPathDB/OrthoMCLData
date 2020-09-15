@@ -82,7 +82,7 @@ sub getPostText {
 	$coding = "protein coding gene";
     }
 
-    my $postText = "'{\"searchConfig\": {\"parameters\": { \"gene_or_transcript\": \"Genes\",\"gene_model_char\": \"{\\\"filters\\\":[{\\\"field\\\":\\\"organism\\\",\\\"type\\\":\\\"string\\\",\\\"isRange\\\":false,\\\"value\\\":[\\\"$organismName\\\"],\\\"includeUnknown\\\":false,\\\"fieldDisplayName\\\":\\\"Organism\\\"},{\\\"field\\\":\\\"gene_type\\\",\\\"type\\\":\\\"string\\\",\\\"isRange\\\":false,\\\"value\\\":[\\\"$coding\\\"],\\\"includeUnknown\\\":false,\\\"fieldDisplayName\\\":\\\"Gene Type\\\"}]}\"},\"wdkWeight\":10},\"reportConfig\": {\"attributes\": [\"primary_key\",\"source_id\",\"gene_product\",\"protein_sequence\",\"ec_numbers\"],\"includeHeader\": true,\"attachmentType\": \"text\",\"applyFilter\": true}}'";
+    my $postText = "'{\"searchConfig\": {\"parameters\": { \"gene_or_transcript\": \"Genes\",\"gene_model_char\": \"{\\\"filters\\\":[{\\\"field\\\":\\\"organism\\\",\\\"type\\\":\\\"string\\\",\\\"isRange\\\":false,\\\"value\\\":[\\\"$organismName\\\"],\\\"includeUnknown\\\":false,\\\"fieldDisplayName\\\":\\\"Organism\\\"},{\\\"field\\\":\\\"gene_type\\\",\\\"type\\\":\\\"string\\\",\\\"isRange\\\":false,\\\"value\\\":[\\\"$coding\\\"],\\\"includeUnknown\\\":false,\\\"fieldDisplayName\\\":\\\"Gene Type\\\"}]}\"},\"wdkWeight\":10},\"reportConfig\": {\"attributes\": [\"primary_key\",\"source_id\",\"gene_product\",\"protein_sequence\",\"ec_numbers\"],\"includeHeader\": true,\"attachmentType\": \"text\",\"applyFilter\": false}}'";
 
     return $postText;
 }
