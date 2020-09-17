@@ -111,12 +111,12 @@ sub writeFiles {
 	chomp $line;
 	my @row = split("\t",$line);
 	my ($gene,$tx,$prod,$seq,$ec) = ($row[0],$row[1],$row[2],$row[3],$row[4]);
-	print PROT ">$orthomclAbbrev|$tx gene=$gene product=$prod\n$seq\n";
+	print PROT ">$tx gene=$gene product=$prod\n$seq\n";
 
 	my $multipleEc = processEc($ec);
 
 	foreach my $singleEc (@{$multipleEc}) {
-	    print EC "$gene\t$singleEc\n";
+	    print EC "$orthomclAbbrev|$gene\t$singleEc\n";
 	}
     }
 

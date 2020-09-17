@@ -13,7 +13,7 @@ use GUS::Model::ApiDB::OrthomclTaxon;
 my $argsDeclaration =
 [
  stringArg({name           => 'abbrev',
-            descr          => '4-letter abbreviation for the epripheral species. this must be unique',
+            descr          => '4-letter abbreviation for the peripheral species. this must be unique',
             reqd           => 1,
             constraintFunc => undef,
             isList         => 0, }),
@@ -124,7 +124,7 @@ sub run {
     my $species = GUS::Model::ApiDB::OrthomclTaxon->
 	new({parent_id => $parentId,
 	     taxon_id => $taxonId,
-	     name => $organismName,
+	     name => '$organismName',
 	     three_letter_abbrev => $abbrev,
 	     is_species => 1,
 	     species_order => $speciesOrder,

@@ -114,7 +114,7 @@ SQL
     $sth = $dbh->prepareAndExecute($sql);
 
     while (my @row = $sth->fetchrow_array()) {
-	my @array = split(/\|/, $row[0]);
+	my @array = split(/_/, $row[0]);
 	my $currentAbbrev = shift @array;
 	if (! exists $species->{$currentAbbrev} ) {
 	    $self->error("Abbreviation '$currentAbbrev' not in orthomcltaxon table.\n");
