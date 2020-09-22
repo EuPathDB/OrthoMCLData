@@ -112,7 +112,7 @@ while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
       # print STDERR "adding peripheral protein \"$peripheralProtein\", which best matched \"$coreTopHit\" to group \"$groupName\"\n";
       push(@{$grouplist{$groupName}}, $peripheralProtein);
     } else {
-      print STDERR "peripheral protein \"$peripheralProtein\" best matched \"$coreTopHit\", which has no group\n";
+      die "peripheral protein \"$peripheralProtein\" best matched \"$coreTopHit\", which has no group\n";
     }
   } else {
     # no core top hit found so this protein is a residual

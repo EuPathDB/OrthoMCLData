@@ -242,4 +242,21 @@ sub undoTables {
 	 );
 }
 
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+    my $cpr = $self->getArg('corePeripheralResidual');
+    $cpr = uc($cpr);
+
+    my $sql = "DELETE FROM apidb.OrthologGroupAaSequence WHERE ortholog_group_id in (SELECT ortholog_group_id FROM apidb.orthologgroup WHERE core_peripheral_residual = '$cpr')";
+    my $sh = $dbh->prepare($sql);
+    $sh->execute();
+    $sh->finish();
+
+    my $sql = "DELETE FROM apidb.OrthologGroup WHERE core_peripheral_residual = '$cpr')";
+    my $sh = $dbh->prepare($sql);
+    $sh->execute();
+    $sh->finish();
+}
+
 1;

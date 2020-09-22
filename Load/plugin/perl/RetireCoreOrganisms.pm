@@ -22,6 +22,30 @@ my $argsDeclaration =
 	     reqd  => 1,
 	     constraintFunc => undef,
 	   }),
+ stringArg({ descr => 'skip the abbrev if it has already been changed, as opposed to die',
+	     name  => 'skip',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+ stringArg({ descr => 'the cluster name like consign.pmacs.upenn.edu',
+	     name  => 'cluster',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+ stringArg({ descr => 'the cluster username or login',
+	     name  => 'clusterUser',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+ stringArg({ descr => 'the cluster data directory',
+	     name  => 'clusterDir',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
 
 ];
 
@@ -99,10 +123,19 @@ sub new {
 sub run {
     my ($self) = @_;
 
+    my $cluster = $self->getArg('cluster');
+    my $clusterUser = $self->getArg('clusterUser');
+    my $clusterDir = $self->getArg('clusterDir');
     my $mainDataDir = $self->getArg('mainDataDir');
     my $abbrevList = $self->getArg('abbrevList');
-    
-    my $abbrevsToChange = $self->getProperAbbrevs($abbrevList);
+    my $skip = $self->getArg('skip');
+    if (lc($skip) eq 'true' || lc($skip) eq 'yes') {
+	$skip=1;
+    } else {
+	$skip=0;
+    }
+
+    my $abbrevsToChange = $self->getProperAbbrevs($abbrevList,$skip);
     my $num = keys %{$abbrevsToChange};
     if ($num == 0) {
 	$self->log("There are no proper abbreviations. Not updating anything.\n");
@@ -110,14 +143,14 @@ sub run {
 	my $text = join(",",keys %{$abbrevsToChange});
 	$self->log("There are $num proper abbreviations. Changing these:\n  $text\n");
 	$self->updateTables($abbrevsToChange);
-	$self->updateFiles($abbrevsToChange,$mainDataDir);
+	$self->updateFiles($abbrevsToChange,$mainDataDir,$cluster,$clusterUser,$clusterDir);
 	$self->log("Finished updating tables and files.\n");
     }
 }
 
 
 sub getProperAbbrevs {
-    my ($self,$abbrevList)=@_;
+    my ($self,$abbrevList,$skip)=@_;
 
     $abbrevList =~ s/ //g;
     my %abbrevs = map { $_ => 1 } split(/,/,$abbrevList);
@@ -129,9 +162,11 @@ sub getProperAbbrevs {
     foreach my $abbrev (keys %abbrevs) {
 	my $oldAbbrev = $abbrev."-old";
 	if (exists $currentCore->{$oldAbbrev}) {
-	    die "You are trying to change '$abbrev' to '$oldAbbrev', but $oldAbbrev already exists.\n";
+	    $self->log("You are trying to change '$abbrev' to '$oldAbbrev', but $oldAbbrev already exists.\n");
+	    die if (! $skip);
 	} elsif (! exists $currentCore->{$abbrev}) {
-	    die "'$abbrev' does not exist as a Core organism (or at all). Skipping '$abbrev'.\n";
+	    $self->log("'$abbrev' does not exist as a Core organism (or at all).\n");
+	    die if (! $skip);
 	} else {
 	    $properAbbrevs->{$abbrev} = $currentCore->{$abbrev};
 	}
@@ -187,7 +222,7 @@ sub updateTables {
 }
 
 sub updateFiles {
-   my ($self,$abbrevsToChange,$mainDataDir) = @_;
+   my ($self,$abbrevsToChange,$mainDataDir,$cluster,$clusterUser,$clusterDir) = @_;
    $self->log("Updating database tables.\n");
    my $files = getFiles();
    foreach my $file (@{$files}) {
@@ -200,6 +235,12 @@ sub updateFiles {
 	   my $changed = $abbrev."-old|";
 	   $abbrev .= "|";
 	   my $cmd = "sed -i 's/$abbrev/$changed/g' $fullPath";
+	   system($cmd);
+       }
+       if ($file eq 'coreGood.fasta') {
+	   $cmd = "scp $fullPath $clusterUser@$cluster:\"$clusterDir\"";
+	   system($cmd);
+	   $cmd = "ssh -2 $clusterUser@$cluster \"cd $clusterDir; formatdb -i coreGood.fasta -p T\"";
 	   system($cmd);
        }
    }
@@ -264,5 +305,10 @@ sub undoTables {
          );
 }
 
+
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+}
 
 1;
