@@ -54,7 +54,7 @@ sub getBaseUrl {
 	piroplasma => "piroplasmadb.org/piro",
 	plasmo => "plasmodb.org/plasmo",
 	trich => "trichdb.org/trichdb",
-	tritryp => "tritrypdb.org/tritrypdb.org",
+	tritryp => "tritrypdb.org/tritrypdb",
 	host => "hostdb.org/hostdb",
 	schisto => "schistodb.net/schisto",
 	vectorbase => "vectorbase.org/vectorbase",

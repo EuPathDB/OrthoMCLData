@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertOrthomclResource;
+package OrthoMCLData::Load::Plugin::UpdateSpeciesResources;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -7,27 +7,29 @@ package OrthoMCLData::Load::Plugin::InsertOrthomclResource;
 use strict;
 use GUS::PluginMgr::Plugin;
 use GUS::Model::ApiDB::OrthomclResource;
+use GUS::Model::ApiDB::OrthomclTaxon;
 use FileHandle;
 use Data::Dumper;
 
 my $argsDeclaration =
 [
-    stringArg({name           => 'proteomesFromBuild',
-            descr          => 'the build number for VEuPath sites from where proteomes were obtained',
-            reqd           => 1,
-            mustExist      => 1,
-	    format         => 'see Notes',
-            constraintFunc => undef,
-            isList         => 0, }),
+
+ stringArg({ descr => 'directory that contains the files downloaded from Veupath sites',
+	          name  => 'dataDir',
+	          isList    => 0,
+	          reqd  => 1,
+	          constraintFunc => undef,
+	   }),
+
 ];
 
 
 my $purpose = <<PURPOSE;
-Insert the Orthomcl-DB specific resource information from database.
+Insert proteome source and organism name, obtained from VEuPathDB sites.
 PURPOSE
 
 my $purposeBrief = <<PURPOSE_BRIEF;
-Insert the Orthomcl-DB specific resource information used by the OrthoMCL Data Source page.  
+Insert proteome source and organism name, obtained from VEuPathDB sites.
 PURPOSE_BRIEF
 
 my $notes = <<NOTES;
@@ -36,6 +38,7 @@ NOTES
 
 my $tablesAffected = <<TABLES_AFFECTED;
 ApiDB.OrthomclResource,
+ApiDB.OrthomclTaxon,
 TABLES_AFFECTED
 
 my $tablesDependedOn = <<TABLES_DEPENDED_ON;
@@ -80,14 +83,18 @@ sub new {
 sub run {
 
     my ($self) = @_;
-    my $proteomesFromBuild = $self->getArg('proteomesFromBuild');
-    my $species = $self->getSpecies();
+
+    my $dataDir = uc($self->getArg('dataDir'));
+
+
+    my $speciesFromOrtho = $self->getSpeciesFromOrtho();
     my $numRows = $self->loadRows($species,$proteomesFromBuild);
     $self->log("Finished adding to ApiDB.OrthomclResource. Loaded $numRows rows.\n");
 }
 
-sub getSpecies {
+sub getSpeciesFromOrtho {
     my ($self) = @_;
+
 
     my $sql = <<SQL;
 SELECT three_letter_abbrev,orthomcl_taxon_id
