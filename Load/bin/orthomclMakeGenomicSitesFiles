@@ -60,7 +60,7 @@ my %orthoGroups;
 
 # GROUP FILE FORMAT:   OG6_100000: cbra|A0A388L692 cbra|A0A388LB57
 
-my @peripheralFolders = glob( $peripheralDir."/*_orthomclPeripheralProteome_RSRC" );
+my @peripheralFolders = glob( $peripheralDir."/*RSRC" );
 my @peripheralMapFiles = map { $_."/".$peripheralMapFileName } @peripheralFolders;
 my @groupFiles = ($coreMapFile,@peripheralMapFiles,$residualMapFile);
 
