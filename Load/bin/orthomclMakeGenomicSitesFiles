@@ -47,6 +47,7 @@ SQL
 
 $query->execute();
 while (my($abbrev,$clade,$ncbiId,$corePeripheral) = $query->fetchrow_array()) {
+    next if ($abbrev =~ /'-old'/);
     print OUT "$abbrev\t$clade\t$ncbiId\t$corePeripheral\n";
 }
 $query->finish();
@@ -81,11 +82,12 @@ foreach my $file (@groupFiles) {
     	if ( $line =~ /^([^:]+):\s(.+)$/ ) {
     	    my ($group,$genes) = ($1,$2);
     	    my @geneArray = split(" ",$genes);
+	    my $cleanedGeneArray = cleanGeneArray(\@geneArray);
     	    $group =~ s/://g;
     	    if ( exists $orthoGroups{$group} ) {
-    		push @{$orthoGroups{$group}}, @geneArray;
+    		push @{$orthoGroups{$group}}, @{$cleanedGeneArray};
     	    } else {
-    		$orthoGroups{$group} = [@geneArray]; 
+    		$orthoGroups{$group} = [@{$cleanedGeneArray}]; 
     	    }
     	}
     }
@@ -106,6 +108,17 @@ close(OUT);
 
 print STDERR "Finished at " . `date` . "\n";
 
+sub cleanGeneArray {
+    my ($geneArray) = @_;
+    
+    my @cleanedGeneArray;
+
+    foreach my $gene (@{$geneArray}) {
+	next if ($gene =~ /^[A-Za-z]{4}-old\|/);
+	push @cleanedGeneArray, $gene;
+    }
+    return \@cleanedGeneArray;
+}
 
 sub getDbHandle {
 
