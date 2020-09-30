@@ -47,7 +47,7 @@ SQL
 
 $query->execute();
 while (my($abbrev,$clade,$ncbiId,$corePeripheral) = $query->fetchrow_array()) {
-    next if ($abbrev =~ /'-old'/);
+    next if ($abbrev =~ /-old/);
     print OUT "$abbrev\t$clade\t$ncbiId\t$corePeripheral\n";
 }
 $query->finish();

@@ -113,27 +113,16 @@ sub writeFiles {
 	my ($gene,$tx,$prod,$seq,$ec) = ($row[0],$row[1],$row[2],$row[3],$row[4]);
 	print PROT ">$tx gene=$gene product=$prod\n$seq\n";
 
-	my $multipleEc = processEc($ec);
-
-	foreach my $singleEc (@{$multipleEc}) {
+	my @multipleEcs = split(/;/,$ec);
+	foreach $ecStr (@multipleEcs) {
+	    $ecStr =~ /^(\S+)/;
+	    my $singleEc = $1;
 	    print EC "$orthomclAbbrev|$gene\t$singleEc\n";
 	}
     }
 
     close EC;
     close PROT;
-}
-
-
-sub processEc {
-    my ($ecString) = @_;
-    my @multipleEc;
-    foreach my $ec (split(/[;,\s\t]/,$ecString)) {
-	if ($ec =~ /^[0-9]+\.[0-9\-]+\.[0-9\-]+\.[0-9\-]+$/) {
-	    push @multipleEc, $ec;
-	}
-    }
-    return \@multipleEc;
 }
 
 
