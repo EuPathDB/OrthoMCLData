@@ -94,7 +94,6 @@ sub runOrganismWgetCmds {
 
     # one file for each genomic project
     my %organismFiles;
-    my $totalFileSize=0;
     foreach my $project (keys %{$baseUrls}) {
 	my $downloadFile = $dataDir."/".$project."_organisms.txt";
 	$organismFiles{$project} = $downloadFile;
@@ -103,9 +102,8 @@ sub runOrganismWgetCmds {
 	my $cmd = "wget --output-file=$logFile --output-document=$downloadFile --post-data $postText --header 'content-type: application/json' \"$url\"";
 	print "$cmd\n\n";
 	system($cmd);
-	$totalFileSize += (-s $downloadFile);
+	die "The organism file $downloadFile obtained with wget is empty!\n" if (-s $downloadFile == 0);
     }
-    die "All of the EC files downloaded from Vuepath are empty!\n" if ($totalFileSize == 0);
 
     # one file for uniprot proteomes
     my $cmd = "wget --output-file='$dataDir/uniprot_wget.log' --output-document=$dataDir/UniprotProteomes \"ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/README\"";
@@ -122,6 +120,7 @@ sub runEcWgetCmds {
     my $numEcFiles = 0;
     foreach my $project (keys %{$ecBaseUrls}) {
 	my $organisms = readOrganismFile($organismFiles->{$project});
+	my $totalFileSize=0;
 	foreach my $abbrev (keys %{$organisms} ) {
 	    my $downloadFile = $dataDir."/".$abbrev."_ec.txt";
 	    my $logFile = $dataDir."/".$abbrev."_ec_wget.log";
@@ -130,9 +129,10 @@ sub runEcWgetCmds {
 	    my $cmd = "wget --output-file=$logFile --output-document=$downloadFile --post-data $postText --header 'content-type: application/json' \"$url\"";
 	    print "$cmd\n\n";
 	    system($cmd);
-	    die "Download file $downloadFile was not properly obtained with wget.\n" if (-s $downloadFile == 0);
+	    $totalFileSize += (-s $downloadFile);
 	    $numEcFiles++;
 	}
+	die "All of the EC files downloaded from $project are empty! Directory: $dataDir\n" if ($totalFileSize == 0);
     }
     return $numEcFiles;
 }
