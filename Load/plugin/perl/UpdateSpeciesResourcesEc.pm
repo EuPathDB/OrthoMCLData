@@ -318,14 +318,13 @@ sub loadOrthoResource {
 	    $self->log("incomplete record:\nabbrev: '$abbrev'\nresource '$resource'\nid '$id'\nurl '$url'\nversion '$version'\nname: '$name'\n");
 	    next;
 	}
-	my $resource = GUS::Model::ApiDB::OrthomclResource->
-	    new({orthomcl_taxon_id => $id,
-		 resource_name => $resource,
-		 resource_url => $url,
-		 resource_version => $version
-		});
-	$numRows += $resource->submit();
-	$resource->undefPointerCache();
+	my $res = GUS::Model::ApiDB::OrthomclResource->new();
+	$res->set('orthomcl_taxon_id', $id);
+	$res->set('resource_name', $resource);
+	$res->set('resource_url', $url);
+	$res->set('resource_version', $version);
+	$numRows += $res->submit();
+	$res->undefPointerCache();
     }
     
     return $numRows;

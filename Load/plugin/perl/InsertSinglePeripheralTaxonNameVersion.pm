@@ -121,16 +121,15 @@ sub run {
     my $speciesOrder = $self->getSpeciesOrder();
     my ($parentId, $depthFirstIndex) = $self->getCladeInfo($orthomclClade);
 
-    my $species = GUS::Model::ApiDB::OrthomclTaxon->
-	new({parent_id => $parentId,
-	     taxon_id => $taxonId,
-	     name => '$organismName',
-	     three_letter_abbrev => $abbrev,
-	     is_species => 1,
-	     species_order => $speciesOrder,
-	     depth_first_index => $depthFirstIndex,
-	     core_peripheral => 'P'
-	    });
+    my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
+    $species->set('parent_id', $parentId);
+    $species->set('taxon_id', $taxonId);
+    $species->set('name', $organismName);
+    $species->set('three_letter_abbrev', $abbrev);
+    $species->set('is_species', 1);
+    $species->set('species_order', $speciesOrder);
+    $species->set('depth_first_index', $depthFirstIndex);
+    $species->set('core_peripheral', 'P');
     $species->submit();
     $species->undefPointerCache();
 
