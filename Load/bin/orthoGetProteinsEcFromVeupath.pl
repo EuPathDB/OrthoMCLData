@@ -114,10 +114,11 @@ sub writeFiles {
 	print PROT ">$tx gene=$gene product=$prod\n$seq\n";
 
 	my @multipleEcs = split(/;/,$ec);
-	foreach $ecStr (@multipleEcs) {
-	    $ecStr =~ /^(\S+)/;
-	    my $singleEc = $1;
-	    print EC "$orthomclAbbrev|$gene\t$singleEc\n";
+	foreach my $ecStr (@multipleEcs) {
+	    if ($ecStr =~ /^([0-9\-\.]+)/) {
+		my $singleEc = $1;
+		print EC "$orthomclAbbrev|$gene\t$singleEc\n";
+	    }
 	}
     }
 

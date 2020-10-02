@@ -38,7 +38,7 @@ NOTES
 
 my $tablesAffected = <<TABLES_AFFECTED;
 ApiDB.OrthomclResource,
-ApiDB.OrthomclTaxon,
+ApiDB.OrthomclTaxon
 TABLES_AFFECTED
 
 my $tablesDependedOn = <<TABLES_DEPENDED_ON;
@@ -82,14 +82,14 @@ sub new {
 # ======================================================================
 
 sub run {
-
     my ($self) = @_;
 
-    my $dataDir = uc($self->getArg('dataDir'));
+    my $dataDir = $self->getArg('dataDir');
 
     my $speciesFromOrtho = $self->getSpeciesFromOrtho();
     my $speciesFromOrtho = $self->updateUniprotData($speciesFromOrtho,$dataDir);
     my $speciesFromOrtho = $self->updateVeupathData($speciesFromOrtho,$dataDir);
+    my $speciesFromOrtho = $self->cleanUpData($speciesFromOrtho);
 
     my $numRows = $self->loadOrthoResource($speciesFromOrtho);
     $self->log("Finished adding to ApiDB.OrthomclResource. Loaded $numRows rows.\n");
@@ -187,10 +187,17 @@ sub updateUniprotData {
 sub updateVeupathData {
     my ($self,$species,$dataDir) = @_;
 
-    my @files = glob('$dataDir/*_organisms.txt');
+    my @files = glob("$dataDir/*_organisms.txt");
+
     my $veupath;
     foreach my $file (@files) {
 	open(IN,$file) || die "Can't open file '$file'\n";
+	my $resource;
+	if ($file =~ /\/([A-Za-z]+)_organisms\.txt/) {
+	    $resource = $1;
+	} else {
+	    die "Did not find project name in file name: $file\n";
+	}
 	while (my $line = <IN>) {
 	    chomp $line;
 	    $line =~ s/<i>//g;
@@ -200,13 +207,9 @@ sub updateVeupathData {
 	    my @fields = split("\t",$line);
 	    $veupath->{$fields[2]}->{name} = $fields[0];
 	    $veupath->{$fields[2]}->{filename} = $fields[1];
-	    if ($file =~ /\/([A-Za-z]+)_organisms\.txt/) {
-		$veupath->{$fields[2]}->{resource} = $1;
-	    } else {
-		die "Did not find project name in file name: $file\n";
-	    }
+	    $veupath->{$fields[2]}->{resource} = $resource;
 	}
-	close IN;
+	close IN;	
     }
 
     foreach my $abbrev (keys %{$species}) {
@@ -215,7 +218,6 @@ sub updateVeupathData {
 	$species->{$abbrev}->{name} = $veupath->{$abbrev}->{name};
 	$species->{$abbrev}->{url} = getVeupathUrl($species->{$abbrev}->{resource},$veupath->{$abbrev}->{filename});
     }
-
     return $species;
 }
 
@@ -236,12 +238,59 @@ sub getVeupathUrl {
 	tritrypdb => "tritrypdb.org/tritrypdb",
 	hostdb => "hostdb.org/hostdb",
 	schistodb => "schistodb.net/schisto",
-	vectorbase => "vectorbase.org/vectorbase",
-    );
-
-    $url .= $projects{lc($resource)}."/app/downloads/Current_Release/$filename/fasta/data/";
-
+	vectorbase => "vectorbase.org/vectorbase"
+     );
+    
+    if ( exists $projects{lc($resource)} ) {
+	$url .= $projects{lc($resource)}."/app/downloads/Current_Release/$filename/fasta/data/";
+    } else {
+	$url = "";
+    }
+    
     return $url;
+}
+
+sub cleanUpData {
+    my ($self,$species) = @_;
+
+    foreach my $abbrev (keys %{$species}) {
+	if ( ! exists $species->{$abbrev}->{resource} ) {
+	    my $abbrevWithoutOld = $abbrev;
+	    $abbrevWithoutOld =~ s/-old//;
+	    if ( exists $species->{$abbrevWithoutOld}->{resource} ) {
+		$species->{$abbrev}->{resource} = $species->{$abbrevWithoutOld}->{resource};
+		my $url = $species->{$abbrevWithoutOld}->{url};
+		if ($url =~ /^(.+\/app\/downloads\/)/) {
+		    $species->{$abbrev}->{url} = $1;
+		}
+		if ($species->{$abbrev}->{name} =~ /.+ (\(old build.+\))$/) {
+		    $species->{$abbrev}->{name} = $species->{$abbrevWithoutOld}->{name}." ".$1;
+		}
+	    } elsif (exists $species->{$abbrev}->{url}) {
+		if ( $species->{$abbrev}->{url} =~ /.+\.([A-Za-z]+)\.(org|net)/ ) {
+		    my $resource = $1;
+		    $resource = "VectorBase" if (lc($resource) eq "vectorbase");
+		    $species->{$abbrev}->{resource} = $resource;
+		    my $url = getVeupathUrl($resource);
+		    if ($url ne "") {  #this a veupath url
+			if ( $url =~ /^(.+\/app\/downloads\/)/ ) {
+			    $species->{$abbrev}->{url} = $1;
+			}
+		    }
+		} else {
+		    $species->{$abbrev}->{resource} = "See URL";
+		}
+	    } else {
+		$species->{$abbrev}->{resource} = "unknown";
+		$species->{$abbrev}->{url} = "unknown";
+	    }
+	} else {
+	    if ( ! exists $species->{$abbrev}->{url} ) {
+		$species->{$abbrev}->{url} = "See Resource";
+	    }
+	}
+    }
+    return $species;
 }
 
 sub loadOrthoResource {
@@ -260,23 +309,32 @@ sub loadOrthoResource {
 
     my $numRows=0;
     foreach my $abbrev (keys %{$species}) {
+	my $resource = $species->{$abbrev}->{resource};
+	my $id = $species->{$abbrev}->{orthomclId};
+	my $url = $species->{$abbrev}->{url};
+	my $version = $species->{$abbrev}->{version};
+	my $name = $species->{$abbrev}->{name};
+	if (! $resource || ! $id || ! $url || ! $version) {
+	    $self->log("incomplete record:\nabbrev: '$abbrev'\nresource '$resource'\nid '$id'\nurl '$url'\nversion '$version'\nname: '$name'\n");
+	    next;
+	}
 	my $resource = GUS::Model::ApiDB::OrthomclResource->
-	    new({orthomcl_taxon_id => $species->{$abbrev}->{orthomclId},
-		 resource_name => $species->{$abbrev}->{resource},
-		 resource_url => $species->{$abbrev}->{url},
-		 resource_version => $species->{$abbrev}->{version}
+	    new({orthomcl_taxon_id => $id,
+		 resource_name => $resource,
+		 resource_url => $url,
+		 resource_version => $version
 		});
 	$numRows += $resource->submit();
 	$resource->undefPointerCache();
     }
-
+    
     return $numRows;
 }
 
 
 sub updateOrthoTaxon {
     my ($self,$species) = @_;
-
+    
     my $numRows=0;
     foreach my $abbrev (keys %{$species}) {
 	my $taxon = GUS::Model::ApiDB::OrthomclTaxon->
@@ -299,7 +357,7 @@ sub updateOrthoTaxon {
 sub formatEcFile {
     my ($dataDir,$ecFileName) = @_;
 
-    my @files = glob('$dataDir/*_ec.txt');
+    my @files = glob("$dataDir/*_ec.txt");
     my $numEcFiles= scalar @files;
 
     open(OUT,">","$dataDir/$ecFileName") || die "Can't open file '$dataDir/$ecFileName' for writing\n";
@@ -320,10 +378,11 @@ sub formatEcFile {
 	    my ($gene,$tx,$ec) = ($row[0],$row[1],$row[2]);
 
 	    my @multipleEcs = split(/;/,$ec);
-	    foreach $ecStr (@multipleEcs) {
-		$ecStr =~ /^(\S+)/;
-		my $singleEc = $1;
-		print OUT "$abbrev|$gene\t$singleEc\n";
+	    foreach my $ecStr (@multipleEcs) {
+		if ($ecStr =~ /^([0-9\-\.]+)/) {
+		    my $singleEc = $1;
+		    print OUT "$abbrev|$gene\t$singleEc\n";
+		}
 	    }
 	}
 	close IN;
