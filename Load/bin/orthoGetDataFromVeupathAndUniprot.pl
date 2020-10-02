@@ -94,6 +94,7 @@ sub runOrganismWgetCmds {
 
     # one file for each genomic project
     my %organismFiles;
+    my $totalFileSize=0;
     foreach my $project (keys %{$baseUrls}) {
 	my $downloadFile = $dataDir."/".$project."_organisms.txt";
 	$organismFiles{$project} = $downloadFile;
@@ -102,14 +103,15 @@ sub runOrganismWgetCmds {
 	my $cmd = "wget --output-file=$logFile --output-document=$downloadFile --post-data $postText --header 'content-type: application/json' \"$url\"";
 	print "$cmd\n\n";
 	system($cmd);
-	die "Download file $downloadFile was not properly obtained with wget.\n" if (-s $downloadFile == 0);
+	$totalFileSize += (-s $downloadFile);
     }
+    die "All of the EC files downloaded from Vuepath are empty!\n" if ($totalFileSize == 0);
 
     # one file for uniprot proteomes
     my $cmd = "wget --output-file='$dataDir/uniprot_wget.log' --output-document=$dataDir/UniprotProteomes \"ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/README\"";
     print "$cmd\n\n";
     system($cmd);
-    die "Download file $dataDir/UniprotProteomes was not properly obtained with wget.\n" if (-s "$dataDir/UniprotProteomes" == 0);
+    die "Download file $dataDir/UniprotProteomes obtained with wget is empty!\n" if (-s "$dataDir/UniprotProteomes" == 0);
 
     return \%organismFiles;
 }
