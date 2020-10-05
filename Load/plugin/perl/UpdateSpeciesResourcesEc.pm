@@ -318,8 +318,7 @@ sub loadOrthoResource {
 	    $self->log("incomplete record:\nabbrev: '$abbrev'\nresource '$resource'\nid '$id'\nurl '$url'\nversion '$version'\nname: '$name'\n");
 	    next;
 	}
-	my $res = GUS::Model::ApiDB::OrthomclResource->new();
-	$res->set('orthomcl_taxon_id', $id);
+	my $res = GUS::Model::ApiDB::OrthomclResource->new({'orthomcl_taxon_id'=>$id});
 	$res->set('resource_name', $resource);
 	$res->set('resource_url', $url);
 	$res->set('resource_version', $version);
@@ -337,7 +336,7 @@ sub updateOrthoTaxon {
     my $numRows=0;
     foreach my $abbrev (keys %{$species}) {
 	my $taxon = GUS::Model::ApiDB::OrthomclTaxon->
-	    new({three_letter_abbrev => $abbrev
+	    new({'orthomcl_taxon_id' => $species->{$abbrev}->{orthomclId}
 		});
 
 	$taxon->retrieveFromDB();
