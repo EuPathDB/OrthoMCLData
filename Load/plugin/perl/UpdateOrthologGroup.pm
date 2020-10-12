@@ -268,7 +268,8 @@ sub processSeqsInGroup {
 
       my $isPair=0;
       while (my @row = $sth->fetchrow_array()) {
-	  die "Error: The e-value should not be 0 for $sequence1[1] and $sequence2[1]" if ($row[0] == 0);
+	  die "Cannot handle e-value of 0e0 for $sequence1[1] and $sequence2[1]. Need to set to lowest e-value minus 1." if ($row[0]==0 && $row[1]==0);
+	  $row[0] = 1 if ($row[0] == 0);
 	  my $eValue = $row[0] . "e" . $row[1];
 	  push @eValues, log($eValue)/log(10);
 	  $sumPercentMatch += $row[3];
