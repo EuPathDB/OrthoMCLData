@@ -155,7 +155,8 @@ sub writeToGroupTable {
     my ($dbInstance,$dbLogin,$dbPassword) = getDbCredentials();
     my $cmd = "sqlldr $dbLogin/$dbPassword\@$dbInstance data=$tempFile control=$ctlFile log=$sqlldrLog rows=25000 direct=TRUE";
     print STDERR "Running: $cmd \n";
-    system($cmd);
+    my $error = system($cmd);
+    die "sqlldr had an error: $! \nSee log file: $sqlldrLog" if ($error);
 }
 
 sub writeControlFile {
