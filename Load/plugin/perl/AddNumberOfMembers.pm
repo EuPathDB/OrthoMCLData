@@ -176,19 +176,25 @@ EOF
 
 # ----------------------------------------------------------------------
 
-sub undoUpdateTables {
-  my ($self) = @_;
-
-  return ('ApiDB.OrthologGroup',
-	 );
-}
-
 
 sub undoTables {
   my ($self) = @_;
 
   return (
          );
+}
+
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+
+    my $sql = "UPDATE apidb.OrthologGroup
+               SET number_of_members = NULL
+               WHERE row_alg_invocation_id in ($rowAlgInvocations)";
+    
+    my $sh = $dbh->prepare($sql);
+    $sh->execute();
+    $sh->finish();
 }
 
 
