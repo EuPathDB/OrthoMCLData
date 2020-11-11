@@ -267,7 +267,7 @@ WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
     $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 
-    $sql = "DELETE FROM apidb.OrthologGroup WHERE core_peripheral_residual = '$cpr')";
+    $sql = "DELETE FROM apidb.OrthologGroup WHERE core_peripheral_residual = '$cpr'";
     $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 }
