@@ -97,8 +97,9 @@ sub run {
     $numRows = $self->updateOrthoTaxon($speciesFromOrtho);
     $self->log("Finished updating ApiDB.OrthomclTaxon. Updated $numRows rows.\n");
 
-    my $ecFileName = "ecFromVeupath.txt";
-    my $numEcFiles = formatEcFile($dataDir,$ecFileName);
+    my $ecFileForOrtho = "ecFromVeupath.txt";
+    my $ecFileforGenomicSites = "ec_organism.txt";
+    my $numEcFiles = $self->formatEcFile($dataDir,$speciesFromOrtho,$ecFileForOrtho,$ecFileforGenomicSites);
     $self->log("Used $numEcFiles EC files obtained from Veupath to make $dataDir/$ecFileName.\n");
 }
 
@@ -353,12 +354,16 @@ sub updateOrthoTaxon {
 
 
 sub formatEcFile {
-    my ($dataDir,$ecFileName) = @_;
+    my ($self,$dataDir,$species,$ecFileForOrtho,$ecFileforGenomicSites) = @_;
 
     my @files = glob("$dataDir/*_ec.txt");
     my $numEcFiles= scalar @files;
 
-    open(OUT,">","$dataDir/$ecFileName") || die "Can't open file '$dataDir/$ecFileName' for writing\n";
+    my $currentEc = $self->getCurrentEcNumbers();
+    my $ecForGenomic;
+
+    open(ORTHO,">","$dataDir/$ecFileForOrtho") || die "Can't open file '$dataDir/$ecFileForOrtho' for writing\n";
+
     foreach my $file (@files) {
 	open(IN,$file) || die "Can't open file '$file'\n";
 
@@ -368,25 +373,74 @@ sub formatEcFile {
 	} else {
 	    die "Did not find orthomcl abbrev in file name: $file\n";
 	}
+	my $organismName = $species->{$abbrev}->{name};
+	$organismName =~ s/^\s+//;
+	my @words = split(/\s/,$organismName);
+	my $genus = $words[0];
 
 	my $header = <IN>;
 	while (my $line = <IN>) {
 	    chomp $line;
 	    my @row = split("\t",$line);
-	    my ($gene,$tx,$ec) = ($row[0],$row[1],$row[2]);
+	    my ($gene,$tx,$ec,$ecDerived) = ($row[0],$row[1],$row[2],$row[3]);
 
 	    my @multipleEcs = split(/;/,$ec);
 	    foreach my $ecStr (@multipleEcs) {
 		if ($ecStr =~ /^([0-9\-\.]+)/) {
 		    my $singleEc = $1;
-		    print OUT "$abbrev|$gene\t$singleEc\n";
+		    $ecForGenomic->{$genus}->{$singleEc} = 1;
+		    my $tempString = "$abbrev|$gene|$singleEc";
+		    next if (exists $currentEc->{$tempString});
+		    $currentEc->{$tempString} = 1;
+		    print ORTHO "$abbrev|$gene\t$singleEc\n";
 		}
 	    }
+
+	    @multipleEcs = split(/;/,$ecDerived);
+	    foreach my $ecStr (@multipleEcs) {
+		if ($ecStr =~ /^([0-9\-\.]+)/) {
+		    my $singleEc = $1;
+		    $ecForGenomic->{$genus}->{$singleEc} = 1;
+		}
+	    }
+	    
 	}
 	close IN;
     }
-    close OUT;
+    close ORTHO;
+
+    open(GEN,">","$dataDir/$ecFileforGenomicSites") || die "Can't open file '$dataDir/$ecFileforGenomicSites' for writing\n";
+    foreach my $genus (keys %{$ecForGenomic}) {
+	foreach my $ec (keys %{$ecForGenomic->{$genus}}) {
+	    print GEN "$ec\t$genus\n";
+	}
+    }   
+    close GEN;
+
     return $numEcFiles;
+}
+
+sub getCurrentEcNumbers {
+    my ($self) = @_;
+
+    my %ec;
+
+    my $sql = <<SQL;
+SELECT eas.secondary_identifier,ec.ec_number
+FROM SRes.EnzymeClass ec,
+     DoTS.AASequenceEnzymeClass aaec,
+     dots.ExternalAASequence eas
+WHERE ec.enzyme_class_id = aaec.enzyme_class_id
+      AND aaec.aa_sequence_id = eas.aa_sequence_id
+SQL
+
+    my $dbh = $self->getQueryHandle();
+    my $sth = $dbh->prepareAndExecute($sql);
+    while (my @row = $sth->fetchrow_array()) {
+	my $tempString = $row[0]."|".$row[1];
+	$ec{$tempString} = 1;
+    }
+    return \%ec;
 }
 
 

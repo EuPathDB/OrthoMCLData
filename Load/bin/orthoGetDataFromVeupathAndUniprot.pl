@@ -38,13 +38,13 @@ exit;
 sub getBaseUrls {
     my ($type) = @_;
 
-    my $first = "https://qa.";
+    my $first = "https://";
 
     my $last;
     if ($type eq "organism") {
-	$last = ".b49/service/record-types/organism/searches/GeneMetrics/reports/attributesTabular";
+	$last = "/service/record-types/organism/searches/GeneMetrics/reports/attributesTabular";
     } elsif ($type eq "ec") {
-	$last = ".b49/service/record-types/transcript/searches/GenesByTaxon/reports/attributesTabular";
+	$last = "/service/record-types/transcript/searches/GenesByTaxon/reports/attributesTabular";
     } else {
 	die "Type must be 'organism' or 'ec' for getBaseUrl.\n";
     }
@@ -80,7 +80,7 @@ sub getPostText {
     if ($type eq "organism") {
 	$postText = "'{\"searchConfig\": {\"parameters\": {},\"wdkWeight\": 10},\"reportConfig\": {\"attributes\": [\"primary_key\",\"name_for_filenames\",\"orthomcl_abbrev\"],\"includeHeader\": true,\"attachmentType\": \"text\"}}'";
     } elsif ($type eq 'ec') {
-	$postText = "'{\"searchConfig\": {\"parameters\": {\"organism\": \"[\\\"$organismName\\\"]\"},\"wdkWeight\": 10},\"reportConfig\": {\"attributes\": [\"primary_key\",\"source_id\",\"ec_numbers\"],\"includeHeader\": true,\"attachmentType\": \"text\",\"applyFilter\": false}}'";
+	$postText = "'{\"searchConfig\": {\"parameters\": {\"organism\": \"[\\\"$organismName\\\"]\"},\"wdkWeight\": 10},\"reportConfig\": {\"attributes\": [\"primary_key\",\"source_id\",\"ec_numbers\",\"ec_numbers_derived\"],\"includeHeader\": true,\"attachmentType\": \"text\",\"applyFilter\": false}}'";
     } else {
 	die "Type must be 'organism' or 'ec' for getPostText.\n";
     }

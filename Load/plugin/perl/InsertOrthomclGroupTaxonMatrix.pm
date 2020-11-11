@@ -114,6 +114,13 @@ EOF
     $dbh->prepareAndExecute($sql);
     $dbh->commit();
 
+    $sql = "grant select on apidb.orthologgrouptaxon to gus_r";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
+
+    $sql = "grant insert, select, update, delete on apidb.orthologgrouptaxon to gus_w";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
 
     $sql = "SELECT count(*) from apidb.orthologgrouptaxon";
     my $stmt = $dbh->prepareAndExecute($sql);

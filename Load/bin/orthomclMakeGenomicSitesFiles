@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # This script generates three files that are needed by Data Loaders to update ortholog data on the
-# genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
+# genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt, ec_organism.txt
 
 use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
@@ -14,8 +14,9 @@ my $peripheralMapFileName = $ARGV[2];
 my $coreMapFile = $ARGV[3];
 my $residualMapFile = $ARGV[4];
 my $cladeFile = $ARGV[5];
+my $ecFile = $ARGV[6];
 
-usage() unless scalar(@ARGV) == 6;
+usage() unless scalar(@ARGV) == 7;
 
 $| = 1;
 
@@ -23,11 +24,13 @@ print STDERR "Creating $outputDir directory at " . `date` . "\n";
 my $cmd = "mkdir -p $outputDir";
 system($cmd) && die "Failed running cmd\n$cmd";
 
-
 print STDERR "Copying $cladeFile to $outputDir at" . `date` . "\n";
-my $cmd = "cp $cladeFile $outputDir";
+$cmd = "cp $cladeFile $outputDir";
 system($cmd) && die "Failed running cmd\n$cmd";
 
+print STDERR "Moving $ecFile to $outputDir at" . `date` . "\n";
+$cmd = "mv $ecFile $outputDir";
+system($cmd) && die "Failed running cmd\n$cmd";
 
 print STDERR "Creating orthomclTaxons.txt file in $outputDir using data from database at " . `date` . "\n";
 my $taxonFile = $outputDir."/orthomclTaxons.txt";
@@ -105,8 +108,9 @@ foreach my $group (sort keys %orthoGroups) {
 }
 close(OUT);
 
-
 print STDERR "Finished at " . `date` . "\n";
+
+
 
 sub cleanGeneArray {
     my ($geneArray) = @_;
@@ -140,9 +144,9 @@ sub getDbHandle {
 sub usage() {
   die "
 This script generates three files that are needed by Data Loaders to update ortholog data on the
-genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
+genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt, ec_organism.txt
 
-Usage: orthomclMakeGenomicSitesFiles outputDir peripheralDir peripheralMapFileName coreMapFile residualMapFile cladeFile
+Usage: orthomclMakeGenomicSitesFiles outputDir peripheralDir peripheralMapFileName coreMapFile residualMapFile cladeFile ecFile
 
 Where:
   outputDirectory: the directory that will contain all output files. This is inded to be a sub-directory of the workflow
@@ -161,5 +165,9 @@ Where:
 
   cladeFile: the full path and name of the clade file that will be copied into the new directory
        (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/orthomclClades_RSRC/OrthoMCL6/orthomclClades.txt)
+
+  ecFile: the full path and name of the ec file that will be copied into the new directory
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/OrganismNameResources/ec_organism.txt)
+
 ";
 }
