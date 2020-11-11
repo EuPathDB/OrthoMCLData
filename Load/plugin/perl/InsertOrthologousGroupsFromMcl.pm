@@ -245,17 +245,30 @@ sub undoTables {
 sub undoPreprocess {
     my ($self, $dbh, $rowAlgInvocationList) = @_;
     my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
-    my $cpr = $self->getArg('corePeripheralResidual');
-    $cpr = uc($cpr);
 
-    my $sql = "DELETE FROM apidb.OrthologGroupAaSequence WHERE ortholog_group_id in (SELECT ortholog_group_id FROM apidb.orthologgroup WHERE core_peripheral_residual = '$cpr')";
-    my $sh = $dbh->prepare($sql);
-    $sh->execute();
+    my $cpr = "";
+
+    my $sql ="
+SELECT ap.string_value
+FROM CORE.ALGORITHMPARAM ap, core.algorithmparamkey apk
+WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
+      AND ap.ROW_ALG_INVOCATION_ID IN ($rowAlgInvocations)
+      AND apk.ALGORITHM_PARAM_KEY = 'corePeripheralResidual'";
+
+    my $sh = $dbh->prepareAndExecute($sql);
+    while (my @row = $sh->fetchrow_array()) {
+	die "The corePeripheralResidual value is not C, P or R" if ($row[0] !~ /^[CPR]$/);
+	die "There are multiple corePeripheralResidual values for this step" if ($cpr ne "" && $cpr ne $row[0]);
+	$cpr = $row[0];
+    }
     $sh->finish();
 
-    my $sql = "DELETE FROM apidb.OrthologGroup WHERE core_peripheral_residual = '$cpr')";
-    my $sh = $dbh->prepare($sql);
-    $sh->execute();
+    $sql = "DELETE FROM apidb.OrthologGroupAaSequence WHERE ortholog_group_id in (SELECT ortholog_group_id FROM apidb.orthologgroup WHERE core_peripheral_residual = '$cpr')";
+    $sh = $dbh->prepareAndExecute($sql);
+    $sh->finish();
+
+    $sql = "DELETE FROM apidb.OrthologGroup WHERE core_peripheral_residual = '$cpr')";
+    $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 }
 
