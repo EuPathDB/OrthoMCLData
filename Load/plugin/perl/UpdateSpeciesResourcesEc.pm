@@ -100,7 +100,7 @@ sub run {
     my $ecFileForOrtho = "ecFromVeupath.txt";
     my $ecFileforGenomicSites = "ec_organism.txt";
     my $numEcFiles = $self->formatEcFile($dataDir,$speciesFromOrtho,$ecFileForOrtho,$ecFileforGenomicSites);
-    $self->log("Used $numEcFiles EC files obtained from Veupath to make $dataDir/$ecFileName.\n");
+    $self->log("Used $numEcFiles EC files obtained from Veupath to make $dataDir/$ecFileForOrtho and $dataDir/$ecFileforGenomicSites\n");
 }
 
 sub getSpeciesFromOrtho {
