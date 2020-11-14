@@ -310,15 +310,16 @@ sub loadOrthoResource {
 
     my $numRows=0;
     foreach my $abbrev (keys %{$species}) {
-	my $resource = $species->{$abbrev}->{resource};
+	$abbrev = "rhiz" if ($abbrev eq "rirr"); # this is temporary, because rhiz on orthomcl equals rirr on fungidb
 	my $id = $species->{$abbrev}->{orthomclId};
-	my $url = $species->{$abbrev}->{url};
-	my $version = $species->{$abbrev}->{version};
-	my $name = $species->{$abbrev}->{name};
-	if (! $resource || ! $id || ! $url || ! $version) {
-	    $self->log("incomplete record:\nabbrev: '$abbrev'\nresource '$resource'\nid '$id'\nurl '$url'\nversion '$version'\nname: '$name'\n");
+	if (! $id) {
+	    die "organism does not have an orthomcl_taxon_id:\nabbrev '$abbrev'\n";
 	    next;
 	}
+	my $resource = defined $species->{$abbrev}->{resource} ? $species->{$abbrev}->{resource} : "-"; 
+	my $url = defined $species->{$abbrev}->{url} ? $species->{$abbrev}->{url} : "-";
+	my $version = defined $species->{$abbrev}->{version} ? $species->{$abbrev}->{version} : "-";
+	my $name = defined $species->{$abbrev}->{name} ? defined $species->{$abbrev}->{name} : "-";
 	my $res = GUS::Model::ApiDB::OrthomclResource->new({'orthomcl_taxon_id'=>$id});
 	$res->set('resource_name', $resource);
 	$res->set('resource_url', $url);
@@ -370,13 +371,16 @@ sub formatEcFile {
 	my $abbrev="";
 	if ($file =~ /\/([A-Za-z]+)_ec\.txt/) {
 	    $abbrev = $1;
+	    $abbrev = "rhiz" if ($abbrev eq "rirr"); # this is temporary, because rhiz on orthomcl equals rirr on fungidb
 	} else {
 	    die "Did not find orthomcl abbrev in file name: $file\n";
 	}
 	my $organismName = $species->{$abbrev}->{name};
 	$organismName =~ s/^\s+//;
 	my @words = split(/\s/,$organismName);
-	my $genus = $words[0];
+	my $genus = "";
+	$genus = $words[0];
+	die "There is no genus for this organism: '$file' '$abbrev' '$species->{$abbrev}->{name}'" if ($genus eq "");
 
 	my $header = <IN>;
 	while (my $line = <IN>) {
