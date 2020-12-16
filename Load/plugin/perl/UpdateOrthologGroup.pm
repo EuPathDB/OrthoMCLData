@@ -456,9 +456,16 @@ WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
     my $text = join("','",keys %types);
     $text = "('$text')";
 
-    $sql = "UPDATE apidb.OrthologGroup
-               SET number_of_match_pairs = NULL
-               WHERE core_peripheral_residual in $text";    
+    $sql = "
+UPDATE apidb.OrthologGroup
+SET avg_percent_identity = NULL,
+    avg_percent_match = NULL,
+    avg_evalue_mant = NULL,
+    avg_evalue_exp = NULL,
+    avg_connectivity = NULL,
+    number_of_match_pairs = NULL,
+    percent_match_pairs = NULL
+WHERE core_peripheral_residual in $text";    
     $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 }
