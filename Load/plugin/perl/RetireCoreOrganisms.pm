@@ -235,12 +235,15 @@ sub updateFiles {
 	   my $changed = $abbrev."-old|";
 	   $abbrev .= "|";
 	   my $cmd = "sed -i 's/$abbrev/$changed/g' $fullPath";
+	   $self->log("Running command: $cmd\n");
 	   system($cmd);
        }
        if ($file eq 'coreGood.fasta') {
 	   my $cmd = "scp $fullPath $clusterUser\@$cluster:\"$clusterDir\"";
+	   $self->log("Running command: $cmd\n");
 	   system($cmd);
 	   $cmd = "ssh -2 $clusterUser\@$cluster \"cd $clusterDir; formatdb -i coreGood.fasta -p T\"";
+	   $self->log("Running command: $cmd\n");
 	   system($cmd);
        }
    }
