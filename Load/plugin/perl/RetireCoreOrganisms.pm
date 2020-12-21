@@ -238,7 +238,7 @@ sub updateFiles {
 	   system($cmd);
        }
        if ($file eq 'coreGood.fasta') {
-	   $cmd = "scp $fullPath $clusterUser@$cluster:\"$clusterDir\"";
+	   my $cmd = "scp $fullPath $clusterUser@$cluster:\"$clusterDir\"";
 	   system($cmd);
 	   $cmd = "ssh -2 $clusterUser@$cluster \"cd $clusterDir; formatdb -i coreGood.fasta -p T\"";
 	   system($cmd);
