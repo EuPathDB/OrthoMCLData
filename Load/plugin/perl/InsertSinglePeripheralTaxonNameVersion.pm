@@ -242,7 +242,7 @@ WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
     }
 
     $sql = "
-DELETE FROM apidb.OrthologGroup
+DELETE FROM apidb.OrthomclTaxon
 WHERE three_letter_abbrev = '$oneAbbrev'";
 
     $sh = $dbh->prepareAndExecute($sql);
