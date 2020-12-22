@@ -205,8 +205,48 @@ AND taxon_id IS NULL
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.OrthomclTaxon'
+  return (
 	 );
+}
+
+
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+
+    my %abbrev;
+    my $sql = " 
+SELECT ap.string_value
+FROM CORE.ALGORITHMPARAM ap, core.algorithmparamkey apk
+WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
+      AND ap.ROW_ALG_INVOCATION_ID IN ($rowAlgInvocations)
+      AND apk.ALGORITHM_PARAM_KEY = 'abbrev'";
+    my $sh = $dbh->prepareAndExecute($sql);
+    while (my @row = $sh->fetchrow_array()) {
+	$abbrev{$row[0]} = 1;
+    }
+    $sh->finish();
+
+    my $oneAbbrev;
+    my $n = keys %abbrev;
+    if ($n > 1) {
+	$self->log("Error. There should be one abbrev value for this step but there are $n: ");
+	$self->log("'".$_."' ") foreach (keys %abbrev);
+	$self->("\n");
+	die;
+    } elsif ($n == 0) {
+        $self->log("Error. There is no abbrev value for this step.\n");
+	die;
+    } else {
+	$oneAbbrev = $_ foreach (keys %abbrev);
+    }
+
+    $sql = "
+DELETE FROM apidb.OrthologGroup
+WHERE three_letter_abbrev = '$oneAbbrev'";
+
+    $sh = $dbh->prepareAndExecute($sql);
+    $sh->finish();
 }
 
 1;
