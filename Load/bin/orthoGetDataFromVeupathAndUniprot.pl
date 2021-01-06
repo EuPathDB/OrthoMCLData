@@ -38,7 +38,7 @@ exit;
 sub getBaseUrls {
     my ($type) = @_;
 
-    my $first = "https://qa.";
+    my $first = "https://";
 
     my $last;
     if ($type eq "organism") {
