@@ -34,20 +34,20 @@ foreach my $group (keys %{$groupsToTest}) {
     my $groupScoresFile = "$outputDirectory/$group/scores.txt";
     open(my $outFh,">",$outputFileStats) || die "Cannot open $outputFileStats for writing\n";
 
-    my $proteinIds = getProteinInfo($group,$includeOld,$dbh,$outputProteinFile);
-    my $viableEcNumbers = getViableEcNumbers($proteinIds,$minNumGenera,$minNumProteins,$outFh);
+    my $proteinIds = &getProteinInfo($group,$includeOld,$dbh,$outputProteinFile);
+    my $viableEcNumbers = &getViableEcNumbers($proteinIds,$minNumGenera,$minNumProteins,$outFh);
     
     my $domainStatsPerEc;
     my $domainPerProtein;
-    if (numProteinsWithDomainAndEc($proteinIds) > 1) {
-	($domainStatsPerEc,$domainPerProtein) = ecDomainStats($proteinIds,$viableEcNumbers,$outFh);
+    if (&numProteinsWithDomainAndEc($proteinIds) > 1) {
+	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$viableEcNumbers,$outFh);
     }
 
-    my $lengthStatsPerEc = ecLengthStats($proteinIds,$viableEcNumbers,$outFh);
+    my $lengthStatsPerEc = &ecLengthStats($proteinIds,$viableEcNumbers,$outFh);
 
-    my ($blastStatsPerEc,$blastStatsPerProtein) = ecBlastStats($blastInputFile,$proteinIds,$viableEcNumbers,$includeOld,$outFh);
+    my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$outFh);
 
-    outputProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
+    &outputProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
 
 }
 
@@ -55,19 +55,37 @@ $dbh->disconnect();
 exit;
 
 
-sub ecBlastStats {
-    my ($proteinIds,$viableEcNumbers,$includeOld,$outFh) = @_;
 
-    # read in blast e-values
-    my $blastEvalues;      # id -> ec -> (-5,-6.4,-150.3)
+
+################################  SUBROUTINES  ########################################
+
+
+sub ecBlastStats {
+    my ($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$outFh) = @_;
+
+    my ($blastEvalues,$blastPerEc) = &readBlastEvaluesFromDatabase($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$outFh);
+    my @orderedViableEcs = sort keys %{$viableEcNumbers};
+    my $blastStatsPerEc = &calculateBlastStatsPerEc(\@orderedViableEcs,$blastPerEc,$outFh);
+    my $blastStatsPerProtein = &calculateBlastStatsPerProtein(\@orderedViableEcs,$blastEvalues,$outFh);
+    
+    return ($blastStatsPerEc,$blastStatsPerProtein);
+}
+
+sub readBlastEvaluesFromDatabase {
+    my ($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$outFh) = @_;
+
+    my $blastEvalues;    # id -> ec -> (-5,-6.4,-150.3)
     my $blastPerEc;        # ec -> (-5,-6.4,-150.3)  only if both proteins have EC
-    open(IN,$blastInputFile) || die "Cannot open $blastInputFile\n";
+
     my $missing;
-    while (my $line = <IN>) {
-	chomp($line);
-	$line =~ s/"//g;
-	next if ($line !~ /^[^\|]{4,8}\|/);
-	my ($query,$subject,$mantua,$exponent) = split("\t",$line);
+    my $query = $dbh->prepare(<<SQL);
+SELECT ssg.query_id, ssg.subject_id, ssg.evalue_mant, ssg.evalue_exp,
+FROM apidb.similarSequencesGroupCore ssg, apidb.orthologGroup og
+WHERE ssg.ortholog_group_id=og.ortholog_group_id AND og.name='$group';
+SQL
+    
+    $query->execute();
+    while (my($query,$subject,$manuta,$exponent) = $query->fetchrow_array()) {
 	next if ($includeOld =~ /[Nn]o/ && ($query =~ /-old\|/ || $subject =~ /-old\|/));
 	next if (&proteinDoesNotExist($subject,$proteinIds,$outFh,$missing));
 	next if (&proteinDoesNotExist($query,$proteinIds,$outFh,$missing));
@@ -79,25 +97,29 @@ sub ecBlastStats {
 	my $exponentFromMantua = log($mantua)/log(10);
 	$exponent += $exponentFromMantua;
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
-	    if (proteinHasThisEcNumber($proteinIds->{$query},$viableEc) && proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
+	    if (&proteinHasThisEcNumber($proteinIds->{$query},$viableEc) && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
 		&addArrayElement($blastPerEc->{$viableEc},$exponent);
 	    }
-	    if ($subjectHasEc && proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
+	    if ($subjectHasEc && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
 		&addArrayElement($blastEvalues->{$query}->{$viableEc},$exponent);
 	    }
-	    if ($queryHasEc && proteinHasThisEcNumber($proteinIds->{$query},$viableEc)) {
+	    if ($queryHasEc && &proteinHasThisEcNumber($proteinIds->{$query},$viableEc)) {
 		&addArrayElement($blastEvalues->{$subject}->{$viableEc},$exponent);
 	    }
 	}
     }
-    close IN;
+    $query->finish();
 
-    # calculate and print stats for each EC number
-    my @ecArray = sort keys %{$viableEcNumbers};
+    return ($blastEvalues,$blastPerEc);
+}
+
+sub calculateBlastStatsPerEc {
+    my ($orderedEcs,$blastPerEc,$outFh) = @_;
+
     print $outFh "\nBLAST_STATISTICS\n";
     print $outFh "ec_number\tnum_values\tminimum\tmaximum\tmedian\tmean\tstd_dev\n";
     my $blastStatsPerEc;
-    foreach my $ec (@ecArray) {
+    foreach my $ec (@{$orderedEcs}) {
 	print $outFh "$ec";
 	my $noValues;
 	$noValues = 1 if (! exists $blastPerEc->{$ec});   # this EC does not have any blast partners
@@ -109,7 +131,7 @@ sub ecBlastStats {
 	print  $outFh "\t$blastStatsPerEc->{$ec}->{max}";
 	$blastStatsPerEc->{$ec}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastPerEc->{$ec}));
 	print  $outFh "\t$blastStatsPerEc->{$ec}->{median}";
-	my ($mean,$sd) = meanSd($blastPerEc->{$ec}) if (! $noValues);;
+	my ($mean,$sd) = meanSd($blastPerEc->{$ec}) if (! $noValues);
 	$blastStatsPerEc->{$ec}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
 	print  $outFh "\t$blastStatsPerEc->{$ec}->{mean}";
 	$blastStatsPerEc->{$ec}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
@@ -117,15 +139,18 @@ sub ecBlastStats {
 	print $outFh "\n";
     }
     print $outFh "\n";
-    
-    # loop through and calculate stats for each protein
-    # ec -> id -> min,max,mean,sd,median,num e-values
+    return $blastStatsPerEc;
+}
+
+sub calculateBlastStatsPerProtein {
+    my ($orderedEcs,$blastEvalues,$outFh);
+
     print $outFh "GENE\t";
-    foreach my $ec (@ecArray) {
+    foreach my $ec (@{$orderedEcs}) {
 	print $outFh "$ec\t\t\t\t\t\t";
     }
     print $outFh "\n";
-    foreach my $ec (@ecArray) {
+    foreach my $ec (@{$orderedEcs}) {
 	print $outFh "\tnumber_values\tminimum\tmaximum\tmedian\tmean\tstd_dev";
     }
     print $outFh "\n";
@@ -133,7 +158,7 @@ sub ecBlastStats {
     my $blastStatsPerProtein;
     foreach my $id (keys %{$blastEvalues}) {
 	print $outFh "$id";
-	foreach my $viableEc ( @ecArray ) {
+	foreach my $viableEc ( @{$orderedEcs} ) {
 	    my $noValues;
 	    $noValues = 1 if (! exists $blastEvalues->{$id}->{$viableEc});   # this id does not have blast partner containing this EC number
 	    $blastStatsPerProtein->{$viableEc}->{$id}->{numValues} = $noValues ? 0 : scalar @{$blastEvalues->{$id}->{$viableEc}};
@@ -153,8 +178,9 @@ sub ecBlastStats {
 	print $outFh "\n";
     }
     print $outFh "\n";
-    return ($blastStatsPerEc,$blastStatsPerProtein);
+    return $blastStatsPerProtein;
 }
+
 
 sub proteinDoesNotExist {
     my ($proteinName,$proteinIds,$outFh,$missing) = @_;
@@ -796,7 +822,7 @@ sub getProteinsFromDatabase {
     my $query = $dbh->prepare(<<SQL);
 SELECT full_id,product,length,core_peripheral,group_name,taxon_name                                     
 FROM ApidbTuning.SequenceAttributes sa
-WHERE group_name=$group
+WHERE group_name='$group'
 SQL
     
     $query->execute();
