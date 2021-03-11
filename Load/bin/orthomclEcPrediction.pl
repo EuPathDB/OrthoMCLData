@@ -47,6 +47,8 @@ foreach my $group (keys %{$groupsToTest}) {
 
     my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$outFh);
 
+    close $outFh;
+
     &outputProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
 
 }
@@ -78,11 +80,7 @@ sub readBlastEvaluesFromDatabase {
     my $blastPerEc;        # ec -> (-5,-6.4,-150.3)  only if both proteins have EC
 
     my $missing;
-    my $query = $dbh->prepare(<<SQL);
-SELECT ssg.query_id, ssg.subject_id, ssg.evalue_mant, ssg.evalue_exp,
-FROM apidb.similarSequencesGroupCore ssg, apidb.orthologGroup og
-WHERE ssg.ortholog_group_id=og.ortholog_group_id AND og.name='$group';
-SQL
+    my $query = $dbh->prepare(&blastSql($group));
     
     $query->execute();
     while (my($query,$subject,$manuta,$exponent) = $query->fetchrow_array()) {
@@ -341,67 +339,49 @@ sub getParent {
 }
 
 sub getBackgroundDomainCount {
-    my ($domainCountFile,$domainFile,$proteinFile,$includeOld) = @_;
-
-    my $domainCount;
-    
+    my ($domainCountFile,$dbh,$includeOld) = @_;
+    my $domainCount;    
     if (-e $domainCountFile) {
-	open(IN,$domainCountFile) || die "Cannot open $domainCountFile\n";
-        my $header = <IN>;
-	my $totalLine = <IN>;
-	chomp($totalLine);
-	my ($text,$numProteins) = split("\t",$totalLine);
-	$domainCount->{numProteins} = $numProteins;
-	while (my $line=<IN>) {
-	    chomp($line);
-	    my ($domain,$num) = split("\t",$line);
-	    $domainCount->{domain}->{$domain} = $num;
-	}
-	close IN;
-
+	$domainCount = &readDomainCountFile($domainCountFile);
     } else {
-	my $domainCount->{numProteins} = getNumProteins($proteinFile,$includeOld);
-
-	open(IN,$domainFile) || die "Cannot open $domainFile\n";
-	my %seen;
-	while (<IN>) {
-	    my $line = $_;
-	    chomp $line;
-	    $line =~ s/"//g;
-	    next if ($line !~ /^[^\|]{4,8}\|/);
-	    my ($id,$domain) = split("\t",$line);
-	    next if ($includeOld =~ /[Nn]o/ && $id =~ /-old\|/);
-	    next if ($seen{$id.$domain});
-	    $seen{$id.$domain} = 1;
-	    $domainCount->{domain}->{$domain}++;
-	}
-	close IN;
-
-	open(OUT,">",$domainCountFile) || die "Cannot open $domainCountFile for writing\n";
-	print OUT "DOMAIN\tNUM_PROTEINS\n";
-	print OUT "all_proteins\t$domainCount->{numProteins}\n";
-	foreach my $domain (keys %{$domainCount->{domain}}) {
-	    print OUT "$domain\t$domainCount->{domain}->{$domain}\n";
-	}
-	close OUT;
+	$domainCount = &countAllDomainsFromDatabase($dbh,$includeOld);
+	&writeDomainCountFile($domainCount,$domainCountFile);
+	$domainCount->{numProteins} = &getNumProteinsFromDatabase($dbh,$includeOld);
     }
     return $domainCount;
 }
 
+sub readDomainCountFile {
+    my ($domainCountFile) = @_;
+    my $domainCount;
 
-sub getNumProteins {
-    my ($proteinFile,$includeOld) = @_;
-    my $numProteins=0;
-
-    open(IN,$proteinFile) || die "Cannot open $proteinFile\n";
-    while (<IN>) {
-	my $line = $_;
-	chomp $line;
-	$line =~ s/"//g;
-	next if ($includeOld =~ /[Nn]o/ && $line =~ /^[^\|]{4}-old\|/);
-        $numProteins++ if ($line =~ /^[^\|]{4,8}\|/);
+    open(IN,$domainCountFile) || die "Cannot open $domainCountFile\n";
+    my $header = <IN>;
+    my $totalLine = <IN>;
+    chomp($totalLine);
+    my ($text,$numProteins) = split("\t",$totalLine);
+    $domainCount->{numProteins} = $numProteins;
+    while (my $line=<IN>) {
+	chomp($line);
+	my ($domain,$num) = split("\t",$line);
+	$domainCount->{domain}->{$domain} = $num;
     }
     close IN;
+    return $domainCount;
+}
+
+
+
+sub getNumProteinsFromDatabase {
+    my ($dbh,$includeOld) = @_;
+    my $numProteins=0;
+
+    my $query = $dbh->prepare(&numProteinsSql($includeOld));
+    $query->execute();
+    while (my($count) = $query->fetchrow_array()) {
+	$numProteins = $count;
+    }
+    $query->finish();
     return $numProteins;
 }
 
@@ -510,42 +490,9 @@ sub ecDomainStats {
 
     my $domainToLetter = getDomainKey($proteinIds,$outFh);
        
-    # for each viable EC number, determine number of proteins with each domain string and sub-string
-    my $ecNumbers;    # ec -> domain -> count
-    my $domainPerProtein;  # id -> domain
-    print $outFh "GENE\tDOMAINS\n";
-    foreach my $id (keys %{$proteinIds}) {
-	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
-	my $domainString = getDomain($proteinIds->{$id},$domainToLetter);
-	$domainPerProtein->{$id} = $domainString;
-	print $outFh "$id\t$domainString\n";
-	my $domains = getAllPossibleCombinations($domain,"");
-	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
-	    if (proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
-		foreach my $domainString (keys %{$domains}) {
-		    $ecNumbers->{$viableEc}->{domainString}->{$domainString}->{count}++;
-		}
-	    }
-	}
-    }
-    print $outFh "\n";
-	
-    # for each EC number, calculate total number of proteins
-    # for each string, calculate score
-    foreach my $ec (keys %{$ecNumbers}) {
-	$ecNumbers->{$ec}->{numProteins} = $viableEcNumbers->{$ec}->{numProteins};
-	foreach my $string ( keys %{$ecNumbers->{$ec}->{domainString}} ) {
-	    $ecNumbers->{$ec}->{domainString}->{$string}->{score} =  $ecNumbers->{$ec}->{domainString}->{$string}->{count} / $viableEcNumbers->{$ec}->{numProteins};
-	}
-    }
-
-    # for each EC number, calculate max score
-    foreach my $ec (keys %{$ecNumbers}) {
-	$ecNumbers->{$ec}->{maxScore} = 0;
-	foreach my $string ( keys %{$ecNumbers->{$ec}->{domainString}} ) {
-	    $ecNumbers->{$ec}->{maxScore} += $ecNumbers->{$ec}->{domainString}->{$string}->{score};
-	}
-    }
+    my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$viableEcNumbers,$domainToLetter,$outFh);
+    &calculateDomainNumAndScore($ecNumbers,$viableEcNumbers);
+    &calculateDomainMaxScore($ecNumbers);
 
     print $outFh "EC_NUMBER\tDOMAIN_STRING\tNUM_PROTEINS\tSCORE\n";
     foreach my $ec (sort keys %{$ecNumbers}) {
@@ -559,6 +506,48 @@ sub ecDomainStats {
     print $outFh "\n";
 
     return ($ecNumbers,$domainPerProtein);
+}
+
+sub getAllDomainStringsPerEc {
+    my ($proteinIds,$viableEcNumbers,$domainToLetter,$outFh) = @_;
+    my ($ecNumbers,$domainPerProtein);
+    print $outFh "GENE\tDOMAINS\n";
+    foreach my $id (keys %{$proteinIds}) {
+	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
+	my $domainString = &getDomain($proteinIds->{$id},$domainToLetter);
+	$domainPerProtein->{$id} = $domainString;
+	print $outFh "$id\t$domainString\n";
+	my $domains = &getAllPossibleCombinations($domain,"");
+	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
+	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
+		foreach my $domainString (keys %{$domains}) {
+		    $ecNumbers->{$viableEc}->{domainString}->{$domainString}->{count}++;
+		}
+	    }
+	}
+    }
+    print $outFh "\n";
+    return ($ecNumbers,$domainPerProtein);
+}
+
+sub calculateDomainNumAndScore {
+    my ($ecNumbers,$viableEcNumbers) = @_;
+    foreach my $ec (keys %{$ecNumbers}) {
+	$ecNumbers->{$ec}->{numProteins} = $viableEcNumbers->{$ec}->{numProteins};
+	foreach my $string ( keys %{$ecNumbers->{$ec}->{domainString}} ) {
+	    $ecNumbers->{$ec}->{domainString}->{$string}->{score} =  $ecNumbers->{$ec}->{domainString}->{$string}->{count} / $viableEcNumbers->{$ec}->{numProteins};
+	}
+    }
+}
+
+sub calculateDomainMaxScore {
+    my ($ecNumbers) = @_;
+    foreach my $ec (keys %{$ecNumbers}) {
+	$ecNumbers->{$ec}->{maxScore} = 0;
+	foreach my $string ( keys %{$ecNumbers->{$ec}->{domainString}} ) {
+	    $ecNumbers->{$ec}->{maxScore} += $ecNumbers->{$ec}->{domainString}->{$string}->{score};
+	}
+    }
 }
 
 sub getDomain {
@@ -819,11 +808,7 @@ sub getProteinInfo {
 sub getProteinsFromDatabase {
     my ($proteinIds,$group,$includeOld,$dbh) = @_;
 
-    my $query = $dbh->prepare(<<SQL);
-SELECT full_id,product,length,core_peripheral,group_name,taxon_name                                     
-FROM ApidbTuning.SequenceAttributes sa
-WHERE group_name='$group'
-SQL
+    my $query = $dbh->prepare(&proteinsSql($group));
     
     $query->execute();
     while (my($id,$product,$length,$corePeripheral,$group,$taxon) = $query->fetchrow_array()) {
@@ -840,27 +825,23 @@ SQL
     return $proteinIds;
 }
 
-
-sub getEcsFromDatabase {
-    my ($proteinIds,$includeOld,$dbh) = @_;
-
+sub createIdString {
+    my ($proteinIds,$includeOld) = @_;
     my @ids;
     foreach my $id (keys %{$proteinIds}) {
 	next if ($includeOld =~ /[Nn]o/ && $id =~ /-old\|/);
 	push @ids, $id;
     }
     my $idString = join("','",@ids);
-    $idString = "('".$idString."')";
+    return "('".$idString."')";
+}
 
-    my $query = $dbh->prepare(<<SQL);
-SELECT eas.secondary_identifier,ec.ec_number
-FROM SRes.EnzymeClass ec,
-     DoTS.AASequenceEnzymeClass aaec,
-     dots.ExternalAASequence eas
-WHERE ec.enzyme_class_id = aaec.enzyme_class_id
-      AND aaec.aa_sequence_id = eas.aa_sequence_id
-      AND eas.secondary_identifier IN $idString
-SQL
+sub getEcsFromDatabase {
+    my ($proteinIds,$includeOld,$dbh) = @_;
+
+    my $idString = createIdString($proteinIds,$includeOld);
+
+    my $query = $dbh->prepare(&ecsSql($idString));
     
     $query->execute();
     while (my($id,$ecString) = $query->fetchrow_array()) {
@@ -876,8 +857,7 @@ SQL
     
     # sort EC numbers for each protein
     foreach my $id (keys %{$proteinIds}) {
-	my @sortedEcs = sort @{$proteinIds->{$id}->{ec}};
-	@{$proteinIds->{$id}->{ec}} = @sortedEcs;
+	@{$proteinIds->{$id}->{ec}} = sort @{$proteinIds->{$id}->{ec}};
     }
     
     return $proteinIds;
@@ -886,20 +866,9 @@ SQL
 sub getDomainsFromDatabase {
     my ($proteinIds,$includeOld,$dbh) = @_;
 
-    my @ids;
-    foreach my $id (keys %{$proteinIds}) {
-	next if ($includeOld =~ /[Nn]o/ && $id =~ /-old\|/);
-	push @ids, $id;
-    }
-    my $idString = join("','",@ids);
-    $idString = "('".$idString."')";
+    my $idString = createIdString($proteinIds,$includeOld);
 
-    my $query = $dbh->prepare(<<SQL);
-SELECT full_id,accession
-FROM ApidbTuning.DomainAssignment
-WHERE full_id IN $idString
-ORDER BY full_id,start_min
-SQL
+    my $query = $dbh->prepare(&domainsSql($idString));
 
     $query->execute();
     while (my($id,$domain) = $query->fetchrow_array()) {
@@ -908,6 +877,34 @@ SQL
     }
     $query->finish();
     return $proteinIds;
+}
+
+sub countAllDomainsFromDatabase {
+    my ($dbh,$includeOld) = @_;
+    my $query = $dbh->prepare(&allDomainsSql);
+    $query->execute();
+    my $domainCount;
+    my %seen;
+    while (my($id,$domain) = $query->fetchrow_array()) {
+	next if ($includeOld =~ /[Nn]o/ && $id =~ /-old\|/);
+	next if ($seen{$id.$domain});  # because counting number proteins per domain
+	$seen{$id.$domain} = 1;
+	$domainCount->{domain}->{$domain}++;	
+    }
+    $query->finish();
+    return $domainCount;
+}
+
+sub writeDomainCountFile {
+    my ($domainCount,$domainCountFile) = @_;
+
+    open(OUT,">",$domainCountFile) || die "Cannot open $domainCountFile for writing\n";
+    print OUT "DOMAIN\tNUM_PROTEINS\n";
+    print OUT "all_proteins\t$domainCount->{numProteins}\n";
+    foreach my $domain (keys %{$domainCount->{domain}}) {
+	print OUT "$domain\t$domainCount->{domain}->{$domain}\n";
+    }
+    close OUT;
 }
    
 sub getGroupsFromProteins {
@@ -927,14 +924,7 @@ sub getGroupsFromDatabase {
     my ($minNumProteinsWithEc,$dbh) = @_;
     my %groups;
     
-    my $query = $dbh->prepare(<<SQL);
-SELECT group_name
-FROM (SELECT group_name,count(ec_numbers) as num_proteins                         
-      FROM ApidbTuning.SequenceAttributes sa
-      WHERE ec_numbers IS NOT NULL
-      GROUP BY group_name)
-WHERE num_proteins >= $minNumProteinsWithEc
-SQL
+    my $query = $dbh->prepare(&groupsSql($minNumProteinsWithEc));
 
     $query->execute();
     while (my($group) = $query->fetchrow_array()) {
@@ -942,6 +932,54 @@ SQL
     }
     $query->finish();
     return \%groups;
+}
+
+sub allDomainsSql {
+    return "SELECT full_id,accession FROM ApidbTuning.DomainAssignment";
+}
+
+sub domainsSql {
+    my ($idString) = @_;
+    return "SELECT full_id,accession FROM ApidbTuning.DomainAssignment
+            WHERE full_id IN $idString ORDER BY full_id,start_min";
+}
+
+sub ecsSql {
+    my ($idString) = @_;
+    return "SELECT eas.secondary_identifier,ec.ec_number
+            FROM SRes.EnzymeClass ec, DoTS.AASequenceEnzymeClass aaec,
+                 dots.ExternalAASequence eas
+            WHERE ec.enzyme_class_id = aaec.enzyme_class_id AND aaec.aa_sequence_id = eas.aa_sequence_id
+                  AND eas.secondary_identifier IN $idString";
+}
+
+sub proteinsSql {
+    my ($group) = @_;
+    return "SELECT full_id,product,length,core_peripheral,group_name,taxon_name                                     
+            FROM ApidbTuning.SequenceAttributes WHERE group_name='$group'";
+}
+
+sub groupsSql {
+    my ($minNumProteinsWithEc) = @_;
+    return "SELECT group_name
+            FROM (SELECT group_name,count(ec_numbers) as num_proteins                         
+                  FROM ApidbTuning.SequenceAttributes sa
+                  WHERE ec_numbers IS NOT NULL
+                  GROUP BY group_name)
+            WHERE num_proteins >= $minNumProteinsWithEc";
+}
+
+sub blastSql {
+    my ($group) = @_;
+    return "SELECT ssg.query_id, ssg.subject_id, ssg.evalue_mant, ssg.evalue_exp,
+            FROM apidb.similarSequencesGroupCore ssg, apidb.orthologGroup og
+            WHERE ssg.ortholog_group_id=og.ortholog_group_id AND og.name='$group'";
+}
+
+sub numProteinsSql {
+    my ($includeOld) = @_;
+    my $whereClause = $includeOld =~ /[Nn]o/ ? "WHERE secondary_identifier NOT LIKE '%-old|%'" : "";
+    return = "SELECT COUNT(*) FROM dots.ExternalAaSequence $whereClause";
 }
 
 sub getDbHandle {
