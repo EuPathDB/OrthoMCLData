@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 use warnings;
 use strict;
 use Data::Dumper;
@@ -6,7 +7,7 @@ use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 use DBI;
 
-# example command line:  perl prediction.pl /home/markhick/ec 'no'
+# example command line:  orthomclEcPrediction.pl /home/markhick/ec 'no'
 # good groups to study: OG6_100435, OG6_101725
 
 my $outputDirectory = $ARGV[0];
@@ -26,9 +27,13 @@ my $minNumProteins = 1;
 
 my $dbh = getDbHandle();
 
-my $groupsToTest = getGroupsFromDatabase($minNumProteinsWithEc,$dbh);
+#my $groupsToTest = getGroupsFromDatabase($minNumProteinsWithEc,$dbh);
+
+my $groupsToTest;
+$groupsToTest->{"OG6_100718"} = 1;
 
 foreach my $group (keys %{$groupsToTest}) {
+    &makeDir("$outputDirectory/$group");
     my $outputFileStats = "$outputDirectory/$group/stats.txt";
     my $outputProteinFile = "$outputDirectory/$group/proteins.txt";
     my $groupScoresFile = "$outputDirectory/$group/scores.txt";
@@ -82,7 +87,7 @@ sub readBlastEvaluesFromDatabase {
     my $query = $dbh->prepare(&blastSql($group));
     
     $query->execute();
-    while (my($query,$subject,$manuta,$exponent) = $query->fetchrow_array()) {
+    while (my($query,$subject,$mantua,$exponent) = $query->fetchrow_array()) {
 	next if ($includeOld =~ /[Nn]o/ && ($query =~ /-old\|/ || $subject =~ /-old\|/));
 	next if (&proteinDoesNotExist($subject,$proteinIds,$outFh,$missing));
 	next if (&proteinDoesNotExist($query,$proteinIds,$outFh,$missing));
@@ -95,13 +100,13 @@ sub readBlastEvaluesFromDatabase {
 	$exponent += $exponentFromMantua;
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$query},$viableEc) && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
-		&addArrayElement($blastPerEc->{$viableEc},$exponent);
+		$blastPerEc->{$viableEc} = &addArrayElement($blastPerEc->{$viableEc},$exponent);
 	    }
 	    if ($subjectHasEc && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
-		&addArrayElement($blastEvalues->{$query}->{$viableEc},$exponent);
+		$blastEvalues->{$query}->{$viableEc} = &addArrayElement($blastEvalues->{$query}->{$viableEc},$exponent);
 	    }
 	    if ($queryHasEc && &proteinHasThisEcNumber($proteinIds->{$query},$viableEc)) {
-		&addArrayElement($blastEvalues->{$subject}->{$viableEc},$exponent);
+		$blastEvalues->{$subject}->{$viableEc} = &addArrayElement($blastEvalues->{$subject}->{$viableEc},$exponent);
 	    }
 	}
     }
@@ -150,7 +155,7 @@ sub printBlastStatsPerEc {
 
 
 sub calculateBlastStatsPerProtein {
-    my ($orderedEcs,$blastEvalues,$outFh);
+    my ($orderedEcs,$blastEvalues,$outFh) = @_;
     
     my $blastStatsPerProtein;
     foreach my $id (keys %{$blastEvalues}) {
@@ -247,7 +252,7 @@ sub getUniqueEcNumbersFromProteins {
     my $ecs;
     foreach my $id (keys %{$proteinIds}) {
 	foreach my $ec ( @{$proteinIds->{$id}->{ec}} ) {
-	    $ecs->{$ec};
+	    $ecs->{$ec} = 1;
 	}
     }
     return $ecs;
@@ -281,13 +286,13 @@ sub getNumProteinsGeneraForEachEc {
     foreach my $id (keys %{$proteinIds}) {
 	my $genus = &getGenusFromProtein($proteinIds->{$id});
 	foreach my $ec ( keys %{$allEcNumbers} ) {
-	    if &proteinHasThisEcNumber($proteinIds->{$id},$ec) {
+	    if (&proteinHasThisEcNumber($proteinIds->{$id},$ec)) {
 		$ecNumbersWithCounts->{$ec}->{numProteins}++;
-		&addArrayElement($ecGenera->{$ec},$genus);
+		$ecGenera->{$ec} = &addArrayElement($ecGenera->{$ec},$genus);
 	    }
 	}
     }
-
+    
     &addNumberGenera($ecNumbersWithCounts,$ecGenera);
     return $ecNumbersWithCounts;
 }
@@ -300,11 +305,12 @@ sub getGenusFromProtein {
 
 sub addArrayElement {
     my ($arrayRef,$element) = @_;
-    if (exists $arrayRef) {
+    if (defined $arrayRef) {
 	push @{$arrayRef}, $element;
     } else {
 	$arrayRef = [$element];
     }
+    return $arrayRef;
 }
 
 sub addNumberGenera {
@@ -335,7 +341,7 @@ sub deletePartialEcNumbers {
     foreach my $ec (keys %{$ecs}) {
 	my ($a,$b,$c,$d) = split(/\./,$ec);
 	next if ($c eq "-" && $d eq "-");   # there are no parents of this one
-	$parentEc = getParent($ec);
+	my $parentEc = getParent($ec);
 	if ($parentEc && exists $ecs->{$parentEc}) {
 	    if ($ecs->{$ec}->{numProteins} == $ecs->{$parentEc}->{numProteins}) {
 		$toDelete{$parentEc} = 1;      # if parent has same number proteins then delete parent
@@ -410,7 +416,7 @@ sub ecLengthStats {
 	next if ( scalar @{$proteinIds->{$id}->{ec}} == 0 );
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
-		&addArrayElement($ecNumbers->{$viableEc},$proteinIds->{$id}->{length});
+		$ecNumbers->{$viableEc} = &addArrayElement($ecNumbers->{$viableEc},$proteinIds->{$id}->{length});
 	    }
 	}
     }
@@ -494,12 +500,12 @@ sub median {
 
 sub proteinHasThisEcNumber {
     my ($protein,$ecNumber) = @_;
-    my ($a1,$b1,$c1,$d1) = split(".",$ecNumber);
+    my ($a1,$b1,$c1,$d1) = split(/\./,$ecNumber);
     foreach my $currentEc ( @{$protein->{ec}} ) {
-	my ($a2,$b2,$c2,$d2) = split(".",$currentEc);
+	my ($a2,$b2,$c2,$d2) = split(/\./,$currentEc);
 	$c2 = "-" if ($c1 eq "-");
 	$d2 = "-" if ($d1 eq "-");
-	if ($a1 eq $a2 && $b1 eq $b2 && $c1 eq $c2 && $d1 eq $d2) {
+	if (($a1 eq $a2) && ($b1 eq $b2) && ($c1 eq $c2) && ($d1 eq $d2)) {
 	    return 1;
 	}
     }
@@ -553,11 +559,11 @@ sub getAllDomainStringsPerEc {
 	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
 	my $domainString = &getDomain($proteinIds->{$id},$domainToLetter);
 	$domainPerProtein->{$id} = $domainString;
-	my $domains = &getAllPossibleCombinations($domain,"");
+	my $domains = &getAllPossibleCombinations($domainString,"");
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
-		foreach my $domainString (keys %{$domains}) {
-		    $ecNumbers->{$viableEc}->{domainString}->{$domainString}->{count}++;
+		foreach my $domain (keys %{$domains}) {
+		    $ecNumbers->{$viableEc}->{domainString}->{$domain}->{count}++;
 		}
 	    }
 	}
@@ -1006,7 +1012,7 @@ sub groupsSql {
 
 sub blastSql {
     my ($group) = @_;
-    return "SELECT ssg.query_id, ssg.subject_id, ssg.evalue_mant, ssg.evalue_exp,
+    return "SELECT ssg.query_id, ssg.subject_id, ssg.evalue_mant, ssg.evalue_exp
             FROM apidb.similarSequencesGroupCore ssg, apidb.orthologGroup og
             WHERE ssg.ortholog_group_id=og.ortholog_group_id AND og.name='$group'";
 }
@@ -1014,7 +1020,7 @@ sub blastSql {
 sub numProteinsSql {
     my ($includeOld) = @_;
     my $whereClause = $includeOld =~ /[Nn]o/ ? "WHERE secondary_identifier NOT LIKE '%-old|%'" : "";
-    return = "SELECT COUNT(*) FROM dots.ExternalAaSequence $whereClause";
+    return "SELECT COUNT(*) FROM dots.ExternalAaSequence $whereClause";
 }
 
 sub getDbHandle {
@@ -1032,4 +1038,9 @@ sub getDbHandle {
   $dbh->{AutoCommit} = 0;
 
   return $dbh;
+}
+
+sub makeDir {
+    my ($dir) = @_;
+    mkdir($dir) || die "Unable to create directory '$dir'" unless (-e $dir);
 }
