@@ -39,7 +39,7 @@ foreach my $group (keys %{$groupsToTest}) {
     
     my $domainStatsPerEc;
     my $domainPerProtein;
-    if (&numProteinsWithDomainAndEc($proteinIds) > 1) {
+    if (&numProteinsWithDomainAndEc($proteinIds) > 0) {
 	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$viableEcNumbers,$outFh);
     }
 
@@ -78,7 +78,6 @@ sub readBlastEvaluesFromDatabase {
 
     my $blastEvalues;    # id -> ec -> (-5,-6.4,-150.3)
     my $blastPerEc;        # ec -> (-5,-6.4,-150.3)  only if both proteins have EC
-
     my $missing;
     my $query = $dbh->prepare(&blastSql($group));
     
@@ -114,35 +113,67 @@ sub readBlastEvaluesFromDatabase {
 sub calculateBlastStatsPerEc {
     my ($orderedEcs,$blastPerEc,$outFh) = @_;
 
-    print $outFh "\nBLAST_STATISTICS\n";
-    print $outFh "ec_number\tnum_values\tminimum\tmaximum\tmedian\tmean\tstd_dev\n";
     my $blastStatsPerEc;
     foreach my $ec (@{$orderedEcs}) {
-	print $outFh "$ec";
 	my $noValues;
 	$noValues = 1 if (! exists $blastPerEc->{$ec});   # this EC does not have any blast partners
 	$blastStatsPerEc->{$ec}->{numValues} = $noValues ? 0 : scalar @{$blastPerEc->{$ec}};
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{numValues}";
 	$blastStatsPerEc->{$ec}->{min} = $noValues ? 0 : sprintf('%.1f',min($blastPerEc->{$ec}));
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{min}";
 	$blastStatsPerEc->{$ec}->{max} = $noValues ? 0 : sprintf('%.1f',max($blastPerEc->{$ec}));
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{max}";
 	$blastStatsPerEc->{$ec}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastPerEc->{$ec}));
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{median}";
 	my ($mean,$sd) = meanSd($blastPerEc->{$ec}) if (! $noValues);
 	$blastStatsPerEc->{$ec}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{mean}";
 	$blastStatsPerEc->{$ec}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
-	print  $outFh "\t$blastStatsPerEc->{$ec}->{sd}";
-	print $outFh "\n";
     }
-    print $outFh "\n";
+    
+    &printBlastStatsPerEc($blastStatsPerEc,$outFh);
+    
     return $blastStatsPerEc;
 }
 
+sub printBlastStatsPerEc {
+    my ($blastStatsPerEc,$outFh) = @_;
+    print $outFh "\nBLAST_STATISTICS\n";
+    print $outFh "ec_number\tnum_values\tminimum\tmaximum\tmedian\tmean\tstd_dev\n";
+    foreach my $ec (keys %{$blastStatsPerEc}) {
+	print $outFh "$ec";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{numValues}";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{min}";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{max}";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{median}";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{mean}";
+	print $outFh "\t$blastStatsPerEc->{$ec}->{sd}";
+	print $outFh "\n";
+    }
+    print $outFh "\n";
+}
+
+
 sub calculateBlastStatsPerProtein {
     my ($orderedEcs,$blastEvalues,$outFh);
+    
+    my $blastStatsPerProtein;
+    foreach my $id (keys %{$blastEvalues}) {
+	foreach my $viableEc ( @{$orderedEcs} ) {
+	    my $noValues;
+	    $noValues = 1 if (! exists $blastEvalues->{$id}->{$viableEc});   # this id does not have blast partner containing this EC number
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{numValues} = $noValues ? 0 : scalar @{$blastEvalues->{$id}->{$viableEc}};
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{min} = $noValues ? 0 : sprintf('%.1f',min($blastEvalues->{$id}->{$viableEc}));
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{max} = $noValues ? 0 : sprintf('%.1f',max($blastEvalues->{$id}->{$viableEc}));
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastEvalues->{$id}->{$viableEc}));
+	    my ($mean,$sd) = meanSd($blastEvalues->{$id}->{$viableEc}) if (! $noValues);
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
+	    $blastStatsPerProtein->{$viableEc}->{$id}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
+	}
+    }
 
+    &printBlastStatsPerProtein($orderedEcs,$blastStatsPerProtein,$outFh);
+    
+    return $blastStatsPerProtein;
+}
+
+sub printBlastStatsPerProtein {
+    my ($orderedEcs,$blastStatsPerProtein,$outFh) = @_;
     print $outFh "GENE\t";
     foreach my $ec (@{$orderedEcs}) {
 	print $outFh "$ec\t\t\t\t\t\t";
@@ -152,33 +183,20 @@ sub calculateBlastStatsPerProtein {
 	print $outFh "\tnumber_values\tminimum\tmaximum\tmedian\tmean\tstd_dev";
     }
     print $outFh "\n";
-    
-    my $blastStatsPerProtein;
-    foreach my $id (keys %{$blastEvalues}) {
+    foreach my $id (keys %{$blastStatsPerProtein}) {
 	print $outFh "$id";
 	foreach my $viableEc ( @{$orderedEcs} ) {
-	    my $noValues;
-	    $noValues = 1 if (! exists $blastEvalues->{$id}->{$viableEc});   # this id does not have blast partner containing this EC number
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{numValues} = $noValues ? 0 : scalar @{$blastEvalues->{$id}->{$viableEc}};
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{numValues}";
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{min} = $noValues ? 0 : sprintf('%.1f',min($blastEvalues->{$id}->{$viableEc}));
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{min}";
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{max} = $noValues ? 0 : sprintf('%.1f',max($blastEvalues->{$id}->{$viableEc}));
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{max}";
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastEvalues->{$id}->{$viableEc}));
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{median}";
-	    my ($mean,$sd) = meanSd($blastEvalues->{$id}->{$viableEc}) if (! $noValues);
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{mean}";
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
 	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{sd}";
 	}
 	print $outFh "\n";
     }
     print $outFh "\n";
-    return $blastStatsPerProtein;
 }
-
 
 sub proteinDoesNotExist {
     my ($proteinName,$proteinIds,$outFh,$missing) = @_;
@@ -192,7 +210,6 @@ sub proteinDoesNotExist {
     }
     return 0;
 }
-
 
 sub numProteinsWithDomainAndEc {
     my ($proteinIds) = @_;
@@ -370,8 +387,6 @@ sub readDomainCountFile {
     return $domainCount;
 }
 
-
-
 sub getNumProteinsFromDatabase {
     my ($dbh,$includeOld) = @_;
     my $numProteins=0;
@@ -413,6 +428,13 @@ sub ecLengthStats {
 	$ecStats->{$ec}->{sd} = $noValues ? -1 : $sd;
     }
 
+    &printEcLengthStats($ecStats,$outFh);
+
+    return $ecStats;
+}
+
+sub printEcLengthStats {
+    my ($ecStats,$outFh) = @_;
     print $outFh "EC_NUMBER\tNUM_PROTEINS\tMIN_LENGTH\tMAX_LENGTH\t_MEDIAN_LENGTH\tMEAN_LENGTH\tSTD_DEV_LENGTH\n";
     foreach my $ec (sort keys %{$ecStats}) {
 	    print $outFh "$ec\t$ecStats->{$ec}->{numProteins}";
@@ -421,7 +443,6 @@ sub ecLengthStats {
 	    print $outFh "\t$ecStats->{$ec}->{sd}\n";
     }
     print $outFh "\n";
-    return $ecStats;
 }
 
 sub min {
@@ -490,10 +511,28 @@ sub ecDomainStats {
 
     my $domainToLetter = getDomainKey($proteinIds,$outFh);
        
-    my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$viableEcNumbers,$domainToLetter,$outFh);
+    my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$viableEcNumbers,$domainToLetter);
     &calculateDomainNumAndScore($ecNumbers,$viableEcNumbers);
     &calculateDomainMaxScore($ecNumbers);
 
+    &printEcDomainStats($ecNumbers,$outFh);
+    &printProteinDomains($domainPerProtein,$outFh);
+
+    return ($ecNumbers,$domainPerProtein);
+}
+
+sub printProteinDomains {
+    my ($domainPerProtein,$outFh) = @_;
+    print $outFh "GENE\tDOMAINS\n";
+    foreach my $id (keys %{$domainPerProtein}) {
+	my $domainString = $domainPerProtein->{$id};
+	print $outFh "$id\t$domainString\n";
+    }
+    print $outFh "\n";
+}
+
+sub printEcDomainStats {
+    my ($ecNumbers,$outFh) = @_;
     print $outFh "EC_NUMBER\tDOMAIN_STRING\tNUM_PROTEINS\tSCORE\n";
     foreach my $ec (sort keys %{$ecNumbers}) {
 	print $outFh "$ec\t--NUM PROTEINS--\t$ecNumbers->{$ec}->{numProteins}\t$ecNumbers->{$ec}->{maxScore}\n";
@@ -504,19 +543,16 @@ sub ecDomainStats {
 	}
     }
     print $outFh "\n";
-
-    return ($ecNumbers,$domainPerProtein);
 }
 
 sub getAllDomainStringsPerEc {
-    my ($proteinIds,$viableEcNumbers,$domainToLetter,$outFh) = @_;
+    my ($proteinIds,$viableEcNumbers,$domainToLetter) = @_;
     my ($ecNumbers,$domainPerProtein);
-    print $outFh "GENE\tDOMAINS\n";
+
     foreach my $id (keys %{$proteinIds}) {
 	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
 	my $domainString = &getDomain($proteinIds->{$id},$domainToLetter);
 	$domainPerProtein->{$id} = $domainString;
-	print $outFh "$id\t$domainString\n";
 	my $domains = &getAllPossibleCombinations($domain,"");
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
@@ -526,7 +562,6 @@ sub getAllDomainStringsPerEc {
 	    }
 	}
     }
-    print $outFh "\n";
     return ($ecNumbers,$domainPerProtein);
 }
 
