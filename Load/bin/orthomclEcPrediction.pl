@@ -162,13 +162,13 @@ sub calculateBlastStatsPerProtein {
 	foreach my $viableEc ( @{$orderedEcs} ) {
 	    my $noValues;
 	    $noValues = 1 if (! exists $blastEvalues->{$id}->{$viableEc});   # this id does not have blast partner containing this EC number
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{numValues} = $noValues ? 0 : scalar @{$blastEvalues->{$id}->{$viableEc}};
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{min} = $noValues ? 0 : sprintf('%.1f',min($blastEvalues->{$id}->{$viableEc}));
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{max} = $noValues ? 0 : sprintf('%.1f',max($blastEvalues->{$id}->{$viableEc}));
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastEvalues->{$id}->{$viableEc}));
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{numValues} = $noValues ? 0 : scalar @{$blastEvalues->{$id}->{$viableEc}};
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{min} = $noValues ? 0 : sprintf('%.1f',min($blastEvalues->{$id}->{$viableEc}));
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{max} = $noValues ? 0 : sprintf('%.1f',max($blastEvalues->{$id}->{$viableEc}));
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{median} = $noValues ? 0 : sprintf('%.1f',median($blastEvalues->{$id}->{$viableEc}));
 	    my ($mean,$sd) = meanSd($blastEvalues->{$id}->{$viableEc}) if (! $noValues);
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
-	    $blastStatsPerProtein->{$viableEc}->{$id}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{mean} = $noValues ? 0 : sprintf('%.1f',$mean);
+	    $blastStatsPerProtein->{$id}->{$viableEc}->{sd} = $noValues ? 0 : sprintf('%.1f',$sd);
 	}
     }
 
@@ -188,15 +188,15 @@ sub printBlastStatsPerProtein {
 	print $outFh "\tnumber_values\tminimum\tmaximum\tmedian\tmean\tstd_dev";
     }
     print $outFh "\n";
-    foreach my $id (keys %{$blastStatsPerProtein}) {
+    foreach my $id (keys %{$blastStatsPerProtein}) { 
 	print $outFh "$id";
 	foreach my $viableEc ( @{$orderedEcs} ) {
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{numValues}";
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{min}";
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{max}";
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{median}";
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{mean}";
-	    print  $outFh "\t$blastStatsPerProtein->{$viableEc}->{$id}->{sd}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{numValues}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{min}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{max}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{median}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{mean}";
+	    print  $outFh "\t$blastStatsPerProtein->{$id}->{$viableEc}->{sd}";
 	}
 	print $outFh "\n";
     }
@@ -556,9 +556,9 @@ sub getAllDomainStringsPerEc {
     my ($ecNumbers,$domainPerProtein);
 
     foreach my $id (keys %{$proteinIds}) {
-	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
 	my $domainString = &getDomain($proteinIds->{$id},$domainToLetter);
 	$domainPerProtein->{$id} = $domainString;
+	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
 	my $domains = &getAllPossibleCombinations($domainString,"");
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
@@ -593,12 +593,11 @@ sub calculateDomainMaxScore {
 
 sub getDomain {
     my ($proteinRef,$domainToLetter) = @_;
-    my $domain = "";
+    my $domain = "-";
     if (scalar @{$proteinRef->{domain}} > 0) {
 	my @domainLetters = map { $domainToLetter->{$_} } @{$proteinRef->{domain}};
 	$domain = join("",@domainLetters);
     }
-    $domain = "-" if ($domain eq "");
     return $domain;
 }
 
@@ -648,9 +647,9 @@ sub lengthScore {
 sub blastScore {
     my ($id,$ec,$blastStatsPerEc,$blastStatsPerProtein) = @_;
 
-    return "D" if (! exists $blastStatsPerProtein->{$ec}->{$id});   #this protein does not BLAST to any protein with an EC number
+    return "D" if (! exists $blastStatsPerProtein->{$id}->{$ec});   #this protein does not BLAST to any protein with an EC number
 
-    my $idBlast = $blastStatsPerProtein->{$ec}->{$id}->{median};
+    my $idBlast = $blastStatsPerProtein->{$id}->{$ec}->{median};
     my $ecBlast =  $blastStatsPerEc->{$ec}->{median};
     $ecBlast = -181 if ($ecBlast == 0);  # this happens when protein with EC does not have blast partners
     my $tenPercentOfMedian = abs(0.1 * $ecBlast);
