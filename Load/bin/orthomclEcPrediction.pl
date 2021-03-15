@@ -7,7 +7,7 @@ use lib "$ENV{GUS_HOME}/lib/perl";
 use CBIL::Util::PropertySet;
 use DBI;
 
-# example command line:  orthomclEcPrediction.pl /home/markhick/ec 'no'
+# example command line:  orthomclEcPrediction.pl /home/markhick/EC 'no'
 # good groups to study: OG6_100435, OG6_101725
 
 my $outputDirectory = $ARGV[0];
@@ -54,7 +54,7 @@ foreach my $group (keys %{$groupsToTest}) {
 
     close $outFh;
 
-    &outputProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
+   my $scores =  &getProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
 
 }
 
@@ -339,8 +339,6 @@ sub deletePartialEcNumbers {
     my ($ecs) = @_;
     my %toDelete;
     foreach my $ec (keys %{$ecs}) {
-	my ($a,$b,$c,$d) = split(/\./,$ec);
-	next if ($c eq "-" && $d eq "-");   # there are no parents of this one
 	my $parentEc = getParent($ec);
 	if ($parentEc && exists $ecs->{$parentEc}) {
 	    if ($ecs->{$ec}->{numProteins} == $ecs->{$parentEc}->{numProteins}) {
@@ -471,11 +469,8 @@ sub max {
 
 sub meanSd {
     my ($arrayRef) = @_;
-    my $sum = 0;
     my $numSamples = scalar @{$arrayRef};
-    foreach my $number (@{$arrayRef}) {
-	$sum += $number;
-    }
+    my $sum = &sum($arrayRef);
     my $mean = $sum/$numSamples;
 
     $sum=0;
@@ -485,6 +480,15 @@ sub meanSd {
     my $sd = sqrt($sum/$numSamples);
 
     return ($mean,$sd);
+}
+
+sub sum {
+    my ($arrayRef) = @_;
+    my $sum = 0;
+    foreach my $number (@{$arrayRef}) {
+        $sum += $number;
+    }
+    return $sum;
 }
 
 sub median {
@@ -607,7 +611,7 @@ sub domainScore {
 
     my $score=0;
     my $idDomain = $domainPerProtein->{$id};
-    return "" if ($idDomain eq "");
+    return "-" if ($idDomain eq "-");
     foreach my $domainString ( keys %{$domainStatsPerEc->{$ec}->{domainString}} ) {
 	if ($idDomain =~ /$domainString/) {
 	    $score += $domainStatsPerEc->{$ec}->{domainString}->{$domainString}->{score};
@@ -665,33 +669,61 @@ sub blastScore {
     }
 }
 
-sub outputProteinScores {
+sub getProteinScores {
     my ($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile) = @_;
 
-    my @ecArray = reverse sort keys %{$viableEcNumbers};
-
-    open(OUT,">",$groupScoresFile) || die "Cannot open file '$groupScoresFile' for writing";
+    my $scores;
     foreach my $id (keys %{$proteinIds}) {
-	my $pastEc = "";
-	foreach my $ec (@ecArray) {
-	    if ($ec =~ /^([^-]+)-/) {       # skip less specific EC number like 1.2.-.- if there is more specific like 1.2.3.- or 1.2.3.4
-		my $firstDigits = $1;
-		if ($pastEc =~ /^($firstDigits)/) {
-		    next;
-		}
-	    }
+	foreach my $ec (keys %{$viableEcNumbers}) {
 	    my $lengthScore = lengthScore($id,$ec,$proteinIds,$lengthStatsPerEc);
 	    my $blastScore = blastScore($id,$ec,$blastStatsPerEc,$blastStatsPerProtein);
 	    my $domainScore = domainScore($id,$ec,$domainStatsPerEc,$domainPerProtein);
 	    my $scoreString = $lengthScore.$blastScore.$domainScore;
-	    next if ($scoreString =~ /[CD]/);
-	    $pastEc = $ec;
-	    print OUT "$id\t$ec ($scoreString)\n";
+	    next if ($scoreString =~ /[D]/);
+	    $scores->{$id}->{$ec} = $scoreString;
 	}
     }
-    close OUT;
+    &deletePartialEcWithWorseScore($scores);
+    &printEcScores($scores,$groupScoresFile);
+    return $scores;
 }
 
+sub deletePartialEcWithWorseScore {
+    my ($scores) = @_;
+    foreach my $id (keys %{$scores}) {
+	my %toDelete;
+	foreach my $ec (keys %{$scores->{$id}}) {
+	    my $parentEc = getParent($ec);
+	    if ($parentEc && exists $scores->{$id}->{$parentEc}) {
+		if (&scoreToDigit($scores->{$id}->{$ec}) >= &scoreToDigit($scores->{$id}->{$parentEc})) {
+		    $toDelete{$parentEc} = 1;      # if parent has same or worse score, then delete parent
+		}
+	    }
+	}
+	foreach my $ec (keys %toDelete) {
+	    delete $scores->{$id}->{$ec};
+	}
+    }
+}
+
+sub scoreToDigit {
+    my ($letterScore) = @_;
+    $letterScore =~ tr/ABCD-/43204/;
+    my @digits = split("",$letterScore);
+    my $sum = &sum(\@digits);
+    return $sum;
+}
+
+sub printEcScores {
+    my ($scores,$groupScoresFile) = @_;
+    open(my $scoreFh,">",$groupScoresFile) || die "Cannot open file '$groupScoresFile' for writing";
+    foreach my $id (keys %{$scores}) {
+	foreach my $ec (keys %{$scores->{$id}}) {
+	    print $scoreFh "$id\t$ec\t$scores->{$id}->{$ec}\n";
+	}
+    }
+    close $scoreFh;
+}
 
 sub getAllPossibleCombinations {
     my ($domainString,$delimiter) = @_;
@@ -783,7 +815,6 @@ sub increaseStringCounter {
     
 }
 
-
 sub writeProteinInfoFile {
     my ($proteinIds,$proteinInfoFile) =@_;
 
@@ -795,10 +826,10 @@ sub writeProteinInfoFile {
 	my $product = $proteinIds->{$id}->{product};
 	my $taxon = $proteinIds->{$id}->{taxon};
 	my @ecs = @{$proteinIds->{$id}->{ec}};
-	$ecs[0] = "." if (scalar @ecs == 0);
+	$ecs[0] = "-" if (scalar @ecs == 0);
 	my $ec = join(",",@ecs);
 	my @domains = @{$proteinIds->{$id}->{domain}};
-	$domains[0] = "." if (scalar @domains == 0);
+	$domains[0] = "-" if (scalar @domains == 0);
 	my $domain = join(",",@domains);
 	print OUT "$group\t$id\t$taxon\t$length\t$domain\t$product\t$ec\n";
     }
@@ -819,9 +850,9 @@ sub readProteinInfoFile {
 	$proteinIds->{$id}->{taxon} = $taxon;
 	$proteinIds->{$id}->{length} = $length;
 	$proteinIds->{$id}->{product} = $product;
-	$ecs = $ecs eq "." ? "" : $ecs;
+	$ecs = $ecs eq "-" ? "" : $ecs;
 	$proteinIds->{$id}->{ec} = [split(",",$ecs)];
-	$domains = $domains eq "." ? "" : $domains;
+	$domains = $domains eq "-" ? "" : $domains;
 	$proteinIds->{$id}->{domain} = [split(",",$domains)];
     }
     close IN;
