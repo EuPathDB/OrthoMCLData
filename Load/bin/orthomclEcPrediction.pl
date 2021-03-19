@@ -19,12 +19,8 @@ my $includeOld = 1;
 my $createStatsFile = 1;
 my $createProteinFile = 1;
 my $test = 1;
-my $testFraction = 0.2;
-my $totalEcsTested=0;
-my $noEcMatch=0;
-my $testExact;
-my $testPartial;
-my $testFile =  "$outputDirectory/test.txt";
+
+my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest() if ($test);
 
 my $dbh = getDbHandle();
 
@@ -54,11 +50,11 @@ foreach my $group (keys %{$groups}) {
 
     close $statsFh;
 
-    my $scores =  &getProteinScores($proteinIds,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
+    my $scores =  &getProteinScores($proteinIds,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoreFile);
 
-    &testScores($scores,$proteinIds,$testIds,\$totalEcsTested,\$noEcMatch,$testExact,$testPartial) if ($test);
+    &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 }
-&printTest($totalEcsTested,$noEcMatch,$testExact,$testPartial,$testFile) if ($test);
+&printTest($totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 
 $dbh->disconnect();
 exit;
@@ -68,13 +64,26 @@ exit;
 
 ################################  SUBROUTINES  ########################################
 
-sub &getTrainingAndTestIds {
+sub setUpTest {
+    my $testFraction = 0.2;
+    my $totalEcsTested=0;
+    my $noEcMatch=0;
+    my %testExact;
+    my %testLessPrecise;
+    my %testMorePrecise;
+    my $testFile =  "$outputDirectory/test.txt";
+    open(my $testFh,">",$testFile) || die "Cannot open $testFile for writing\n";
+    return (\$testFraction,\$totalEcsTested,\$noEcMatch,\%testExact,\%testLessPrecise,\%testMorePrecise,$testFh);
+}
+
+
+sub getTrainingAndTestIds {
     my ($proteinIds,$testFraction) = @_;
     my ($trainingIds,$testIds);
 
     my $numProteinsWithEc = &numProteinsWithEc($proteinIds);
     return ("","") if ($numProteinsWithEc < 10);
-    my $numProteinsTest = sprintf("%.0f",$testFraction * $numProteins);
+    my $numProteinsTest = sprintf("%.0f",${$testFraction} * $numProteinsWithEc);
     my $testIdPositions = &getTestIdPositions($numProteinsTest,$numProteinsWithEc);
 
     my $proteinCounter = 1;
@@ -114,7 +123,7 @@ sub makeDirAndFiles {
 	$proteinFile = "$outputDirectory/$group/proteins.txt";
     }
     my $scoresFile = "$outputDirectory/$group/scores.txt";
-    return ($statsFh,$proteinFile,$scoreFile);
+    return ($statsFh,$proteinFile,$scoresFile);
 }
 
 sub ecBlastStats {
@@ -133,14 +142,14 @@ sub readBlastEvaluesFromDatabase {
 
     my $blastEvalues;    # id -> ec -> (-5,-6.4,-150.3)
     my $blastPerEc;        # ec -> (-5,-6.4,-150.3)  only if both proteins have EC
-    my $missing;
+    my %missing;
     my $query = $dbh->prepare(&blastSql($group));
     
     $query->execute();
     while (my($query,$subject,$mantua,$exponent) = $query->fetchrow_array()) {
 	next if ($includeOld && ($query =~ /-old\|/ || $subject =~ /-old\|/));
-	next if (&proteinDoesNotExist($subject,$proteinIds,$statsFh,$missing));
-	next if (&proteinDoesNotExist($query,$proteinIds,$statsFh,$missing));
+	next if (&proteinDoesNotExist($subject,$proteinIds,$statsFh,\%missing));
+	next if (&proteinDoesNotExist($query,$proteinIds,$statsFh,\%missing));
 	
 	my $subjectHasEc = scalar @{$proteinIds->{$subject}->{ec}} > 0 ? 1 : 0;
 	my $queryHasEc = scalar @{$proteinIds->{$query}->{ec}} > 0 ? 1 : 0;
@@ -260,12 +269,12 @@ sub printBlastStatsPerProtein {
 }
 
 sub proteinDoesNotExist {
-    my ($proteinName,$proteinIds,$statsFh,$missing) = @_;
+    my ($proteinName,$proteinIds,$statsFh,$missingHashRef) = @_;
 
     if (! exists $proteinIds->{$proteinName}) {
-	if (! exists $missing->{$proteinName}) {
-	    print $statsFh "ERROR: The protein '$proteinName' does not exist in the original protein ids\n" if ($statsFh);
-	    $missing->{$proteinName}=1;
+	if ($statsFh && ! exists $missingHashRef->{$proteinName}) {
+	    print $statsFh "ERROR: The protein '$proteinName' does not exist in the original protein ids\n";
+	    $missingHashRef->{$proteinName}=1;
 	}
 	return 1;
     }
@@ -802,43 +811,89 @@ sub printEcScores {
 }
 
 sub testScores {
-    my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testPartial) = @_;
+    my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
 
     foreach my $id (keys %{$testIds}) {
-	foreach my $ec (@{$proteinIds->{$id}->{ec}}) {
+	foreach my $thisIdEc (@{$proteinIds->{$id}->{ec}}) {
 	    ${$totalEcsRef}++;
-	    if (exists $scores->{$id}->{$ec}) {
-		$testExact->{$scores->{$id}->{$ec}}++;
-	    } else {
-		my $parentEc = &getParent($ec};
-		if ($parentEc && exists $scores->{$id}->{$parentEc}) {
-		    $testPartial->{$scores->{$id}->{$parentEc}}++;
-		}  else {
-		    my $grandParentEc = &getParent($parentEc};
-		    if ($grandParentEc && exists $scores->{$id}->{$grandParentEc}) {
-			$testPartial->{$scores->{$id}->{$grandParentEc}}++;
-		    } else {
-			${$noEcMatchRef}++;	
-		    }
-		}
-	    }
+	    print $testFh "$id\t$thisIdEc\t";
+	    &testEcNumberMatch($thisIdEc,$scores->{$id},$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh);
 	}
     }
 }
 
+sub testEcNumberMatch {
+    my ($thisIdEc,$scoresForThisId,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
+
+    if (exists $scoresForThisId->{$thisIdEc}) {   #exact match
+	$testExact->{$scoresForThisId->{$thisIdEc}}++;
+	print $testFh "$scoresForThisId->{$thisIdEc}\texact\n";
+    } elsif (&testLessPrecise($thisIdEc,$scoresForThisId,$testLessPrecise,$testFh)) {
+    } elsif (&testMorePrecise($thisIdEc,$scoresForThisId,$testMorePrecise,$testFh)) {
+    } else {
+	${$noEcMatchRef}++;
+	print $testFh "\tno_match\tECs_predicted: ";
+	print $testFh "$_ " foreach (keys %{$scoresForThisId});
+	print $testFh "\n";
+    }	
+}
+
+sub testLessPrecise {
+    my ($thisIdEc,$scoresForThisId,$testLessPrecise,$testFH) = @_;
+    my $thisIdParentEc = &getParent($thisIdEc);
+    if (! $thisIdParentEc) {
+	return 0;
+    } elsif (exists $scoresForThisId->{$thisIdParentEc}) {
+	print $testFh "$scoresForThisId->{$thisIdParentEc}\tprediction_less_precise: $thisIdParentEc\n";
+	$testLessPrecise->{$scoresForThisId->{$thisIdParentEc}}++;
+	return 1;
+    } else {
+	return &testLessPrecise($thisIdParentEc,$scoresForThisId,$testLessPrecise,$testFH);
+    }
+}
+
+sub testMorePrecise {
+    my ($thisIdEc,$scoresForThisId,$testMorePrecise,$testFH) = @_;
+    foreach my $predictedEc (keys %{$scoresForThisId}) {
+	if (&partialMatchEc($thisIdEc,$predictedEc)) {
+	    print $testFh "$scoresForThisId->{$predictedEc}\tprediction_more_precise: $predictedEc\n";
+	    $testMorePrecise->{$scoresForThisId->{$predictedEc}}++;
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+sub partialMatchEc {
+    my ($thisIdEc,$predictedEc) = @_;
+    my $predictedParentEc = &getParent($predictedEc);
+    if (! $predictedParentEc) {
+	return 0;
+    } elsif ($thisIdEc eq $predictedParentEc) {
+	return 1;
+    } else {
+	return &partialMatchEc($thisIdEc,$predictedParentEc);
+    }
+}
+ 
 sub printTest {
-    my ($total,$noMatch,$testExact,$testPartial,$testFile) = @_;
-    open(my $testFh,">",$testFile) || die "Cannot open $testFile for writing\n";   
-    print $testFh "total tested ECs: $total\n";
-    print $testFh "no match: $noMatch\n";
+    my ($total,$noMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
+    print $testFh "\nSUMMARY\n";
+    print $testFh "total tested ECs: ${$total}\n";
+    print $testFh "no match: ${$noMatch}\n";
     print $testFh "Exact matches:\n";
     foreach my $score (sort keys %{$testExact}) {
 	print $testFh "  $score  $testExact->{$score}\n";
     }
-    print $testFh "Partial matches:\n";
-    foreach my $score (sort keys %{$testPartial}) {
-	print $testFh "  $score  $testPartial->{$score}\n";
+    print $testFh "Less precise predictions:\n";
+    foreach my $score (sort keys %{$testLessPrecise}) {
+	print $testFh "  $score  $testLessPrecise->{$score}\n";
     }
+    print $testFh "More precise predictions:\n";
+    foreach my $score (sort keys %{$testMorePrecise}) {
+	print $testFh "  $score  $testMorePrecise->{$score}\n";
+    }
+
     close $testFh;
 }
 
@@ -847,10 +902,8 @@ sub getAllPossibleCombinations {
     my ($domainString,$delimiter) = @_;
 
     my $domains;
-
     my @domainArray = split(/$delimiter/,$domainString);
     my $length = scalar @domainArray;
-    
     for (my $a=0; $a<$length; $a++) {
 	for (my $b=$a; $b<$length; $b++) {
 	    my $string = join("$delimiter",@domainArray[$a..$b]);
@@ -1144,7 +1197,7 @@ sub ecsSql {
 
 sub proteinsSql {
     my ($group) = @_;
-    return "SELECT full_id,product,length,core_peripheral,group_name,taxon_name                                     
+    return "SELECT full_id,product,length,core_peripheral,group_name,organism_name                                     
             FROM ApidbTuning.SequenceAttributes WHERE group_name='$group'";
 }
 
