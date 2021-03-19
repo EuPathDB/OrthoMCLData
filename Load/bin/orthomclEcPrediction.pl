@@ -24,10 +24,7 @@ my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMo
 
 my $dbh = getDbHandle();
 
-#my $groups = getGroupsFromDatabase($minNumProteinsWithEc,$dbh);
-
-my $groups;
-$groups->{"OG6_100718"} = 1;
+my $groups = getGroupsFromDatabase($minNumProteinsWithEc,$dbh);
 
 foreach my $group (keys %{$groups}) {
     my ($statsFh,$proteinFile,$scoreFile) = &makeDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
@@ -878,10 +875,20 @@ sub partialMatchEc {
  
 sub printTest {
     my ($total,$noMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
+    my $percentNoMatch = sprintf("%.1f",100 * ${$noMatch} / ${$total});
+    my $numExactMatch = &sumHashValues($testExact);
+    my $percentExactMatch = sprintf("%.1f",100 * $numExactMatch / ${$total});
+    my $numLessPreciseMatch = &sumHashValues($testLessPrecise);
+    my $percentLessPreciseMatch = sprintf("%.1f",100 * $numLessPreciseMatch / ${$total});
+    my $numMorePreciseMatch = &sumHashValues($testMorePrecise);
+    my $percentMorePreciseMatch = sprintf("%.1f",100 * $numMorePreciseMatch / ${$total});
     print $testFh "\nSUMMARY\n";
-    print $testFh "total tested ECs: ${$total}\n";
-    print $testFh "no match: ${$noMatch}\n";
-    print $testFh "Exact matches:\n";
+    print $testFh "Total tested ECs\t${$total}\n";
+    print $testFh "No match\t${$noMatch} ($percentNoMatch %)\n";
+    print $testFh "Exact match\t$numExactMatch ($percentExactMatch %)\n";
+    print $testFh "Less precise match\t$numLessPreciseMatch ($percentLessPreciseMatch %)\n";
+    print $testFh "More precise match\t$numMorePreciseMatch ($percentMorePreciseMatch %)\n";
+    print $testFh "\nExact predictions:\n";
     foreach my $score (sort keys %{$testExact}) {
 	print $testFh "  $score  $testExact->{$score}\n";
     }
@@ -897,6 +904,14 @@ sub printTest {
     close $testFh;
 }
 
+sub sumHashValues {
+    my ($hashRef) = @_;
+    my $sum = 0;
+    foreach my $key (keys %{$hashRef}) {
+	$sum += $hashRef->{$key};
+    }
+    return $sum;
+}
     
 sub getAllPossibleCombinations {
     my ($domainString,$delimiter) = @_;
