@@ -12,14 +12,6 @@ use DBI;
 
 my $outputDirectory = $ARGV[0];
 
-# 1. get groups with 1+ EC numbers (10+ for testing)
-# 2. loop through groups
-# 3. get all protein info
-# 3.b. if testing, make hash of proteins (with EC) to hide
-# 4. get domain stats if there are domains
-# 5. get length and blast stats
-# 6. assign EC numbers, output file with EC and score
-
 my $minNumProteinsWithEc = 500;
 my $minNumGenera = 1;
 my $minNumProteins = 1;
@@ -28,7 +20,11 @@ my $createStatsFile = 1;
 my $createProteinFile = 1;
 my $test = 1;
 my $testFraction = 0.2;
-
+my $totalEcsTested=0;
+my $noEcMatch=0;
+my $testExact;
+my $testPartial;
+my $testFile =  "$outputDirectory/test.txt";
 
 my $dbh = getDbHandle();
 
@@ -41,32 +37,28 @@ foreach my $group (keys %{$groups}) {
     my ($statsFh,$proteinFile,$scoreFile) = &makeDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
     my $proteinIds = &getProteinInfo($group,$includeOld,$dbh,$proteinFile);
 
-    my $testIds;
-    if ($test) {
-	($proteinIds,$testIds) = &getTrainingAndTest($proteinIds);
-    }
+    my ($trainingIds,$testIds);
+    ($trainingIds,$testIds) = &getTrainingAndTestIds($proteinIds,$testFraction) if ($test);
 
-    my $viableEcNumbers = &getViableEcNumbers($proteinIds,$minNumGenera,$minNumProteins,$statsFh);
+    my $viableEcNumbers = &getViableEcNumbers($proteinIds,$test,$trainingIds,$minNumGenera,$minNumProteins,$statsFh);
     
     my $domainStatsPerEc;
     my $domainPerProtein;
     if (&numProteinsWithDomainAndEc($proteinIds) > 0) {
-	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$viableEcNumbers,$statsFh);
+	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
     }
 
-    my $lengthStatsPerEc = &ecLengthStats($proteinIds,$viableEcNumbers,$statsFh);
+    my $lengthStatsPerEc = &ecLengthStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
 
-    my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$statsFh);
+    my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$includeOld,$statsFh);
 
     close $statsFh;
 
-   my $scores =  &getProteinScores($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
+    my $scores =  &getProteinScores($proteinIds,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile);
 
-    if ($test) {
-	&testScores($scores,$proteinIds,$testIds);
-    }
-
+    &testScores($scores,$proteinIds,$testIds,\$totalEcsTested,\$noEcMatch,$testExact,$testPartial) if ($test);
 }
+&printTest($totalEcsTested,$noEcMatch,$testExact,$testPartial,$testFile) if ($test);
 
 $dbh->disconnect();
 exit;
@@ -76,6 +68,38 @@ exit;
 
 ################################  SUBROUTINES  ########################################
 
+sub &getTrainingAndTestIds {
+    my ($proteinIds,$testFraction) = @_;
+    my ($trainingIds,$testIds);
+
+    my $numProteinsWithEc = &numProteinsWithEc($proteinIds);
+    return ("","") if ($numProteinsWithEc < 10);
+    my $numProteinsTest = sprintf("%.0f",$testFraction * $numProteins);
+    my $testIdPositions = &getTestIdPositions($numProteinsTest,$numProteinsWithEc);
+
+    my $proteinCounter = 1;
+    foreach my $id (keys %{$proteinIds}) {
+	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
+	if (exists $testIdPositions->{$proteinCounter}) {
+	    $testIds->{$id} = 1;
+	} else {
+	    $trainingIds->{$id} = 1;
+	}
+	$proteinCounter++;
+    }
+    return ($trainingIds,$testIds);
+}
+
+sub getTestIdPositions {
+    my ($numProteinsTest,$numProteinsWithEc) = @_;
+    my %testPositions;
+    while (keys %testPositions < $numProteinsTest ) {
+	my $randomNumber = int(rand($numProteinsWithEc)) + 1;
+	next if (exists $testPositions{$randomNumber});
+	$testPositions{$randomNumber} = 1;
+    }
+    return \%testPositions;
+}
 
 sub makeDirAndFiles {
     my ($outputDirectory,$group,$createStatsFile,$createProteinFile) = @_;
@@ -94,9 +118,9 @@ sub makeDirAndFiles {
 }
 
 sub ecBlastStats {
-    my ($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$statsFh) = @_;
+    my ($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$includeOld,$statsFh) = @_;
 
-    my ($blastEvalues,$blastPerEc) = &readBlastEvaluesFromDatabase($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$statsFh);
+    my ($blastEvalues,$blastPerEc) = &readBlastEvaluesFromDatabase($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$includeOld,$statsFh);
     my @orderedViableEcs = sort keys %{$viableEcNumbers};
     my $blastStatsPerEc = &calculateBlastStatsPerEc(\@orderedViableEcs,$blastPerEc,$statsFh);
     my $blastStatsPerProtein = &calculateBlastStatsPerProtein(\@orderedViableEcs,$blastEvalues,$statsFh);
@@ -105,7 +129,7 @@ sub ecBlastStats {
 }
 
 sub readBlastEvaluesFromDatabase {
-    my ($dbh,$group,$proteinIds,$viableEcNumbers,$includeOld,$statsFh) = @_;
+    my ($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$includeOld,$statsFh) = @_;
 
     my $blastEvalues;    # id -> ec -> (-5,-6.4,-150.3)
     my $blastPerEc;        # ec -> (-5,-6.4,-150.3)  only if both proteins have EC
@@ -118,21 +142,27 @@ sub readBlastEvaluesFromDatabase {
 	next if (&proteinDoesNotExist($subject,$proteinIds,$statsFh,$missing));
 	next if (&proteinDoesNotExist($query,$proteinIds,$statsFh,$missing));
 	
-	my $subjectHasEc =  scalar @{$proteinIds->{$subject}->{ec}} > 0 ? 1 : 0;
-	my $queryHasEc =  scalar @{$proteinIds->{$query}->{ec}} > 0 ? 1 : 0;
+	my $subjectHasEc = scalar @{$proteinIds->{$subject}->{ec}} > 0 ? 1 : 0;
+	my $queryHasEc = scalar @{$proteinIds->{$query}->{ec}} > 0 ? 1 : 0;
 	next if ( ! $subjectHasEc && ! $queryHasEc );
 	
 	my $exponentFromMantua = log($mantua)/log(10);
 	$exponent += $exponentFromMantua;
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$query},$viableEc) && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
-		$blastPerEc->{$viableEc} = &addArrayElement($blastPerEc->{$viableEc},$exponent);
+		if (! $test || ($test && exists $trainingIds->{$query} && exists $trainingIds->{$subject})) {
+		    $blastPerEc->{$viableEc} = &addArrayElement($blastPerEc->{$viableEc},$exponent);
+		}
 	    }
 	    if ($subjectHasEc && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
-		$blastEvalues->{$query}->{$viableEc} = &addArrayElement($blastEvalues->{$query}->{$viableEc},$exponent);
+		if (! $test || ($test && exists $trainingIds->{$subject})) {
+		    $blastEvalues->{$query}->{$viableEc} = &addArrayElement($blastEvalues->{$query}->{$viableEc},$exponent);
+		}
 	    }
 	    if ($queryHasEc && &proteinHasThisEcNumber($proteinIds->{$query},$viableEc)) {
-		$blastEvalues->{$subject}->{$viableEc} = &addArrayElement($blastEvalues->{$subject}->{$viableEc},$exponent);
+		if (! $test || ($test && exists $trainingIds->{$query})) {
+		    $blastEvalues->{$subject}->{$viableEc} = &addArrayElement($blastEvalues->{$subject}->{$viableEc},$exponent);
+		}
 	    }
 	}
     }
@@ -255,12 +285,22 @@ sub numProteinsWithDomainAndEc {
     return $numProteins;
 }
 
-sub getViableEcNumbers {
-    my ($proteinIds,$minNumGenera,$minNumProteins,$statsFh) = @_;
+sub numProteinsWithEc {
+    my ($proteinIds) = @_;
+    my $numProteins = 0;
+    foreach my $id (keys %{$proteinIds}) {
+	my $numEcs = scalar @{$proteinIds->{$id}->{ec}};
+	$numProteins++ if ($numEcs > 0);
+    }
+    return $numProteins;
+}
 
-    my $actualEcNumbers = &getUniqueEcNumbersFromProteins($proteinIds);
+sub getViableEcNumbers {
+    my ($proteinIds,$test,$trainingIds,$minNumGenera,$minNumProteins,$statsFh) = @_;
+
+    my $actualEcNumbers = &getUniqueEcNumbersFromProteins($proteinIds,$test,$trainingIds);
     my $allEcNumbers = &addPartialEcNumbers($actualEcNumbers);
-    my $ecNumbersWithCounts = &getNumProteinsGeneraForEachEc($proteinIds,$allEcNumbers);
+    my $ecNumbersWithCounts = &getNumProteinsGeneraForEachEc($proteinIds,$test,$trainingIds,$allEcNumbers);
     &deletePartialEcNumbers($ecNumbersWithCounts);
     &deleteEcNumbersBelowMin($ecNumbersWithCounts,$minNumProteins,$minNumGenera);
     &printViableEcNumbers($ecNumbersWithCounts,$statsFh) if ($statsFh);
@@ -278,9 +318,10 @@ sub printViableEcNumbers {
 }
 
 sub getUniqueEcNumbersFromProteins {
-    my ($proteinIds) = @_;
+    my ($proteinIds,$test,$trainingIds) = @_;
     my $ecs;
     foreach my $id (keys %{$proteinIds}) {
+	next if ($test && ! exists $trainingIds->{$id});
 	foreach my $ec ( @{$proteinIds->{$id}->{ec}} ) {
 	    $ecs->{$ec} = 1;
 	}
@@ -310,10 +351,11 @@ sub addPartialEcNumbers {
 }
 
 sub getNumProteinsGeneraForEachEc {
-    my ($proteinIds,$allEcNumbers) = @_;
+    my ($proteinIds,$test,$trainingIds,$allEcNumbers) = @_;
     my $ecNumbersWithCounts;
     my $ecGenera;
     foreach my $id (keys %{$proteinIds}) {
+	next if ($test && ! exists $trainingIds->{$id});
 	my $genus = &getGenusFromProtein($proteinIds->{$id});
 	foreach my $ec ( keys %{$allEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$id},$ec)) {
@@ -383,6 +425,7 @@ sub deletePartialEcNumbers {
 
 sub getParent {
     my ($ec) = @_;
+    return "" if ($ec eq "");
     my ($a,$b,$c,$d) = split(/\./,$ec);
     return "" if ($c eq "-");
     return "$a.$b.-.-" if ($d eq "-");
@@ -436,14 +479,15 @@ sub getNumProteinsFromDatabase {
 
 
 sub ecLengthStats {
-    my ($proteinIds,$viableEcNumbers,$statsFh) = @_;
+    my ($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh) = @_;
 
     # for each viable EC number, obtain array of protein lengths
     my $ecNumbers;
     foreach my $id (keys %{$proteinIds}) {
 	next if ( scalar @{$proteinIds->{$id}->{ec}} == 0 );
+	next if ($test && ! exists $trainingIds->{$id});
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
-	    if (proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
+	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
 		$ecNumbers->{$viableEc} = &addArrayElement($ecNumbers->{$viableEc},$proteinIds->{$id}->{length});
 	    }
 	}
@@ -455,8 +499,8 @@ sub ecLengthStats {
 	my $noValues = scalar @{$ecNumbers->{$ec}} == 0 ? 1 : 0;
 	$ecStats->{$ec}->{numProteins} = scalar @{$ecNumbers->{$ec}};
 	$ecStats->{$ec}->{min} = $noValues ? -1 : min($ecNumbers->{$ec});
-	$ecStats->{$ec}->{max} = $noValues ? -1 :max($ecNumbers->{$ec});
-	$ecStats->{$ec}->{median} = $noValues ? -1 :median($ecNumbers->{$ec});
+	$ecStats->{$ec}->{max} = $noValues ? -1 : max($ecNumbers->{$ec});
+	$ecStats->{$ec}->{median} = $noValues ? -1 : median($ecNumbers->{$ec});
 	my ($mean,$sd) = meanSd($ecNumbers->{$ec});
 	$ecStats->{$ec}->{mean} = $noValues ? -1 : $mean;
 	$ecStats->{$ec}->{sd} = $noValues ? -1 : $sd;
@@ -547,11 +591,11 @@ sub proteinHasThisEcNumber {
 }
 
 sub ecDomainStats {
-    my ($proteinIds,$viableEcNumbers,$statsFh) = @_;
+    my ($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh) = @_;
 
     my $domainToLetter = getDomainKey($proteinIds,$statsFh);
        
-    my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$viableEcNumbers,$domainToLetter);
+    my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$test,$trainingIds,$viableEcNumbers,$domainToLetter);
     &calculateDomainNumAndScore($ecNumbers,$viableEcNumbers);
     &calculateDomainMaxScore($ecNumbers);
 
@@ -586,13 +630,14 @@ sub printEcDomainStats {
 }
 
 sub getAllDomainStringsPerEc {
-    my ($proteinIds,$viableEcNumbers,$domainToLetter) = @_;
+    my ($proteinIds,$test,$trainingIds,$viableEcNumbers,$domainToLetter) = @_;
     my ($ecNumbers,$domainPerProtein);
 
     foreach my $id (keys %{$proteinIds}) {
 	my $domainString = &getDomain($proteinIds->{$id},$domainToLetter);
 	$domainPerProtein->{$id} = $domainString;
 	next if (scalar @{$proteinIds->{$id}->{ec}} == 0);
+	next if ($test && ! exists $trainingIds->{$id});
 	my $domains = &getAllPossibleCombinations($domainString,"");
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$id},$viableEc)) {
@@ -700,14 +745,15 @@ sub blastScore {
 }
 
 sub getProteinScores {
-    my ($proteinIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile) = @_;
+    my ($proteinIds,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile) = @_;
 
     my $scores;
     foreach my $id (keys %{$proteinIds}) {
+	next if ($test && ! exists $testIds->{$id});
 	foreach my $ec (keys %{$viableEcNumbers}) {
-	    my $lengthScore = lengthScore($id,$ec,$proteinIds,$lengthStatsPerEc);
-	    my $blastScore = blastScore($id,$ec,$blastStatsPerEc,$blastStatsPerProtein);
-	    my $domainScore = domainScore($id,$ec,$domainStatsPerEc,$domainPerProtein);
+	    my $lengthScore = &lengthScore($id,$ec,$proteinIds,$lengthStatsPerEc);
+	    my $blastScore = &blastScore($id,$ec,$blastStatsPerEc,$blastStatsPerProtein);
+	    my $domainScore = &domainScore($id,$ec,$domainStatsPerEc,$domainPerProtein);
 	    my $scoreString = $lengthScore.$blastScore.$domainScore;
 	    next if ($scoreString =~ /[D]/);
 	    $scores->{$id}->{$ec} = $scoreString;
@@ -755,6 +801,48 @@ sub printEcScores {
     close $scoreFh;
 }
 
+sub testScores {
+    my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testPartial) = @_;
+
+    foreach my $id (keys %{$testIds}) {
+	foreach my $ec (@{$proteinIds->{$id}->{ec}}) {
+	    ${$totalEcsRef}++;
+	    if (exists $scores->{$id}->{$ec}) {
+		$testExact->{$scores->{$id}->{$ec}}++;
+	    } else {
+		my $parentEc = &getParent($ec};
+		if ($parentEc && exists $scores->{$id}->{$parentEc}) {
+		    $testPartial->{$scores->{$id}->{$parentEc}}++;
+		}  else {
+		    my $grandParentEc = &getParent($parentEc};
+		    if ($grandParentEc && exists $scores->{$id}->{$grandParentEc}) {
+			$testPartial->{$scores->{$id}->{$grandParentEc}}++;
+		    } else {
+			${$noEcMatchRef}++;	
+		    }
+		}
+	    }
+	}
+    }
+}
+
+sub printTest {
+    my ($total,$noMatch,$testExact,$testPartial,$testFile) = @_;
+    open(my $testFh,">",$testFile) || die "Cannot open $testFile for writing\n";   
+    print $testFh "total tested ECs: $total\n";
+    print $testFh "no match: $noMatch\n";
+    print $testFh "Exact matches:\n";
+    foreach my $score (sort keys %{$testExact}) {
+	print $testFh "  $score  $testExact->{$score}\n";
+    }
+    print $testFh "Partial matches:\n";
+    foreach my $score (sort keys %{$testPartial}) {
+	print $testFh "  $score  $testPartial->{$score}\n";
+    }
+    close $testFh;
+}
+
+    
 sub getAllPossibleCombinations {
     my ($domainString,$delimiter) = @_;
 
