@@ -1055,8 +1055,8 @@ sub getProteinInfo {
 	$proteinIds = &readProteinInfoFile($proteinInfoFile,$includeOld);
     } else {
 	$proteinIds = &getProteinsFromDatabase($proteinIds,$group,$includeOld,$dbh);
-	$proteinIds = &getEcsFromDatabase($proteinIds,$includeOld,$dbh);
-	$proteinIds = &getDomainsFromDatabase($proteinIds,$includeOld,$dbh);
+	$proteinIds = &getEcsFromDatabase($proteinIds,$group,$includeOld,$dbh);
+	$proteinIds = &getDomainsFromDatabase($proteinIds,$group,$includeOld,$dbh);
 	&writeProteinInfoFile($proteinIds,$proteinInfoFile) if ($proteinInfoFile);
     }
     return $proteinIds;
@@ -1094,19 +1094,18 @@ sub createIdString {
 }
 
 sub getEcsFromDatabase {
-    my ($proteinIds,$includeOld,$dbh) = @_;
+    my ($proteinIds,$group,$includeOld,$dbh) = @_;
 
-    my $idString = createIdString($proteinIds,$includeOld);
-
-    my $query = $dbh->prepare(&ecsSql($idString));
+    my $query = $dbh->prepare(&ecsSql($group));
     
     $query->execute();
     while (my($id,$ecString) = $query->fetchrow_array()) {
+	next if ($includeOld && $id =~ /-old\|/);
 	die "The protein '$id' was not found in group" if (! exists $proteinIds->{$id});
 	$ecString =~ s/ //g;
 	my @multipleEc = split(/[;,]/,$ecString);
 	foreach my $ec ( @multipleEc) {
-	    die "Incorrect EC number '$ec' for protein '$id'" if (! &validEcNumber($ec));
+	    next if (! &validEcNumber($ec));
 	    push @{$proteinIds->{$id}->{ec}}, $ec;
 	}
     }
@@ -1121,14 +1120,13 @@ sub getEcsFromDatabase {
 }
 
 sub getDomainsFromDatabase {
-    my ($proteinIds,$includeOld,$dbh) = @_;
+    my ($proteinIds,$group,$includeOld,$dbh) = @_;
 
-    my $idString = createIdString($proteinIds,$includeOld);
-
-    my $query = $dbh->prepare(&domainsSql($idString));
+     my $query = $dbh->prepare(&domainsSql($group));
 
     $query->execute();
     while (my($id,$domain) = $query->fetchrow_array()) {
+	next if ($includeOld && $id =~ /-old\|/);
 	die "The protein '$id' was not found in group" if (! exists $proteinIds->{$id});
 	push @{$proteinIds->{$id}->{domain}}, $domain;
     }
@@ -1196,18 +1194,18 @@ sub allDomainsSql {
 }
 
 sub domainsSql {
-    my ($idString) = @_;
+    my ($group) = @_;
     return "SELECT full_id,accession FROM ApidbTuning.DomainAssignment
-            WHERE full_id IN $idString ORDER BY full_id,start_min";
+            WHERE group_name = '$group' ORDER BY full_id,start_min";
 }
 
 sub ecsSql {
-    my ($idString) = @_;
-    return "SELECT eas.secondary_identifier,ec.ec_number
+    my ($group) = @_;
+    return "SELECT sa.full_id,ec.ec_number
             FROM SRes.EnzymeClass ec, DoTS.AASequenceEnzymeClass aaec,
-                 dots.ExternalAASequence eas
-            WHERE ec.enzyme_class_id = aaec.enzyme_class_id AND aaec.aa_sequence_id = eas.aa_sequence_id
-                  AND eas.secondary_identifier IN $idString";
+                 apidbTuning.SequenceAttributes sa
+            WHERE ec.enzyme_class_id = aaec.enzyme_class_id AND aaec.aa_sequence_id = sa.aa_sequence_id
+                  AND sa.group_name='$group'";
 }
 
 sub proteinsSql {
