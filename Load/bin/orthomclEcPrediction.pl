@@ -12,26 +12,36 @@ use DBI;
 
 my $outputDirectory = $ARGV[0];
 
-my $minNumProteinsWithEc = 500;
+my $minNumProteinsWithEc = 10;
+my $maxNumProteinsWithEc = 0;
 my $minNumGenera = 1;
 my $minNumProteins = 1;
 my $includeOld = 1;
 my $createStatsFile = 1;
 my $createProteinFile = 1;
 my $test = 1;
+my $fractionOfGroups = 0.1;
 
 my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest() if ($test);
 
 my $dbh = getDbHandle();
 
-my $groups = getGroupsFromDatabase($minNumProteinsWithEc,$dbh);
+my $groups = getGroupsFromDatabase($minNumProteinsWithEc,$maxNumProteinsWithEc,$dbh);
+my $numGroups = keys %{$groups};
+my $netGroups = sprintf("%.0f",$fractionOfGroups * $numGroups);
+print "Total groups: $numGroups  Fraction: $fractionOfGroups  Net number of groups: $netGroups\n";
 
 foreach my $group (keys %{$groups}) {
+    next if (rand(1) >= $fractionOfGroups);
+    print "Approx number groups remaining: $netGroups\n";
+    $netGroups--;
+
     my ($statsFh,$proteinFile,$scoreFile) = &makeDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
     my $proteinIds = &getProteinInfo($group,$includeOld,$dbh,$proteinFile);
 
     my ($trainingIds,$testIds);
     ($trainingIds,$testIds) = &getTrainingAndTestIds($proteinIds,$testFraction) if ($test);
+    next if ($trainingIds eq "" || $testIds eq "");
 
     my $viableEcNumbers = &getViableEcNumbers($proteinIds,$test,$trainingIds,$minNumGenera,$minNumProteins,$statsFh);
     
@@ -599,7 +609,7 @@ sub proteinHasThisEcNumber {
 sub ecDomainStats {
     my ($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh) = @_;
 
-    my $domainToLetter = getDomainKey($proteinIds,$statsFh);
+    my $domainToLetter = &getDomainKey($proteinIds,$statsFh);
        
     my ($ecNumbers,$domainPerProtein) = &getAllDomainStringsPerEc($proteinIds,$test,$trainingIds,$viableEcNumbers,$domainToLetter);
     &calculateDomainNumAndScore($ecNumbers,$viableEcNumbers);
@@ -692,14 +702,13 @@ sub domainScore {
 
     my $score=0;
     my $idDomain = $domainPerProtein->{$id};
-    return "-" if ($idDomain eq "-");
+    return "-" if (! $idDomain || $idDomain eq "-");
     foreach my $domainString ( keys %{$domainStatsPerEc->{$ec}->{domainString}} ) {
 	if ($idDomain =~ /$domainString/) {
 	    $score += $domainStatsPerEc->{$ec}->{domainString}->{$domainString}->{score};
 	}
     }
     my $normalizedScore = $score / $domainStatsPerEc->{$ec}->{maxScore};
-	#sprintf('%.1f', 100 * $score / $domainStatsPerEc->{$ec}->{maxScore});
     if ($normalizedScore > 0.75 ) {
 	return "A";
     } elsif ($normalizedScore > 0.50) {
@@ -810,6 +819,8 @@ sub printEcScores {
 sub testScores {
     my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
 
+    my $group = &getGroupFromProteins($proteinIds);
+    print $testFh "Group $group\n";
     foreach my $id (keys %{$testIds}) {
 	foreach my $thisIdEc (@{$proteinIds->{$id}->{ec}}) {
 	    ${$totalEcsRef}++;
@@ -1069,7 +1080,7 @@ sub getProteinsFromDatabase {
     
     $query->execute();
     while (my($id,$product,$length,$corePeripheral,$group,$taxon) = $query->fetchrow_array()) {
-	next if ($includeOld && $id =~ /-old\|/);
+	next if ( ($includeOld && $id =~ /-old\|/) || $id eq "");
 	$proteinIds->{$id}->{product} = $product;
 	$proteinIds->{$id}->{length} = $length;
 	$proteinIds->{$id}->{corePeripheral} = $corePeripheral;
@@ -1162,27 +1173,32 @@ sub writeDomainCountFile {
     close OUT;
 }
    
-sub getGroupsFromProteins {
+sub getGroupFromProteins {
     my ($proteinIds) = @_;
-    my $groups;
+    my $group = "";
     foreach my $protein (keys %{$proteinIds}) {
-	if ( exists $groups->{$proteinIds->{$protein}->{group}} ) {
-	    push @{$groups->{$proteinIds->{$protein}->{group}}}, $protein;
-	} else {
-	    $groups->{$proteinIds->{$protein}->{group}} = [$protein];
+	if ($group ne "" && $group ne $proteinIds->{$protein}->{group}) {
+	    die "expected only one ortholog group but obtained more than one: $group $proteinIds->{$protein}->{group}";
 	}
+	$group = $proteinIds->{$protein}->{group};
     }
-    return $groups;
+    if ($group eq "") {
+	print "Did not obtain any ortholog groups from these proteins: ";
+	print "$_ " foreach (keys %{$proteinIds});
+	die;
+    }
+    return $group;
 }
 
 sub getGroupsFromDatabase {
-    my ($minNumProteinsWithEc,$dbh) = @_;
+    my ($minNumProteinsWithEc,$maxNumProteinsWithEc,$dbh) = @_;
     my %groups;
     
-    my $query = $dbh->prepare(&groupsSql($minNumProteinsWithEc));
+    my $query = $dbh->prepare(&groupsSql($minNumProteinsWithEc,$maxNumProteinsWithEc));
 
     $query->execute();
     while (my($group) = $query->fetchrow_array()) {
+	
         $groups{$group} = 1;
     }
     $query->finish();
@@ -1215,13 +1231,17 @@ sub proteinsSql {
 }
 
 sub groupsSql {
-    my ($minNumProteinsWithEc) = @_;
+    my ($minNumProteinsWithEc,$maxNumProteinsWithEc) = @_;
+    my $maxClause = "";
+    if ($maxNumProteinsWithEc) {
+	$maxClause = "AND num_proteins <= $maxNumProteinsWithEc";
+    }
     return "SELECT group_name
             FROM (SELECT group_name,count(ec_numbers) as num_proteins                         
                   FROM ApidbTuning.SequenceAttributes sa
-                  WHERE ec_numbers IS NOT NULL
+                  WHERE ec_numbers IS NOT NULL AND group_name IS NOT NULL
                   GROUP BY group_name)
-            WHERE num_proteins >= $minNumProteinsWithEc";
+            WHERE num_proteins >= $minNumProteinsWithEc $maxClause";
 }
 
 sub blastSql {
