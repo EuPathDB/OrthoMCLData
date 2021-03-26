@@ -12,7 +12,7 @@ use DBI;
 
 my $outputDirectory = $ARGV[0];
 
-my $minNumProteinsWithEc = 2;    # if not testing, then set to 1
+my $minNumProteinsWithEc = 1;    # if not testing, then set to 1
 my $maxNumProteinsWithEc = 0;    # if not testing, then set to 0
 my $minNumGeneraForViableEc = 1;
 my $minNumProteinsForViableEc = 1;
@@ -20,7 +20,7 @@ my $excludeOld = 1;
 my $createStatsFile = 0;       # if not testing, then set to 0
 my $createProteinFile = 0;     # if not testing, then set to 0
 my $test = 1;                  # if not testing, then set to 0
-my $fractionOfGroups = 0.01;   # if not testing, then set to 1
+my $fractionOfGroups = 1;   # if not testing, then set to 1
 
 my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest($outputDirectory) if ($test);
 
@@ -190,7 +190,7 @@ sub readBlastEvaluesFromDatabase {
 	my $queryHasEc = scalar @{$proteinIds->{$query}->{ec}} > 0 ? 1 : 0;
 	next if ( ! $subjectHasEc && ! $queryHasEc );
 	
-	my $exponentFromMantua = log($mantua)/log(10);
+	my $exponentFromMantua = $mantua == 0 ? 0 : log($mantua)/log(10);
 	$exponent += $exponentFromMantua;
 	foreach my $viableEc ( keys %{$viableEcNumbers} ) {
 	    if (&proteinHasThisEcNumber($proteinIds->{$query},$viableEc) && &proteinHasThisEcNumber($proteinIds->{$subject},$viableEc)) {
@@ -885,7 +885,6 @@ sub printEcScores {
 
 sub testScores {
     my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh,$logFh) = @_;
-
     my $group = &getGroupFromProteins($proteinIds,$logFh);
     print $testFh "Group $group\n";
     foreach my $id (keys %{$testIds}) {
@@ -899,23 +898,32 @@ sub testScores {
 
 sub testEcNumberMatch {
     my ($thisIdEc,$scoresForThisId,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
-
     if (exists $scoresForThisId->{$thisIdEc}) {   #exact match
 	my $score1 = &scoreToNumber($scoresForThisId->{$thisIdEc}->{composite});
 	my $score2 = $scoresForThisId->{$thisIdEc}->{detailed};
 	if ($score1 >= 1) {
 	    $testExact->{$score1}++;
 	    print $testFh "$score1\t$score2\texact\n";
+	    return;
 	}
-    } elsif (&testLessPrecise($thisIdEc,$scoresForThisId,$testLessPrecise,$testFh)) {
-    } elsif (&testMorePrecise($thisIdEc,$scoresForThisId,$testMorePrecise,$testFh)) {
-    } else {
-	${$noEcMatchRef}++;
-	print $testFh "\t\tno_match\tECs_predicted: ";
-	print $testFh "$_ " foreach (keys %{$scoresForThisId});
-	print $testFh "\n";
-    }	
+    }
+    if (&testMorePrecise($thisIdEc,$scoresForThisId,$testMorePrecise,$testFh)) {
+	return;
+    }
+    if (&testLessPrecise($thisIdEc,$scoresForThisId,$testLessPrecise,$testFh)) {
+	return;
+    }
+    &testNoMatch($noEcMatchRef,$scoresForThisId,$testFh);
 }
+
+sub testNoMatch {
+    my ($noEcMatchRef,$scoresForThisId,$testFh) = @_;
+    ${$noEcMatchRef}++;
+    print $testFh "\t\tno_match\tECs_predicted: ";
+    print $testFh "$_ " foreach (keys %{$scoresForThisId});
+    print $testFh "\n";
+}
+
 
 sub testLessPrecise {
     my ($thisIdEc,$scoresForThisId,$testLessPrecise,$testFh) = @_;
