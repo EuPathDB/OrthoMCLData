@@ -12,33 +12,24 @@ use DBI;
 
 my $outputDirectory = $ARGV[0];
 
-my $minNumProteinsWithEc = 11;    # if not testing, then set to 1
-my $maxNumProteinsWithEc = 11;    # if not testing, then set to 0
+my $minNumProteinsWithEc = 2;    # if not testing, then set to 1
+my $maxNumProteinsWithEc = 0;    # if not testing, then set to 0
 my $minNumGeneraForViableEc = 1;
 my $minNumProteinsForViableEc = 1;
 my $excludeOld = 1;
-my $createStatsFile = 1;       # if not testing, then set to 0
-my $createProteinFile = 1;     # if not testing, then set to 0
+my $createStatsFile = 0;       # if not testing, then set to 0
+my $createProteinFile = 0;     # if not testing, then set to 0
 my $test = 1;                  # if not testing, then set to 0
-my $fractionOfGroups = 1;   # if not testing, then set to 1
+my $fractionOfGroups = 0.001;   # if not testing, then set to 1
 
-my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest() if ($test);
+my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest($outputDirectory) if ($test);
 
-my $dbh = getDbHandle();
-
-my $groups = getGroupsFromDatabase($minNumProteinsWithEc,$maxNumProteinsWithEc,$dbh);
-#$groups->{"OG6_500798"}=1;
-
-my $numGroups = keys %{$groups};
-my $netGroups = sprintf("%.0f",$fractionOfGroups * $numGroups);
-print "Total groups: $numGroups  Fraction: $fractionOfGroups  Net number of groups: $netGroups\n";
+my ($scoresFh,$logFh,$netGroups,$dbh,$groups) = &setUpPrediction($outputDirectory,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc);
 
 foreach my $group (keys %{$groups}) {
-    next if (rand(1) >= $fractionOfGroups);
-    print "Approx number groups remaining: $netGroups\n";
-    $netGroups--;
+    next if (&nextGroup($fractionOfGroups,\$netGroups,$logFh));
 
-    my ($statsFh,$proteinFile,$scoreFile) = &makeDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
+    my ($statsFh,$proteinFile) = &makeGroupDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
     my ($proteinIds,$numTotalProteins,$numTotalGenera) = &getProteinInfo($group,$excludeOld,$dbh,$proteinFile);
 
     my ($trainingIds,$testIds);
@@ -47,25 +38,22 @@ foreach my $group (keys %{$groups}) {
 
     my $viableEcNumbers = &getViableEcNumbers($proteinIds,$test,$trainingIds,$minNumGeneraForViableEc,$minNumProteinsForViableEc,$statsFh);
     
-    my $domainStatsPerEc;
-    my $domainPerProtein;
+    my ($domainStatsPerEc,$domainPerProtein);
     if (&numProteinsWithDomainAndEc($proteinIds) > 0) {
 	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
     }
-
     my $lengthStatsPerEc = &ecLengthStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
-
     my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$excludeOld,$statsFh);
+    close $statsFh if ($statsFh);
 
-    close $statsFh;
-
-    my $scores =  &getProteinScores($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoreFile);
+    my $scores =  &getProteinScores($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoresFh);
 
     &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 }
 &printTest($totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 
-$dbh->disconnect();
+&endPrediction($dbh,$scoresFh);
+
 exit;
 
 
@@ -73,7 +61,42 @@ exit;
 
 ################################  SUBROUTINES  ########################################
 
+sub setUpPrediction {
+    my ($outputDirectory,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc) = @_;
+    my $dbh = &getDbHandle();
+    my $groups = &getGroupsFromDatabase($minNumProteinsWithEc,$maxNumProteinsWithEc,$dbh);
+        #$groups->{"OG6_500798"}=1;
+
+    my $scoresFile = "$outputDirectory/scores.txt";
+    open(my $scoreFh,">",$scoresFile) || die "Cannot open file '$scoresFile' for writing";
+
+    my $logFile = "$outputDirectory/log.txt";
+    open(my $logFh,">",$logFile) || die "Cannot open file '$lFile' for writing";
+    print $logFh "Start time: ".localtime()."\n";
+    my $numGroups = keys %{$groups};
+    my $netGroups = sprintf("%.0f",$fractionOfGroups * $numGroups);
+    print "Total groups: $numGroups  Fraction: $fractionOfGroups  Net number of groups: $netGroups\n";
+
+    return ($scoresFh,$logFh,$netGroups,$dbh,$groups);
+}
+
+sub nextGroup {
+    my ($fractionOfGroups,$netGroupsRef,$logFh) = @_;
+    return 1 if (rand(1) >= $fractionOfGroups);
+    print "Approx number groups remaining: ${$netGroupsRef}\n";
+    ${$netGroupsRef}--;
+    return 0;
+}
+
+sub endPrediction {
+    my ($dbh,$scoresFh) = @_;
+    $dbh->disconnect();
+    print $scoresFh "End time: ".localtime()."\n";
+    close $scoresFh;
+}
+
 sub setUpTest {
+    my ($outputDirectory) = @_;
     my $testFraction = 0.3;
     my $totalEcsTested=0;
     my $noEcMatch=0;
@@ -121,7 +144,7 @@ sub getTestIdPositions {
     return \%testPositions;
 }
 
-sub makeDirAndFiles {
+sub makeGroupDirAndFiles {
     my ($outputDirectory,$group,$createStatsFile,$createProteinFile) = @_;
     &makeDir("$outputDirectory/$group");
     my $statsFh;
@@ -133,8 +156,7 @@ sub makeDirAndFiles {
     if ($createProteinFile) {
 	$proteinFile = "$outputDirectory/$group/proteins.txt";
     }
-    my $scoresFile = "$outputDirectory/$group/scores.txt";
-    return ($statsFh,$proteinFile,$scoresFile);
+    return ($statsFh,$proteinFile);
 }
 
 sub ecBlastStats {
@@ -786,7 +808,7 @@ sub blastScore {
 }
 
 sub getProteinScores {
-    my ($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$groupScoresFile) = @_;
+    my ($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoresFh) = @_;
 
     my $scores;
     foreach my $id (keys %{$proteinIds}) {
@@ -808,7 +830,7 @@ sub getProteinScores {
 	}
     }
     &deletePartialEcWithWorseScore($scores);
-    &printEcScores($scores,$groupScoresFile);
+    &printEcScores($scores,$scoresFh);
     return $scores;
 }
 
@@ -849,16 +871,14 @@ sub scoreToNumber {
 }
 
 sub printEcScores {
-    my ($scores,$groupScoresFile) = @_;
-    open(my $scoreFh,">",$groupScoresFile) || die "Cannot open file '$groupScoresFile' for writing";
+    my ($scores,$scoresFh) = @_;
     foreach my $id (keys %{$scores}) {
 	foreach my $ec (keys %{$scores->{$id}}) {
 	    my $score1 = $scores->{$id}->{$ec}->{composite};
 	    my $score2 = $scores->{$id}->{$ec}->{detailed};
-	    print $scoreFh "$id\t$ec\t$score1\t$score2\n";
+	    print $scoresFh "$id\t$ec\t$score1\t$score2\n";
 	}
     }
-    close $scoreFh;
 }
 
 sub testScores {
