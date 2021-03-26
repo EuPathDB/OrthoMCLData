@@ -20,14 +20,14 @@ my $excludeOld = 1;
 my $createStatsFile = 0;       # if not testing, then set to 0
 my $createProteinFile = 0;     # if not testing, then set to 0
 my $test = 1;                  # if not testing, then set to 0
-my $fractionOfGroups = 0.001;   # if not testing, then set to 1
+my $fractionOfGroups = 0.01;   # if not testing, then set to 1
 
 my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest($outputDirectory) if ($test);
 
-my ($scoresFh,$logFh,$netGroups,$dbh,$groups) = &setUpPrediction($outputDirectory,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc);
+my ($scoresFh,$logFh,$netGroupsRef,$dbh,$groups) = &setUpPrediction($outputDirectory,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc);
 
 foreach my $group (keys %{$groups}) {
-    next if (&nextGroup($fractionOfGroups,\$netGroups,$logFh));
+    next if (&nextGroup($fractionOfGroups,$netGroupsRef,$logFh));
 
     my ($statsFh,$proteinFile) = &makeGroupDirAndFiles($outputDirectory,$group,$createStatsFile,$createProteinFile);
     my ($proteinIds,$numTotalProteins,$numTotalGenera) = &getProteinInfo($group,$excludeOld,$dbh,$proteinFile);
@@ -48,11 +48,11 @@ foreach my $group (keys %{$groups}) {
 
     my $scores =  &getProteinScores($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoresFh);
 
-    &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
+    &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh,$logFh) if ($test);
 }
 &printTest($totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 
-&endPrediction($dbh,$scoresFh);
+&endPrediction($dbh,$scoresFh,$logFh);
 
 exit;
 
@@ -68,31 +68,33 @@ sub setUpPrediction {
         #$groups->{"OG6_500798"}=1;
 
     my $scoresFile = "$outputDirectory/scores.txt";
-    open(my $scoreFh,">",$scoresFile) || die "Cannot open file '$scoresFile' for writing";
+    open(my $scoresFh,">",$scoresFile) || die "Cannot open file '$scoresFile' for writing";
 
     my $logFile = "$outputDirectory/log.txt";
-    open(my $logFh,">",$logFile) || die "Cannot open file '$lFile' for writing";
+    open(my $logFh,">",$logFile) || die "Cannot open file '$logFile' for writing";
     print $logFh "Start time: ".localtime()."\n";
     my $numGroups = keys %{$groups};
     my $netGroups = sprintf("%.0f",$fractionOfGroups * $numGroups);
-    print "Total groups: $numGroups  Fraction: $fractionOfGroups  Net number of groups: $netGroups\n";
+    print $logFh "Groups must have between $minNumProteinsWithEc and $maxNumProteinsWithEc proteins with EC numbers\n";
+    print $logFh "Total groups: $numGroups  Fraction: $fractionOfGroups  Net number of groups: $netGroups\n";
 
-    return ($scoresFh,$logFh,$netGroups,$dbh,$groups);
+    return ($scoresFh,$logFh,\$netGroups,$dbh,$groups);
 }
 
 sub nextGroup {
     my ($fractionOfGroups,$netGroupsRef,$logFh) = @_;
     return 1 if (rand(1) >= $fractionOfGroups);
-    print "Approx number groups remaining: ${$netGroupsRef}\n";
+    print $logFh "Approx number groups remaining: ${$netGroupsRef}\n";
     ${$netGroupsRef}--;
     return 0;
 }
 
 sub endPrediction {
-    my ($dbh,$scoresFh) = @_;
+    my ($dbh,$scoresFh,$logFh) = @_;
     $dbh->disconnect();
-    print $scoresFh "End time: ".localtime()."\n";
+    print $logFh "End time: ".localtime()."\n";
     close $scoresFh;
+    close $logFh;
 }
 
 sub setUpTest {
@@ -146,7 +148,7 @@ sub getTestIdPositions {
 
 sub makeGroupDirAndFiles {
     my ($outputDirectory,$group,$createStatsFile,$createProteinFile) = @_;
-    &makeDir("$outputDirectory/$group");
+    &makeDir("$outputDirectory/$group") if ($createStatsFile || $createProteinFile);
     my $statsFh;
     if ($createStatsFile) {
 	my $statsFile = "$outputDirectory/$group/stats.txt";
@@ -882,9 +884,9 @@ sub printEcScores {
 }
 
 sub testScores {
-    my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
+    my ($scores,$proteinIds,$testIds,$totalEcsRef,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh,$logFh) = @_;
 
-    my $group = &getGroupFromProteins($proteinIds);
+    my $group = &getGroupFromProteins($proteinIds,$logFh);
     print $testFh "Group $group\n";
     foreach my $id (keys %{$testIds}) {
 	foreach my $thisIdEc (@{$proteinIds->{$id}->{ec}}) {
@@ -1042,17 +1044,17 @@ sub getDomainKey {
     }
     die "There are more than 14,776,336 domains in this group so cannot perform A-Z a-z 0-9 mapping" if ($stringLength == 0);
 
-    my $stringCounter = initializeStringCounter($stringLength);
+    my $stringCounter = &initializeStringCounter($stringLength);
     my @domainArray = sort { $domains->{$b} <=> $domains->{$a} } keys %{$domains};
     
-    print $statsFh "DOMAIN\tSTRING\n";
+    print $statsFh "DOMAIN\tSTRING\n" if ($statsFh);
     for (my $currentDomain=0; $currentDomain<$numDomains; $currentDomain++) {
-	my $currentString = makeStringFromCounter($stringCounter,\@alphabet);
+	my $currentString = &makeStringFromCounter($stringCounter,\@alphabet);
 	$domains->{$domainArray[$currentDomain]} = $currentString;
-	print $statsFh "$domainArray[$currentDomain]\t$currentString\n";
-	$stringCounter = increaseStringCounter($stringCounter,$numCharacters);
+	print $statsFh "$domainArray[$currentDomain]\t$currentString\n" if ($statsFh);
+	$stringCounter = &increaseStringCounter($stringCounter,$numCharacters);
     }
-    print $statsFh "\n";
+    print $statsFh "\n" if ($statsFh);
     
     return $domains;
 }
@@ -1265,7 +1267,7 @@ sub writeDomainCountFile {
 }
    
 sub getGroupFromProteins {
-    my ($proteinIds) = @_;
+    my ($proteinIds,$logFh) = @_;
     my $group = "";
     foreach my $protein (keys %{$proteinIds}) {
 	if ($group ne "" && $group ne $proteinIds->{$protein}->{group}) {
@@ -1274,8 +1276,8 @@ sub getGroupFromProteins {
 	$group = $proteinIds->{$protein}->{group};
     }
     if ($group eq "") {
-	print "Did not obtain any ortholog groups from these proteins: ";
-	print "$_ " foreach (keys %{$proteinIds});
+	print $logFh "Did not obtain any ortholog groups from these proteins: ";
+	print $logFh "$_ " foreach (keys %{$proteinIds});
 	die;
     }
     return $group;
