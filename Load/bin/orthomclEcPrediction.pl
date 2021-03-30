@@ -20,7 +20,7 @@ my $excludeOld = 1;
 my $createStatsFile = 0;       # if not testing, then set to 0
 my $createProteinFile = 0;     # if not testing, then set to 0
 my $test = 1;                  # if not testing, then set to 0
-my $fractionOfGroups = 1;   # if not testing, then set to 1
+my $fractionOfGroups = 1;      # if not testing, then set to 1
 
 my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = &setUpTest($outputDirectory) if ($test);
 
@@ -48,7 +48,7 @@ foreach my $group (keys %{$groups}) {
 
     my $scores =  &getProteinScores($proteinIds,$numTotalProteins,$numTotalGenera,$test,$testIds,$viableEcNumbers,$domainStatsPerEc,$domainPerProtein,$lengthStatsPerEc,$blastStatsPerEc,$blastStatsPerProtein,$scoresFh);
 
-    &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh,$logFh) if ($test);
+     &testScores($scores,$proteinIds,$testIds,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh,$logFh) if ($test);
 }
 &printTest($totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$testFh) if ($test);
 
@@ -115,8 +115,11 @@ sub getTrainingAndTestIds {
     my ($proteinIds,$testFraction) = @_;
     my ($trainingIds,$testIds);
 
+    my $uniqueEcNumbers = &getUniqueEcNumbersFromProteins($proteinIds,0,0);
+    foreach my $uniqueEc (keys %{$uniqueEcNumbers}) {
+	return ("","") if ($uniqueEcNumbers->{$ec} < 2);
+    }
     my $numProteinsWithEc = &numProteinsWithEc($proteinIds);
-    return ("","") if ($numProteinsWithEc < 2);
     my $numProteinsTest = sprintf("%.0f",${$testFraction} * $numProteinsWithEc);
     $numProteinsTest = 1 if ($numProteinsTest < 1);
     $numProteinsTest = $numProteinsWithEc - 1 if ($numProteinsTest == $numProteinsWithEc);
@@ -132,8 +135,38 @@ sub getTrainingAndTestIds {
 	}
 	$proteinCounter++;
     }
+    return("","") if (&ecsNotInTrainingAndTest($proteinIds,$trainingIds,$testIds,$uniqueEcNumbers);
     return ($trainingIds,$testIds);
 }
+
+sub ecsNotInTrainingAndTest {
+    my ($proteinIds,$trainingIds,$testIds,$uniqueEcNumbers) = @_;
+    foreach my $uniqueEc (keys %{$uniqueEcNumbers}) {
+	my $found=0;
+	foreach my $id (keys %{$trainingIds}) {
+	    foreach my $idEc (@{$proteinIds->{$id}->{ec}}) {
+		if ($idEc eq $uniqueEc) {
+		    $found=1;
+		    last;
+		}
+	    }
+	    last if ($found == 1);
+	}
+	return 1 if ($found == 0);
+	foreach my $id (keys %{$testIds}) {
+	    foreach my $idEc (@{$proteinIds->{$id}->{ec}}) {
+		if ($idEc eq $uniqueEc) {
+		    $found=2;
+		    last;
+		}
+	    }
+	    last if ($found == 2);
+	}
+	return 1 if ($found == 1);
+    }
+    return 0;
+}
+
 
 sub getTestIdPositions {
     my ($numProteinsTest,$numProteinsWithEc) = @_;
@@ -367,7 +400,7 @@ sub getUniqueEcNumbersFromProteins {
     foreach my $id (keys %{$proteinIds}) {
 	next if ($test && ! exists $trainingIds->{$id});
 	foreach my $ec ( @{$proteinIds->{$id}->{ec}} ) {
-	    $ecs->{$ec} = 1;
+	    $ecs->{$ec}++;
 	}
     }
     return $ecs;
@@ -754,15 +787,15 @@ sub domainScore {
     }
     my $normalizedScore = $score / $domainStatsPerEc->{$ec}->{maxScore};
     if ($normalizedScore > 0.8 ) {
-	return "A";
+	return 4;
     } elsif ($normalizedScore > 0.6) {
-	return "B";
+	return 3;
     } elsif ($normalizedScore > 0.4) {
-	return "C";
+	return 2;
     } elsif ($normalizedScore > 0.2) {
-	return "D";
+	return 1;
     } else {
-	return "E";
+	return 0;
     }
 }
 
@@ -823,16 +856,14 @@ sub getProteinScores {
 	    my $lengthScore = &lengthScore($id,$ec,$proteinIds,$lengthStatsPerEc);
 	    my $blastScore = &blastScore($id,$ec,$blastStatsPerEc,$blastStatsPerProtein);
 	    my $domainScore = &domainScore($id,$ec,$domainStatsPerEc,$domainPerProtein);
-	    my $compositeScore = $lengthScore + $blastScore;
-	    $compositeScore += $numProteinScore + $numGeneraScore if ($compositeScore);
-	    $compositeScore = $compositeScore.$domainScore;
-	    my $detailedScore = $lengthScore.$blastScore.$domainScore.",$numProteinsWithEc/$numTotalProteins,$numGeneraWithEc/$numTotalGenera";
+	    my $compositeScore = $lengthScore.$blastScore.$domainScore;
+	    my $detailedScore = "$numProteinsWithEc/$numTotalProteins,$numGeneraWithEc/$numTotalGenera";
 	    $scores->{$id}->{$ec}->{composite} = $compositeScore;
 	    $scores->{$id}->{$ec}->{detailed} = $detailedScore;
 	}
     }
     &deletePartialEcWithWorseScore($scores);
-    &printEcScores($scores,$scoresFh);
+    &printEcScores($scores,$scoresFh) if (! $test);
     return $scores;
 }
 
@@ -859,17 +890,9 @@ sub deletePartialEcWithWorseScore {
 sub scoreToNumber {
     my ($compositeScore) = @_;
     my @chars = split("",$compositeScore);
-    my $score;
-    my $letter;
-    if (scalar @chars == 3) {
-	$score = 10*$chars[0] + $chars[1];
-	$letter = $chars[2];
-    } else {
-	$score = $chars[0];
-	$letter = $chars[1];
-    }
-    $letter =~ tr/ABCDE-/543210/;
-    return $score + ($letter/10);
+    my $domainScore = $chars[2] eq "-" ? 0 : $chars[2]/10;
+    my $score = $chars[0] + $chars[1] + $domainScore;
+    return $score;
 }
 
 sub printEcScores {
@@ -893,19 +916,19 @@ sub testScores {
 	    print $testFh "$id\t$thisIdEc\t";
 	    &testEcNumberMatch($thisIdEc,$scores->{$id},$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh);
 	}
+	&testExtraEc($proteinIds->{$id}->{ec},$scores->{$id},$numProteinsExtraEcRef,);
+	${$numTotalProteinsRef}++;
     }
 }
 
 sub testEcNumberMatch {
     my ($thisIdEc,$scoresForThisId,$noEcMatchRef,$testExact,$testLessPrecise,$testMorePrecise,$testFh) = @_;
     if (exists $scoresForThisId->{$thisIdEc}) {   #exact match
-	my $score1 = &scoreToNumber($scoresForThisId->{$thisIdEc}->{composite});
+	my $score1 = $scoresForThisId->{$thisIdEc}->{composite};
 	my $score2 = $scoresForThisId->{$thisIdEc}->{detailed};
-	if ($score1 >= 1) {
-	    $testExact->{$score1}++;
-	    print $testFh "$score1\t$score2\texact\n";
-	    return;
-	}
+	$testExact->{$score1}++;
+	print $testFh "$score1\t$score2\texact\n";
+	return;
     }
     if (&testMorePrecise($thisIdEc,$scoresForThisId,$testMorePrecise,$testFh)) {
 	return;
@@ -919,11 +942,13 @@ sub testEcNumberMatch {
 sub testNoMatch {
     my ($noEcMatchRef,$scoresForThisId,$testFh) = @_;
     ${$noEcMatchRef}++;
-    print $testFh "\t\tno_match\tECs_predicted: ";
-    print $testFh "$_ " foreach (keys %{$scoresForThisId});
+    print $testFh "\t\tno_match,ECs_predicted: ";
+    foreach my $thisIdEc (sort keys %{$scoresForThisId}) {
+	my $score1 = $scoresForThisId->{$thisIdEc}->{composite};
+	print $testFh "$thisIdEc($score1)";
+    }
     print $testFh "\n";
 }
-
 
 sub testLessPrecise {
     my ($thisIdEc,$scoresForThisId,$testLessPrecise,$testFh) = @_;
@@ -931,13 +956,11 @@ sub testLessPrecise {
     if (! $thisIdParentEc) {
 	return 0;
     } elsif (exists $scoresForThisId->{$thisIdParentEc}) {
-	my $score1 = &scoreToNumber($scoresForThisId->{$thisIdParentEc}->{composite});
+	my $score1 = $scoresForThisId->{$thisIdParentEc}->{composite};
 	my $score2 = $scoresForThisId->{$thisIdParentEc}->{detailed};
-	if ($score1 >= 1) {
-	    print $testFh "$score1\t$score2\tprediction_less_precise: $thisIdParentEc\n";
-	    $testLessPrecise->{$score1}++;
-	    return 1;
-	}
+	print $testFh "$score1\t$score2\tprediction_less_precise: $thisIdParentEc\n";
+	$testLessPrecise->{$score1}++;
+	return 1;
     } else {
 	return &testLessPrecise($thisIdParentEc,$scoresForThisId,$testLessPrecise,$testFh);
     }
@@ -947,13 +970,11 @@ sub testMorePrecise {
     my ($thisIdEc,$scoresForThisId,$testMorePrecise,$testFh) = @_;
     foreach my $predictedEc (keys %{$scoresForThisId}) {
 	if (&partialMatchEc($thisIdEc,$predictedEc)) {
-	    my $score1 = &scoreToNumber($scoresForThisId->{$predictedEc}->{composite});
+	    my $score1 = $scoresForThisId->{$predictedEc}->{composite};
 	    my $score2 = $scoresForThisId->{$predictedEc}->{detailed};
-	    if ($score1 >= 1) {
-		print $testFh "$score1\t$score2\tprediction_more_precise: $predictedEc\n";
-		$testMorePrecise->{$score1}++;
-		return 1;
-	    }
+	    print $testFh "$score1\t$score2\tprediction_more_precise: $predictedEc\n";
+	    $testMorePrecise->{$score1}++;
+	    return 1;
 	}
     }
     return 0;
@@ -987,15 +1008,15 @@ sub printTest {
     print $testFh "Less precise match\t$numLessPreciseMatch ($percentLessPreciseMatch %)\n";
     print $testFh "More precise match\t$numMorePreciseMatch ($percentMorePreciseMatch %)\n";
     print $testFh "\nExact predictions:\n";
-    foreach my $score (sort { $b <=> $a } keys %{$testExact}) {
+    foreach my $score (sort { $b cmp $a } keys %{$testExact}) {
 	print $testFh "  $score  $testExact->{$score}\n";
     }
     print $testFh "Less precise predictions:\n";
-    foreach my $score (sort { $b <=> $a } keys %{$testLessPrecise}) {
+    foreach my $score (sort { $b cmp $a } keys %{$testLessPrecise}) {
 	print $testFh "  $score  $testLessPrecise->{$score}\n";
     }
     print $testFh "More precise predictions:\n";
-    foreach my $score (sort { $b <=> $a } keys %{$testMorePrecise}) {
+    foreach my $score (sort { $b cmp $a } keys %{$testMorePrecise}) {
 	print $testFh "  $score  $testMorePrecise->{$score}\n";
     }
 
