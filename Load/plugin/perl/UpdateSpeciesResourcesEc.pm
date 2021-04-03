@@ -206,9 +206,11 @@ sub updateVeupathData {
 	    next if ($line =~ /^Organism/);
 	    next unless ($line =~ /^[A-Za-z]/);
 	    my @fields = split("\t",$line);
-	    $veupath->{$fields[2]}->{name} = $fields[0];
-	    $veupath->{$fields[2]}->{filename} = $fields[1];
-	    $veupath->{$fields[2]}->{resource} = $resource;
+	    my $abbrev = $fields[2];
+	    $abbrev = "rhiz" if ($abbrev eq "rirr"); # this is temporary, because rhiz on orthomcl equals rirr on fungidb  
+	    $veupath->{$abbrev}->{name} = $fields[0];
+	    $veupath->{$abbrev}->{filename} = $fields[1];
+	    $veupath->{$abbrev}->{resource} = $resource;
 	}
 	close IN;	
     }
