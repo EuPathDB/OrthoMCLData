@@ -102,7 +102,7 @@ sub runOrganismWgetCmds {
 	my $cmd = "wget --output-file=$logFile --output-document=$downloadFile --post-data $postText --header 'content-type: application/json' \"$url\"";
 	print "$cmd\n\n";
 	system($cmd);
-	die "The organism file $downloadFile obtained with wget is empty!\n" if (-s $downloadFile == 0);
+	die "The organism file $downloadFile obtained with wget is empty!\n" if (-s $downloadFile == 0 && $downloadFile !~ /SchistoDB/);
     }
 
     # one file for uniprot proteomes
@@ -132,7 +132,7 @@ sub runEcWgetCmds {
 	    $totalFileSize += (-s $downloadFile);
 	    $numEcFiles++;
 	}
-	die "All of the EC files downloaded from $project are empty! Directory: $dataDir\n" if ($totalFileSize == 0);
+	die "All of the EC files downloaded from $project are empty! Directory: $dataDir\n" if ($totalFileSize == 0 && $project !~ /SchistoDB/);
     }
     return $numEcFiles;
 }
