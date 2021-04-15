@@ -9,7 +9,6 @@ use DBI;
 
 my $outputDir = $ARGV[0];
 my $organismDir = $ARGV[1];
-my $version = $ARGV[2];
 
 # example command line:  orthomclEcPrediction.pl /home/markhick/EC
 # good groups to study: OG6_100435, OG6_101725
@@ -29,7 +28,7 @@ my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMo
 
 my ($logFh,$netGroupsRef,$dbh,$groups) = &setUpPrediction($outputDir,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc,$createLogFile);
 
-my ($organisms,$fHs) = &getOrganismsProjectsFileHandles($organismDir,$outputDir,$version,$dbh,$excludeOld,$logFh);
+my ($organisms,$fHs) = &getOrganismsProjectsFileHandles($organismDir,$outputDir,$dbh,$excludeOld,$logFh);
 
 foreach my $group (keys %{$groups}) {
     next if (&nextGroup($fractionOfGroups,$netGroupsRef,$logFh));
@@ -68,15 +67,15 @@ exit;
 ################################  SUBROUTINES  ########################################
 
 sub getOrganismsProjectsFileHandles {
-    my ($organismDir,$outputDir,$version,$dbh,$excludeOld,$logFh) = @_;
+    my ($organismDir,$outputDir,$dbh,$excludeOld,$logFh) = @_;
     my $organisms = &getOrganisms($organismDir,$logFh);
     &addOrganismsFromOrtho($organisms,$dbh,$excludeOld,$logFh);
-    my $fHs = &getFileHandles($organisms,$outputDir,$version,$logFh);
+    my $fHs = &getFileHandles($organisms,$outputDir,$logFh);
     return ($organisms,$fHs);
 }
 
 sub getFileHandles {
-    my ($organisms,$outputDir,$version,$logFh) = @_;
+    my ($organisms,$outputDir,$logFh) = @_;
     my $fHs;
     foreach my $abbrev (keys %{$organisms}) {
 	if (! exists $organisms->{$abbrev}) {
@@ -87,7 +86,6 @@ sub getFileHandles {
 	next if ($project eq "none" || exists $fHs->{$project});
 	my $filePath = $outputDir;
 	$filePath =~ s/PROJECT/$project/;
-	$filePath =~ s/VERSION/$version/;
 	&makeDir($filePath);
 	print {$logFh ? $logFh : *STDERR } "Created directory $filePath\n";
 	$filePath .= "/ec.txt";
