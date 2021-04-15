@@ -29,7 +29,7 @@ my ($testFraction,$totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMo
 
 my ($logFh,$netGroupsRef,$dbh,$groups) = &setUpPrediction($outputDir,$fractionOfGroups,$minNumProteinsWithEc,$maxNumProteinsWithEc,$createLogFile);
 
-my ($organisms,$fHs) = &getOrganismsProjectsFileHandles($organismDir,$outputDir,$version,$dbh,$excludeOld);
+my ($organisms,$fHs) = &getOrganismsProjectsFileHandles($organismDir,$outputDir,$version,$dbh,$excludeOld,$logFh);
 
 foreach my $group (keys %{$groups}) {
     next if (&nextGroup($fractionOfGroups,$netGroupsRef,$logFh));
@@ -58,7 +58,7 @@ foreach my $group (keys %{$groups}) {
 
 &printTest($totalEcsTested,$noEcMatch,$testExact,$testLessPrecise,$testMorePrecise,$numProteinsExtraEcRef,$numExtraEcRef,$numTotalProteinsRef,$testFh) if ($test);
 
-&endPrediction($dbh,$logFh,$createLogFile,$fHs);
+&endPrediction($dbh,$logFh,$fHs);
 
 exit;
 
@@ -68,19 +68,19 @@ exit;
 ################################  SUBROUTINES  ########################################
 
 sub getOrganismsProjectsFileHandles {
-    my ($organismDir,$outputDir,$version,$dbh,$excludeOld) = @_;
-    my $organisms = &getOrganisms($organismDir);
-    &addOrganismsFromOrtho($organisms,$dbh,$excludeOld);
-    my $fHs = &getFileHandles($organisms,$outputDir,$version);
+    my ($organismDir,$outputDir,$version,$dbh,$excludeOld,$logFh) = @_;
+    my $organisms = &getOrganisms($organismDir,$logFh);
+    &addOrganismsFromOrtho($organisms,$dbh,$excludeOld,$logFh);
+    my $fHs = &getFileHandles($organisms,$outputDir,$version,$logFh);
     return ($organisms,$fHs);
 }
 
 sub getFileHandles {
-    my ($organisms,$outputDir,$version) = @_;
+    my ($organisms,$outputDir,$version,$logFh) = @_;
     my $fHs;
     foreach my $abbrev (keys %{$organisms}) {
 	if (! exists $organisms->{$abbrev}) {
-	    print STDERR "Cannot find a project for '$abbrev'. To be safe, I will put this organism into all projects.\n";
+	    print {$logFh ? $logFh : *STDERR } "Cannot find a project for '$abbrev'. To be safe, I will put this organism into all projects.\n";
 	    next;
 	}
 	my $project = $organisms->{$abbrev};
@@ -89,17 +89,19 @@ sub getFileHandles {
 	$filePath =~ s/PROJECT/$project/;
 	$filePath =~ s/VERSION/$version/;
 	&makeDir($filePath);
-	print STDERR "Created directory $filePath\n";
+	print {$logFh ? $logFh : *STDERR } "Created directory $filePath\n";
 	$filePath .= "/ec.txt";
 	open(my $fh,">",$filePath) || die "Cannot open file '$filePath' for writing";
-	print STDERR "Opened $fh for writing\n";
-	$fHs->{$project} = $fh;
+	print {$logFh ? $logFh : *STDERR } "Opened '$filePath' for writing\n";
+	$fHs->{$project}->{fileHandle} = $fh;
+	$filePath =~ s/ec\.txt$/completed/;
+	$fHs->{$project}->{completed} = $filePath;
     }
     return $fHs;
 }
 
 sub getOrganisms {
-    my ($organismDir) = @_;
+    my ($organismDir,$logFh) = @_;
     my $organisms;
     my @files = glob("$organismDir/*_organisms.txt");
     foreach my $file (@files) {
@@ -118,7 +120,7 @@ sub getOrganisms {
 	    next unless ($line =~ /^[A-Za-z]/);
 	    my @fields = split("\t",$line);
 	    $organisms->{$fields[2]} = $project;
-	    print STDERR "Abbrev '$fields[2]'  Project '$project'\n";
+	    print {$logFh ? $logFh : *STDERR } "Abbrev '$fields[2]'  Project '$project'\n";
 	}
 	close IN;	
     }
@@ -126,7 +128,7 @@ sub getOrganisms {
 }
 
 sub addOrganismsFromOrtho {
-    my ($organisms,$dbh,$excludeOld) = @_;
+    my ($organisms,$dbh,$excludeOld,$logFh) = @_;
     my $cladeToProject = &getCladeToProject();
     my $query = $dbh->prepare(&orthoOrganismSql($excludeOld));
     $query->execute();
@@ -134,11 +136,11 @@ sub addOrganismsFromOrtho {
 	$abbrev = "rirr" if ($abbrev eq "rhiz");   # this is temporary, because rhiz on orthomcl equals rirr on fungidb 
 	next if (exists $organisms->{$abbrev});   # already have this
 	if (! exists $cladeToProject->{$clade}) {
-	    print STDERR "Abbrev '$abbrev'  Project 'unknown'\n";
+	    print {$logFh ? $logFh : *STDERR } "Abbrev '$abbrev'  Project 'unknown'\n";
 	    next if (! exists $cladeToProject->{$clade});  # can't find a project for this one
 	}
 	$organisms->{$abbrev} = $cladeToProject->{$clade};
-	print STDERR "Abbrev '$abbrev'  Project '$cladeToProject->{$clade}'\n";
+	print {$logFh ? $logFh : *STDERR } "Abbrev '$abbrev'  Project '$cladeToProject->{$clade}'\n";
     }
     $query->finish();
 }
@@ -171,14 +173,17 @@ sub nextGroup {
 }
 
 sub endPrediction {
-    my ($dbh,$logFh,$createLogFile,$fHs) = @_;
+    my ($dbh,$logFh,$fHs) = @_;
     $dbh->disconnect();
-    print {$logFh ? $logFh : *STDERR } "End time: ".localtime()."\n";
-    close $logFh if ($createLogFile);
     foreach my $project (keys %{$fHs}) {
-	print $fHS->{$project} "completed\n";
-	close $fHs->{$project};
+	close $fHs->{$project}->{fileHandle};
+	my $completedFile = $fHs->{$project}->{completed};
+	open(FH,">",$completedFile) || die "Cannot open file '$completedFile' for writing";
+	close FH;
+	print {$logFh ? $logFh : *STDERR } "Completed $project. Created file '$completedFile'\n";
     }
+    print {$logFh ? $logFh : *STDERR } "End time: ".localtime()."\n";
+    close $logFh if ($logFh);
 }
 
 sub setUpTest {
@@ -995,9 +1000,9 @@ sub printEcScores {
 	my @fhsToPrint;
 	next if (exists $organisms->{$abbrev} && $organisms->{$abbrev} eq "none");
 	if (! exists $organisms->{$abbrev} || ! exists $fHs->{$organisms->{$abbrev}}) {
-	    @fhsToPrint = map { $fHs->{$_} } keys %{$fHs};
+	    @fhsToPrint = map { $fHs->{$_}->{fileHandle} } keys %{$fHs};
 	} else {
-	    push @fhsToPrint, $fHs->{$organisms->{$abbrev}};
+	    push @fhsToPrint, $fHs->{$organisms->{$abbrev}}->{fileHandle};
 	}
 	foreach my $ec (keys %{$scores->{$id}}) {
 	    my $string = &scoresToString($scores->{$id}->{$ec});
