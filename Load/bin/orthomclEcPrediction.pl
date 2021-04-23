@@ -870,7 +870,9 @@ sub domainScore {
     my ($id,$ec,$domainStatsPerEc,$domainPerProtein) = @_;
     my $score=0;
     my $idDomain = $domainPerProtein->{$id};
-    return -1 if (! $idDomain || ! exists $domainStatsPerEc->{$ec});
+    die "There is no domain for $id. Testing EC $ec.\n" if (! $idDomain);
+    die "There is no domainStatsPerEc for $ec. Testing $id.\n" if (! exists $domainStatsPerEc->{$ec});
+
     foreach my $domainString ( keys %{$domainStatsPerEc->{$ec}->{domainString}} ) {
 	if ($idDomain =~ /$domainString/) {
 	    $score += $domainStatsPerEc->{$ec}->{domainString}->{$domainString}->{score};
@@ -947,12 +949,22 @@ sub getProteinScores {
 	    $scores->{$id}->{$ec}->{domainScore} = &domainScore($id,$ec,$domainStatsPerEc,$domainPerProtein);
 	    $scores->{$id}->{$ec}->{numTotalProteins} = $numTotalProteins;
 	    $scores->{$id}->{$ec}->{numTotalGenera} = $numTotalGenera;
+	    delete $scores->{$id}->{$ec} unless (&meetsScoreThreshold($scores->{$id}->{$ec}));
 	}
     }
     &deletePartialEcWithWorseScore($scores);
     &printEcScores($scores,$organisms,$fHs) if (! $test);
     return $scores;
 }
+
+sub meetsScoreThreshold {
+    my ($scoreRef) = @_;
+    if ($scoreRef->{lengthScore} >= 1 && $scoreRef->{blastScore} >= 1 && $scoreRef->{domainScore} >= 1) {
+	return 1;
+    }
+    return 0;
+}
+
 
 sub deletePartialEcWithWorseScore {
     my ($scores) = @_;
