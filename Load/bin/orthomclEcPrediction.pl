@@ -42,10 +42,7 @@ foreach my $group (keys %{$groups}) {
 
     my $viableEcNumbers = &getViableEcNumbers($proteinIds,$test,$trainingIds,$minNumGeneraForViableEc,$minNumProteinsForViableEc,$statsFh);
     
-    my ($domainStatsPerEc,$domainPerProtein);
-    if (&numProteinsWithDomainAndEc($proteinIds) > 0) {
-	($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
-    }
+    my ($domainStatsPerEc,$domainPerProtein) = &ecDomainStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
     my $lengthStatsPerEc = &ecLengthStats($proteinIds,$test,$trainingIds,$viableEcNumbers,$statsFh);
     my ($blastStatsPerEc,$blastStatsPerProtein) = &ecBlastStats($dbh,$group,$proteinIds,$test,$trainingIds,$viableEcNumbers,$excludeOld,$statsFh);
     close $statsFh if ($statsFh);
@@ -579,7 +576,7 @@ sub deletePartialEcNumbers {
     my ($ecs) = @_;
     my %toDelete;
     foreach my $ec (keys %{$ecs}) {
-	my $parentEc = getParent($ec);
+	my $parentEc = &getParent($ec);
 	if ($parentEc && exists $ecs->{$parentEc}) {
 	    if ($ecs->{$ec}->{numProteins} == $ecs->{$parentEc}->{numProteins}) {
 		$toDelete{$parentEc} = 1;      # if parent has same number proteins then delete parent
@@ -598,6 +595,15 @@ sub getParent {
     return "" if ($c eq "-");
     return "$a.$b.-.-" if ($d eq "-");
     return "$a.$b.$c.-";
+}
+
+sub getAllAncestors {
+    my ($ec,$ancestorEcs) = @_;
+    my $parentEc = &getParent($ec);
+    if ($parentEc) {
+	$ancestorEcs->{$parentEc} = 1;
+	&getAllAncestors($parentEc,$ancestorEcs);
+    }
 }
 
 sub getBackgroundDomainCount {
@@ -971,12 +977,11 @@ sub deletePartialEcWithWorseScore {
     foreach my $id (keys %{$scores}) {
 	my %toDelete;
 	foreach my $ec (keys %{$scores->{$id}}) {
-	    my $parentEc = &getParent($ec);
-	    if ($parentEc && exists $scores->{$id}->{$parentEc}) {
-		my $score = &scoreToNumber($scores->{$id}->{$ec});
-		my $parentScore = &scoreToNumber($scores->{$id}->{$parentEc});
-		if ($score >= $parentScore) {
-		    $toDelete{$parentEc} = 1;      # if parent has same or worse score, then delete parent
+	    my $ancestorEcs;
+	    &getAllAncestors($ec,$ancestorEcs);
+	    foreach my $ancestorEc (keys %{$ancestorEcs}) {
+		if (exists $scores->{$id}->{$ancestorEc} && &sameorWorseScore($scores->{$id},$ec,$ancestorEc)) {
+		    $toDelete{$ancestorEc} = 1;
 		}
 	    }
 	}
@@ -984,6 +989,21 @@ sub deletePartialEcWithWorseScore {
 	    delete $scores->{$id}->{$ec};
 	}
     }
+}
+
+sub sameOrWorseScore {
+    my ($scoresRef,$ec1,$ec2) = @_;
+    return 1 if ($scoresRef->{$ec2}->{numProteinsWithEc} <=
+		 $scoresRef->{$ec1}->{numProteinsWithEc} &&
+		 $scoresRef->{$ec2}->{numGeneraWithEc} <=
+		 $scoresRef->{$ec1}->{numGeneraWithEc} &&
+		 $scoresRef->{$ec2}->{lengthScore} <=
+		 $scoresRef->{$ec1}->{lengthScore} &&
+		 $scoresRef->{$ec2}->{blastScore} <=
+		 $scoresRef->{$ec1}->{blastScore} &&
+		 $scoresRef->{$ec2}->{domainScore} <=
+		 $scoresRef->{$ec1}->{domainScore});
+    return 0;
 }
 
 sub scoreToNumber {
