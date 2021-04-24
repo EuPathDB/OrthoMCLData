@@ -600,7 +600,7 @@ sub getParent {
 sub getAllAncestors {
     my ($ec,$ancestorEcs) = @_;
     my $parentEc = &getParent($ec);
-    if ($parentEc) {
+    if ($parentEc ne "") {
 	$ancestorEcs->{$parentEc} = 1;
 	&getAllAncestors($parentEc,$ancestorEcs);
     }
@@ -977,14 +977,17 @@ sub deletePartialEcWithWorseScore {
     foreach my $id (keys %{$scores}) {
 	my %toDelete;
 	foreach my $ec (keys %{$scores->{$id}}) {
-	    my $ancestorEcs;
-	    &getAllAncestors($ec,$ancestorEcs);
-	    foreach my $ancestorEc (keys %{$ancestorEcs}) {
-		if (exists $scores->{$id}->{$ancestorEc} && &sameorWorseScore($scores->{$id},$ec,$ancestorEc)) {
+	    my %ancestorEcs;
+ 	    &getAllAncestors($ec,\%ancestorEcs);
+	    next if (keys %ancestorEcs == 0);
+	    
+	    foreach my $ancestorEc (keys %ancestorEcs) {
+		if (exists $scores->{$id}->{$ancestorEc} && &sameOrWorseScore($scores->{$id},$ec,$ancestorEc)) {
 		    $toDelete{$ancestorEc} = 1;
 		}
 	    }
 	}
+
 	foreach my $ec (keys %toDelete) {
 	    delete $scores->{$id}->{$ec};
 	}
@@ -993,10 +996,8 @@ sub deletePartialEcWithWorseScore {
 
 sub sameOrWorseScore {
     my ($scoresRef,$ec1,$ec2) = @_;
-    return 1 if ($scoresRef->{$ec2}->{numProteinsWithEc} <=
-		 $scoresRef->{$ec1}->{numProteinsWithEc} &&
-		 $scoresRef->{$ec2}->{numGeneraWithEc} <=
-		 $scoresRef->{$ec1}->{numGeneraWithEc} &&
+    return 1 if ($scoresRef->{$ec1}->{numProteinsWithEc} >= 2 &&
+		 $scoresRef->{$ec1}->{numGeneraWithEc} >= 2 &&
 		 $scoresRef->{$ec2}->{lengthScore} <=
 		 $scoresRef->{$ec1}->{lengthScore} &&
 		 $scoresRef->{$ec2}->{blastScore} <=
