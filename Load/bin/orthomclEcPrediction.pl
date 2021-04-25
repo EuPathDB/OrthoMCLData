@@ -876,7 +876,7 @@ sub domainScore {
     my ($id,$ec,$domainStatsPerEc,$domainPerProtein) = @_;
     my $score=0;
     my $idDomain = $domainPerProtein->{$id};
-    die "There is no domain for $id. Testing EC $ec.\n" if (! $idDomain);
+    die "There is no domain for $id. Testing EC $ec.\n" if (! defined $idDomain);
     die "There is no domainStatsPerEc for $ec. Testing $id.\n" if (! exists $domainStatsPerEc->{$ec});
 
     foreach my $domainString ( keys %{$domainStatsPerEc->{$ec}->{domainString}} ) {
