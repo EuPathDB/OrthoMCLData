@@ -128,6 +128,7 @@ sub run {
 
     my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
 
+
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
 }
 
@@ -135,7 +136,7 @@ sub run {
 sub getUnfinishedOrthologGroups {
   my ($self,$groupTypesCPR,$overwriteExisting) = @_;
 
-  $self->log ("Getting the ids of groups not yet updated\n");
+  $self->log("Getting the ids of groups not yet updated\n");
 
   my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
   my $text = join("','",keys %types);
@@ -166,7 +167,7 @@ EOF
 
   my $num = keys %unfinished;
 
-  $self->log ("   There are $num unfinished groups\n");
+  $self->log("   There are $num unfinished groups\n");
 
   return \%unfinished;
 }
@@ -218,7 +219,8 @@ EOF
   }
 
   foreach my $groupId (keys %{$unfinished}) {
-    $self->log("Processing group_id: $groupId\n");
+    # un-comment this for debugging
+    # $self->log("Processing group_id: $groupId\n");
 
     my @seqIdArr;
 
@@ -250,7 +252,8 @@ sub processSeqsInGroup {
 
   my $grpSize = @{$seqIdArr};
 
-  $self->log ("Processing $grpSize seqs in $groupId\n");
+  # un-comment this for debugging
+  # $self->log("Processing $grpSize seqs in $groupId\n");
 
   my $numMatchPairs = 0;     # A<->B and B<->A will be counted as 1
   my $numOneWays = 0;      # A<->B and B<->A will be counted as 2
@@ -307,7 +310,8 @@ sub getPairIsConnected {
 sub updateOrthologGroup {
   my ($self,$groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$eValues,$connectivity,$grpSize,$orthologTableSuffix) = @_;
 
-  $self->log ("Updating row for ortholog group_id $groupId\n");
+  # un-comment for debugging
+  # $self->log("Updating row for ortholog group_id $groupId\n");
 
   my $numOneWaysNoZero = ($numOneWays == 0) ? 1 : $numOneWays;
 
@@ -382,7 +386,8 @@ sub getAvgConnectivity {
 sub updateOrthologGroupAaSequences {
   my ($self, $groupId, $seqIdArr, $connectivity, $orthologTableSuffix) = @_;
 
-  $self->log ("Updating orthologgroupaasequence rows\n");
+  # un-comment for debugging
+  # $self->log("Updating orthologgroupaasequence rows\n");
 
   my $submitted;
 
