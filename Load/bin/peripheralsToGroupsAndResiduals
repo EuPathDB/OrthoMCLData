@@ -19,44 +19,42 @@ my $peripheralsSimSeqTable = $ARGV[3];
 my $abbrev = $ARGV[4];
 my $pvalueExponentCutoff = $ARGV[5];
 my $percentMatch = $ARGV[6];
+my $coreGroupsFile = $ARGV[7];
 
-usage() unless scalar(@ARGV) == 7;
+usage() unless scalar(@ARGV) == 8;
 
 $| = 1;
 
 my $dbh = getDbHandle();
 
-print STDERR "reading core protein Ids and orthogroups from database into hash at " . `date` . "\n";
+print STDERR "reading core protein Ids and orthogroups from file $coreGroupsFile into hash at " . `date` . "\n";
 my %groups;
 my %grouplist;
-
-# prepare query to obtain core protein Ids and orthogroups
-my $orthogroupQuery = $dbh->prepare(<<SQL);
-select eas.secondary_identifier, og.name
-from DoTS.externalaasequence eas
-    , APIDB.OrthologGroupAaSequence ogas
-    , apidb.orthologgroup og
-where eas.aa_sequence_id = ogas.aa_sequence_id
-    and ogas.ortholog_group_id = og.ortholog_group_id
-    and og.core_peripheral_residual='C'
-SQL
-
-$orthogroupQuery->execute();
-while (my($coreProtein,$groupName) = $orthogroupQuery->fetchrow_array()) {
-    $groups{$coreProtein}=$groupName;
-    if (! exists $grouplist{$groupName}) {
-	$grouplist{$groupName}=[];
+open(IN, $coreGroupsFile) or die "Cannot open $coreGroupsFile for reading.\n";
+while (my $line = <IN>) {
+    chomp $line;
+    next if ($line !~ /^OG/);
+    my @ids = split(/ /,$line);
+    my $group = shift @ids;
+    $group =~ s/://g;
+    foreach my $id (@ids) {
+	$groups{$id} = $group;
+	if (! exists $grouplist{$group}) {
+	    $grouplist{$group}=[];
+	}
     }
 }
-$orthogroupQuery->finish();
 
-print STDERR "preparing query to obtain all peripheral protein Ids for organism $abbrev at " . `date` . "\n";
-# prepare query to obtain protein IDs from the current peripheral proteome
-my $peripheralQuery = $dbh->prepare(<<SQL);
-select secondary_identifier
-from DoTS.externalaasequence
-where secondary_identifier like '$abbrev|%'
-SQL
+print STDERR "reading peripheral protein Ids for organism $abbrev from file $inputFastaFile at " . `date` . "\n";
+open(IN, $inputFastaFile) or die "Cannot open $inputFastaFile for reading.\n";
+my %peripheralIds;
+while (my $line = <IN>) {
+    if ($line =~ /^>(\S+)\s/) {
+	my $id = $1;
+	$peripheralIds{$id} = 1;
+    }
+}
+close(IN);
 
 print STDERR "preparing first query to obtain core protein Id that PERFECTLY match (p value=0) a given peripheral protein at " . `date` . "\n";
 # prepare query to obtain the core protein ID that best matches the peripheral protein
@@ -80,12 +78,10 @@ my $coreQuery2 = $dbh->prepare(<<SQL);
     order by evalue_exp, evalue_mant desc
 SQL
 
-$peripheralQuery->execute();
-
 my %residualProteins;
 my %peripheralSeen;
 my $count=0;
-while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
+foreach my $peripheralProtein (keys %peripheralIds) {
   next if (exists $peripheralSeen{$peripheralProtein});
   $peripheralSeen{$peripheralProtein}=1;
   $count++;
@@ -120,8 +116,7 @@ while (my($peripheralProtein) = $peripheralQuery->fetchrow_array()) {
   }
 }
 
-print STDERR "Finishing peripheralQuery at " . `date` . "\n";
-$peripheralQuery->finish();
+print STDERR "Finished mapping peripheral proteins at " . `date` . "\n";
 $dbh->disconnect();
 
 print STDERR "writing out orthogroups and mapped peripheral proteins at " . `date` . "\n";
