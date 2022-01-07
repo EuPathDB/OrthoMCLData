@@ -122,6 +122,10 @@ EOF
     $dbh->prepareAndExecute($sql);
     $dbh->commit();
 
+    $sql = "create index APIDB.OGT_IX01 on APIDB.ORTHOLOGGROUPTAXON(LOWER('THREE_LETTER_ABBREV'),'ORTHOLOG_GROUP_ID')";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
+
     $sql = "SELECT count(*) from apidb.orthologgrouptaxon";
     my $stmt = $dbh->prepareAndExecute($sql);
     my @row = $stmt->fetchrow_array();
