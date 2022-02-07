@@ -217,7 +217,7 @@ sub updateOrthologGroup {
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.OrthologGroup',
+  return (
 	 );
 }
 
@@ -225,10 +225,29 @@ sub undoPreprocess {
     my ($self, $dbh, $rowAlgInvocationList) = @_;
     my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
 
+    my $groupTypesCPR = "";
+    my $sql = " 
+SELECT ap.string_value
+FROM CORE.ALGORITHMPARAM ap, core.algorithmparamkey apk
+WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
+      AND ap.ROW_ALG_INVOCATION_ID IN ($rowAlgInvocations)
+      AND apk.ALGORITHM_PARAM_KEY = 'groupTypesCPR'";
+    my $sh = $dbh->prepareAndExecute($sql);
+    while (my @row = $sh->fetchrow_array()) {
+	die "The groupTypesCPR value must consist of C, P and R only" if ($row[0] !~ /^[CPR]{1,3}$/);
+	die "There are multiple groupTypesCPR values for this step" if ($groupTypesCPR ne "" && $groupTypesCPR ne $row[0]);
+	$groupTypesCPR = $row[0];
+    }
+    $sh->finish();
+
+    my %types = map { $_ => 1 } split('',$groupTypesCPR);
+    my $text = join("','",keys %types);
+    $text = "('$text')";
+
     my $sql = "UPDATE apidb.OrthologGroup
                SET multiple_sequence_alignment = NULL
-               WHERE row_alg_invocation_id in ($rowAlgInvocations)";
-    
+               WHERE core_peripheral_residual in $text";
+
     my $sh = $dbh->prepare($sql);
     $sh->execute();
     $sh->finish();

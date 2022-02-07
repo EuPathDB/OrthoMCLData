@@ -128,6 +128,7 @@ sub run {
 
     my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
 
+
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
 }
 
@@ -135,7 +136,7 @@ sub run {
 sub getUnfinishedOrthologGroups {
   my ($self,$groupTypesCPR,$overwriteExisting) = @_;
 
-  $self->log ("Getting the ids of groups not yet updated\n");
+  $self->log("Getting the ids of groups not yet updated\n");
 
   my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
   my $text = join("','",keys %types);
@@ -166,7 +167,7 @@ EOF
 
   my $num = keys %unfinished;
 
-  $self->log ("   There are $num unfinished groups\n");
+  $self->log("   There are $num unfinished groups\n");
 
   return \%unfinished;
 }
@@ -218,7 +219,8 @@ EOF
   }
 
   foreach my $groupId (keys %{$unfinished}) {
-    $self->log("Processing group_id: $groupId\n");
+    # un-comment this for debugging
+    # $self->log("Processing group_id: $groupId\n");
 
     my @seqIdArr;
 
@@ -250,13 +252,14 @@ sub processSeqsInGroup {
 
   my $grpSize = @{$seqIdArr};
 
-  $self->log ("Processing $grpSize seqs in $groupId\n");
+  # un-comment this for debugging
+  # $self->log("Processing $grpSize seqs in $groupId\n");
 
   my $numMatchPairs = 0;     # A<->B and B<->A will be counted as 1
   my $numOneWays = 0;      # A<->B and B<->A will be counted as 2
   my $sumPercentIdentity = 0;
   my $sumPercentMatch = 0;
-  my $sumEvalue = 0;
+  my @eValues;
   my %connectivity;
 
   for (my $i = 0; $i < $grpSize - 1; $i++) {
@@ -268,14 +271,14 @@ sub processSeqsInGroup {
 
       my $isPair=0;
       while (my @row = $sth->fetchrow_array()) {
+	  die "Cannot handle e-value of 0e0 for $sequence1[1] and $sequence2[1]. Need to set to lowest e-value minus 1." if ($row[0]==0 && $row[1]==0);
+	  $row[0] = 1 if ($row[0] == 0);
 	  my $eValue = $row[0] . "e" . $row[1];
-	  if ($eValue <= 1e-5) {
-	      $numOneWays++;
-	      $isPair=1;
-	  }
+	  push @eValues, log($eValue)/log(10);
 	  $sumPercentMatch += $row[3];
 	  $sumPercentIdentity += $row[2];
-	  $sumEvalue += $eValue;
+	  $numOneWays++;
+	  $isPair=1 if ($eValue <= 1e-5);
       }
       $numMatchPairs++ if ($isPair==1);
       
@@ -288,7 +291,7 @@ sub processSeqsInGroup {
   }
   my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity, $orthologTableSuffix);
 
-  my $groupsUpdated += $self->updateOrthologGroup($groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$sumEvalue,\%connectivity,$grpSize,$orthologTableSuffix);
+  my $groupsUpdated += $self->updateOrthologGroup($groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,\@eValues,\%connectivity,$grpSize,$orthologTableSuffix);
 
   return ($groupsUpdated,$grpAaSeqUpdated);
 
@@ -305,9 +308,10 @@ sub getPairIsConnected {
 }
 
 sub updateOrthologGroup {
-  my ($self,$groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$sumEvalue,$connectivity,$grpSize,$orthologTableSuffix) = @_;
+  my ($self,$groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,$eValues,$connectivity,$grpSize,$orthologTableSuffix) = @_;
 
-  $self->log ("Updating row for ortholog group_id $groupId\n");
+  # un-comment for debugging
+  # $self->log("Updating row for ortholog group_id $groupId\n");
 
   my $numOneWaysNoZero = ($numOneWays == 0) ? 1 : $numOneWays;
 
@@ -315,17 +319,15 @@ sub updateOrthologGroup {
 
   my $avgPercentMatch = sprintf("%.1f", $sumPercentMatch/$numOneWaysNoZero);
 
-  my $avgEvalue = $sumEvalue/$numOneWaysNoZero;
+  my $medianEvalue = median($eValues);
+  $medianEvalue = sprintf("%1.1e",10**$medianEvalue);
+  my ($medianMant,$medianExp) = split(/e/,$medianEvalue);
+  $medianExp = int($medianExp);
 
   my $maxPossiblePairs = ($grpSize * ($grpSize -1)) / 2;
   my $percentMatchPairs = sprintf("%.1f",100 * $numMatchPairs / $maxPossiblePairs);
 
   my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
-
-  my $fixedAvgEValue = sprintf("%e",$avgEvalue);
-
-  my($avgMant,$avgExp) = split(/e/,$fixedAvgEValue);
-
   $orthologGroup->retrieveFromDB();
 
   if ($orthologGroup->get('avg_percent_identity') != $avgPercentIdentity) {
@@ -351,12 +353,12 @@ sub updateOrthologGroup {
     $orthologGroup->set('percent_match_pairs', $percentMatchPairs );
   }
 
-  if ($orthologGroup->get('avg_evalue_exp') != $avgExp) {
-    $orthologGroup->set('avg_evalue_exp', $avgExp);
+  if ($orthologGroup->get('avg_evalue_exp') != $medianExp) {
+    $orthologGroup->set('avg_evalue_exp', $medianExp);
   }
 
-  if ($orthologGroup->get('avg_evalue_mant') != $avgMant) {
-    $orthologGroup->set('avg_evalue_mant', $avgMant);
+  if ($orthologGroup->get('avg_evalue_mant') != $medianMant) {
+    $orthologGroup->set('avg_evalue_mant', $medianMant);
   }
 
   my $submit = $orthologGroup->submit();
@@ -384,7 +386,8 @@ sub getAvgConnectivity {
 sub updateOrthologGroupAaSequences {
   my ($self, $groupId, $seqIdArr, $connectivity, $orthologTableSuffix) = @_;
 
-  $self->log ("Updating orthologgroupaasequence rows\n");
+  # un-comment for debugging
+  # $self->log("Updating orthologgroupaasequence rows\n");
 
   my $submitted;
 
@@ -414,17 +417,18 @@ sub updateOrthologGroupAaSequences {
   return $submitted;
 }
 
-
+sub median {
+    my ($values) = @_;
+    my @sortedValues = sort {$a <=> $b} @{$values};
+    my $len = scalar @sortedValues;
+    if ($len%2) { #odd
+        return $sortedValues[int($len/2)];
+    } else { #even
+        return ($sortedValues[int($len/2)-1] + $sortedValues[int($len/2)])/2;
+    }
+}
 
 # ----------------------------------------------------------------------
-
-sub undoUpdateTables {
-  my ($self) = @_;
-
-  return ('ApiDB.OrthologGroupAASequence',
-          'ApiDB.OrthologGroup',
-	 );
-}
 
 
 sub undoTables {
@@ -432,6 +436,43 @@ sub undoTables {
 
   return (
          );
+}
+
+sub undoPreprocess {
+    my ($self, $dbh, $rowAlgInvocationList) = @_;
+    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+
+    my $groupTypesCPR = "";
+    my $sql = " 
+SELECT ap.string_value
+FROM CORE.ALGORITHMPARAM ap, core.algorithmparamkey apk
+WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
+      AND ap.ROW_ALG_INVOCATION_ID IN ($rowAlgInvocations)
+      AND apk.ALGORITHM_PARAM_KEY = 'groupTypesCPR'";
+    my $sh = $dbh->prepareAndExecute($sql);
+    while (my @row = $sh->fetchrow_array()) {
+	die "The groupTypesCPR value must consist of C, P and R only" if ($row[0] !~ /^[CPR]{1,3}$/);
+	die "There are multiple groupTypesCPR values for this step" if ($groupTypesCPR ne "" && $groupTypesCPR ne $row[0]);
+	$groupTypesCPR = $row[0];
+    }
+    $sh->finish();
+
+    my %types = map { $_ => 1 } split('',$groupTypesCPR);
+    my $text = join("','",keys %types);
+    $text = "('$text')";
+
+    $sql = "
+UPDATE apidb.OrthologGroup
+SET avg_percent_identity = NULL,
+    avg_percent_match = NULL,
+    avg_evalue_mant = NULL,
+    avg_evalue_exp = NULL,
+    avg_connectivity = NULL,
+    number_of_match_pairs = NULL,
+    percent_match_pairs = NULL
+WHERE core_peripheral_residual in $text";    
+    $sh = $dbh->prepareAndExecute($sql);
+    $sh->finish();
 }
 
 

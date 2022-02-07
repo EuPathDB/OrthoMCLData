@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertSinglePeripheralTaxon;
+package OrthoMCLData::Load::Plugin::InsertSinglePeripheralTaxonNameVersion;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -13,11 +13,10 @@ use GUS::Model::ApiDB::OrthomclTaxon;
 my $argsDeclaration =
 [
  stringArg({name           => 'abbrev',
-            descr          => '4-letter abbreviation for the epripheral species. this must be unique',
+            descr          => '4-letter abbreviation for the peripheral species. this must be unique',
             reqd           => 1,
             constraintFunc => undef,
             isList         => 0, }),
-
 
  stringArg({ descr => 'four-letter orthomcl clade to which the peripheral species belongs',
 	     name  => 'orthomclClade',
@@ -26,9 +25,22 @@ my $argsDeclaration =
 	     constraintFunc => undef,
 	   }),
 
-
  stringArg({ descr => 'The NCBI taxon id of the peripheral species',
 	     name  => 'ncbiTaxonId',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+
+ stringArg({ descr => 'The version of the proteome',
+	     name  => 'version',
+	     isList    => 0,
+	     reqd  => 1,
+	     constraintFunc => undef,
+	   }),
+
+ stringArg({ descr => 'The full name of the organism to be shown on the site',
+	     name  => 'organismName',
 	     isList    => 0,
 	     reqd  => 1,
 	     constraintFunc => undef,
@@ -99,28 +111,29 @@ sub run {
     my $abbrev = $self->getArg('abbrev');
     my $orthomclClade = $self->getArg('orthomclClade');
     my $ncbiTaxonId = $self->getArg('ncbiTaxonId');
+    my $version = $self->getArg('version');
+    my $organismName = $self->getArg('organismName');
 
-    die "species abbreviation $abbrev must have 4 letters" if (length($abbrev) != 4);
-    die "species abbreviation $abbrev already exists in the database" if (! $self->abbrevUnique($abbrev));
+    die "species abbreviation '$abbrev' must have 4 letters" if (length($abbrev) != 4);
+    die "species abbreviation '$abbrev' already exists in the database" if (! $self->abbrevUnique($abbrev));
     
     my ($taxonId, $taxonName) = $self->getTaxonId($ncbiTaxonId);
     my $speciesOrder = $self->getSpeciesOrder();
     my ($parentId, $depthFirstIndex) = $self->getCladeInfo($orthomclClade);
 
-    my $species = GUS::Model::ApiDB::OrthomclTaxon->
-	new({parent_id => $parentId,
-	     taxon_id => $taxonId,
-	     name => $taxonName,
-	     three_letter_abbrev => $abbrev,
-	     is_species => 1,
-	     species_order => $speciesOrder,
-	     depth_first_index => $depthFirstIndex,
-	     core_peripheral => 'P'
-	    });
+    my $species = GUS::Model::ApiDB::OrthomclTaxon->new();
+    $species->set('parent_id', $parentId);
+    $species->set('taxon_id', $taxonId);
+    $species->set('name', $organismName);
+    $species->set('three_letter_abbrev', $abbrev);
+    $species->set('is_species', 1);
+    $species->set('species_order', $speciesOrder);
+    $species->set('depth_first_index', $depthFirstIndex);
+    $species->set('core_peripheral', 'P');
     $species->submit();
     $species->undefPointerCache();
 
-    $self->log("The species '$taxonName' with abbrev '$abbrev' has been loaded into apidb.OrthomclTaxon.");
+    $self->log("The species '$organismName' with abbrev '$abbrev' has been loaded into apidb.OrthomclTaxon.");
     
 }
 
@@ -192,9 +205,10 @@ AND taxon_id IS NULL
 sub undoTables {
   my ($self) = @_;
 
-  return ('ApiDB.OrthomclTaxon'
+  return (
 	 );
 }
+
 
 sub undoPreprocess {
     my ($self, $dbh, $rowAlgInvocationList) = @_;

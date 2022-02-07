@@ -101,19 +101,30 @@ CREATE TABLE apidb.orthologgrouptaxon (
 ORGANIZATION index
 NOLOGGING
 AS    
-SELECT substr(eas.secondary_identifier,1,4),
+SELECT NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier),
        count(ogas.aa_sequence_id),
        1 as number_of_taxa, og.ortholog_group_id
 FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.ExternalAaSequence eas        
 WHERE ogas.ortholog_group_id = og.ortholog_group_id
   AND og.core_peripheral_residual in ('P','R')
   AND eas.aa_sequence_id = ogas.aa_sequence_id                                                    
-GROUP BY substr(eas.secondary_identifier,1,4), og.ortholog_group_id 
+GROUP BY NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier), og.ortholog_group_id
 EOF
 
     $dbh->prepareAndExecute($sql);
     $dbh->commit();
 
+    $sql = "grant select on apidb.orthologgrouptaxon to gus_r";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
+
+    $sql = "grant insert, select, update, delete on apidb.orthologgrouptaxon to gus_w";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
+
+    $sql = "create index APIDB.OGT_IX01 on APIDB.ORTHOLOGGROUPTAXON(LOWER('THREE_LETTER_ABBREV'),'ORTHOLOG_GROUP_ID')";
+    $dbh->prepareAndExecute($sql);
+    $dbh->commit();
 
     $sql = "SELECT count(*) from apidb.orthologgrouptaxon";
     my $stmt = $dbh->prepareAndExecute($sql);

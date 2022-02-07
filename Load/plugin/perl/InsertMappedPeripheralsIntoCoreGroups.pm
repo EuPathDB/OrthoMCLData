@@ -174,7 +174,7 @@ sub _parseGroup {
 	die "Can't find an ortholog_group_id for $groupName\n" if !$orthoGroupId;
 
         for (@genes) {
-            if (/(\w+)\|(\S+)/) {
+            if (/([^\|]+)\|(\S+)/) {
 		my $taxonAbbrev = $1;
 		my $sourceId = $2;
 		my $sequenceId = $self->getAASequenceId($taxonAbbrev,$sourceId);

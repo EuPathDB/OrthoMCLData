@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # This script generates three files that are needed by Data Loaders to update ortholog data on the
-# genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
+# genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt, ec_organism.txt
 
 use strict;
 use lib "$ENV{GUS_HOME}/lib/perl";
@@ -14,8 +14,9 @@ my $peripheralMapFileName = $ARGV[2];
 my $coreMapFile = $ARGV[3];
 my $residualMapFile = $ARGV[4];
 my $cladeFile = $ARGV[5];
+my $ecFile = $ARGV[6];
 
-usage() unless scalar(@ARGV) == 6;
+usage() unless scalar(@ARGV) == 7;
 
 $| = 1;
 
@@ -23,11 +24,13 @@ print STDERR "Creating $outputDir directory at " . `date` . "\n";
 my $cmd = "mkdir -p $outputDir";
 system($cmd) && die "Failed running cmd\n$cmd";
 
-
 print STDERR "Copying $cladeFile to $outputDir at" . `date` . "\n";
-my $cmd = "cp $cladeFile $outputDir";
+$cmd = "cp $cladeFile $outputDir";
 system($cmd) && die "Failed running cmd\n$cmd";
 
+print STDERR "Moving $ecFile to $outputDir at" . `date` . "\n";
+$cmd = "mv $ecFile $outputDir";
+system($cmd) && die "Failed running cmd\n$cmd";
 
 print STDERR "Creating orthomclTaxons.txt file in $outputDir using data from database at " . `date` . "\n";
 my $taxonFile = $outputDir."/orthomclTaxons.txt";
@@ -35,19 +38,20 @@ open(OUT, ">", $taxonFile)
     or die "cannot open residuals file \"$taxonFile\" for writing: $!";
 my $dbh = getDbHandle();
 my $query = $dbh->prepare(<<SQL);
-select ot1.three_letter_abbrev,ot2.three_letter_abbrev,t.ncbi_tax_id,ot1.core_peripheral
-from sres.taxon t,
-     (select parent_id,taxon_id,three_letter_abbrev,core_peripheral
+select ot1.three_letter_abbrev,ot1.name,ot2.three_letter_abbrev,ot1.core_peripheral
+from 
+     (select parent_id,taxon_id,three_letter_abbrev,name,core_peripheral
         from apidb.orthomcltaxon) ot1,
      (select orthomcl_taxon_id,three_letter_abbrev
         from apidb.orthomcltaxon) ot2
 where ot1.parent_id=ot2.orthomcl_taxon_id
-    and t.taxon_id=ot1.taxon_id
+    AND ot1.core_peripheral IN ('C','P')
 SQL
 
 $query->execute();
-while (my($abbrev,$clade,$ncbiId,$corePeripheral) = $query->fetchrow_array()) {
-    print OUT "$abbrev\t$clade\t$ncbiId\t$corePeripheral\n";
+while (my($abbrev,$name,$clade,$corePeripheral) = $query->fetchrow_array()) {
+    next if ($abbrev =~ /-old/);
+    print OUT "$abbrev\t$name\t$clade\t$corePeripheral\n";
 }
 $query->finish();
 
@@ -60,7 +64,7 @@ my %orthoGroups;
 
 # GROUP FILE FORMAT:   OG6_100000: cbra|A0A388L692 cbra|A0A388LB57
 
-my @peripheralFolders = glob( $peripheralDir."/*_orthomclPeripheralProteome_RSRC" );
+my @peripheralFolders = glob( $peripheralDir."/*RSRC" );
 my @peripheralMapFiles = map { $_."/".$peripheralMapFileName } @peripheralFolders;
 my @groupFiles = ($coreMapFile,@peripheralMapFiles,$residualMapFile);
 
@@ -81,11 +85,12 @@ foreach my $file (@groupFiles) {
     	if ( $line =~ /^([^:]+):\s(.+)$/ ) {
     	    my ($group,$genes) = ($1,$2);
     	    my @geneArray = split(" ",$genes);
+	    my $cleanedGeneArray = cleanGeneArray(\@geneArray);
     	    $group =~ s/://g;
     	    if ( exists $orthoGroups{$group} ) {
-    		push @{$orthoGroups{$group}}, @geneArray;
+    		push @{$orthoGroups{$group}}, @{$cleanedGeneArray};
     	    } else {
-    		$orthoGroups{$group} = [@geneArray]; 
+    		$orthoGroups{$group} = [@{$cleanedGeneArray}]; 
     	    }
     	}
     }
@@ -103,9 +108,21 @@ foreach my $group (sort keys %orthoGroups) {
 }
 close(OUT);
 
-
 print STDERR "Finished at " . `date` . "\n";
 
+
+
+sub cleanGeneArray {
+    my ($geneArray) = @_;
+    
+    my @cleanedGeneArray;
+
+    foreach my $gene (@{$geneArray}) {
+	next if ($gene =~ /^[A-Za-z]{4}-old\|/);
+	push @cleanedGeneArray, $gene;
+    }
+    return \@cleanedGeneArray;
+}
 
 sub getDbHandle {
 
@@ -127,9 +144,9 @@ sub getDbHandle {
 sub usage() {
   die "
 This script generates three files that are needed by Data Loaders to update ortholog data on the
-genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt
+genomic websites. These files are: orthomclClades.txt, orthomclGroups.txt, orthomclTaxons.txt, ec_organism.txt
 
-Usage: orthomclMakeGenomicSitesFiles outputDir peripheralDir peripheralMapFileName coreMapFile residualMapFile cladeFile
+Usage: orthomclMakeGenomicSitesFiles outputDir peripheralDir peripheralMapFileName coreMapFile residualMapFile cladeFile ecFile
 
 Where:
   outputDirectory: the directory that will contain all output files. This is inded to be a sub-directory of the workflow
@@ -148,5 +165,9 @@ Where:
 
   cladeFile: the full path and name of the clade file that will be copied into the new directory
        (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/orthomclClades_RSRC/OrthoMCL6/orthomclClades.txt)
+
+  ecFile: the full path and name of the ec file that will be copied into the new directory
+       (e.g., /eupath/data/EuPathDB/workflows/OrthoMCL/OrthoMCL6/data/OrganismNameResources/ec_organism.txt)
+
 ";
 }

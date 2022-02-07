@@ -213,7 +213,8 @@ sub FunKeyword {
     my @funlines = @{$_[0]};
    
     my $n_words=10; # define the max number of words for keyword phrases
-    my $freq_cutoff=0.5; # define the smallest frequency cutoff for returned keyword or keyword phrases
+    my $freq_cutoff=0.2; # define the smallest frequency cutoff for returned keyword or keyword phrases
+    my $count_cutoff=2; # define the smallest number of proteins that must contain the returned keyword or keyword phrases
     my $return_n_words=20; # define the max number of total words for returned keyword or keyword phrases
     
     my $total_funlines=0;
@@ -258,8 +259,9 @@ sub FunKeyword {
 	my %freq_keyword;
     foreach my $w (keys %freq) {
 	next unless (word_satisfy($w));
+	next unless ($freq{$w}>=$count_cutoff);
 	$freq{$w}=$freq{$w}/$total_funlines;
-	next unless ($freq{$w}>$freq_cutoff);
+	next unless ($freq{$w}>=$freq_cutoff);
 	push(@{$freq_keyword{sprintf("%.2f",$freq{$w})}},$w);
     }
     

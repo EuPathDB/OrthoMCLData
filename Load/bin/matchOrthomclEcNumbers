@@ -46,7 +46,7 @@ if ($insertSequenceEcNumber) {
                      (orthomcl_id, orthomcl_taxon_id, uniprot_id, uniprot_ncbi_tax_id, ec_number)
                    values (?, (select taxon_id
                                from apidb.OrthomclTaxon
-                               where three_letter_abbrev = substr(?, 1, 4)),
+                               where three_letter_abbrev = ?),
                            ?, ?, ?)
 SQL
 }
@@ -126,7 +126,9 @@ sub loadTaxonMappings {
 
 sub insertMapping {
   my ($uniprotId, $orthomclId, $uniprotNcbiTaxId, $ecNumber, $insertStmt) = @_;
-  $insertStmt->execute($orthomclId, $orthomclId, $uniprotId, $uniprotNcbiTaxId, $ecNumber) or die DBI::errstr;
+  my @array = split(/\|/,$orthomclId);
+  my $abbrev = shift @array;
+  $insertStmt->execute($orthomclId, $abbrev, $uniprotId, $uniprotNcbiTaxId, $ecNumber) or die DBI::errstr;
 }
 
 sub getDbHandle {

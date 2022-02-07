@@ -26,8 +26,8 @@ if ($undo eq "undo") {
     mkdir($dir) || die "could not create directory '$dir' \n";
     createTempFile($dbh,$tempFile,\%suffixes);
     writeToGroupTable($dbh,$ctlFile,$sqlldrLog,$tempFile,$simSeqGroupTableSuffix);
-#    system("rm -rf $dir");
-#    print STDERR "deleting temporary directory $dir\n";
+    system("rm -rf $dir");
+    print STDERR "deleting temporary directory $dir\n";
 }
 
 exit;
@@ -86,14 +86,13 @@ sub createTempFile {
 	    my $subjectGroup = $aaInfo->{$row[1]}->{groupId};
 	    if ($queryGroup eq $subjectGroup && $row[4]>=20) {
 		if ($row[3] < -5 || ( $row[3] == -5 && $row[2] == 1 ) ) {
-		    my @text = ($queryGroup,$row[0],$aaInfo->{row[0]}->{aaType});
-		    push @text, ($row[1],$aaInfo->{row[1]}->{aaType},$row[2],$row[3]);
+		    my @text = ($queryGroup,$row[0],$aaInfo->{$row[0]}->{aaType});
+		    push @text, ($row[1],$aaInfo->{$row[1]}->{aaType},$row[2],$row[3]);
 		    print OUT join(" ",@text)."\n";
 		}
 	    }
 	}
     }
-    
     close(OUT);
 }	
 
@@ -124,7 +123,8 @@ sub getAaInfo {
                WHERE eas.aa_sequence_id = ogas.aa_sequence_id
                      AND ogas.ortholog_group_id = og.ortholog_group_id
                      AND og.core_peripheral_residual = 'P'
-                     AND substr(eas.secondary_identifier,1,4) = ot.three_letter_abbrev"; 
+                     AND NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1),
+                             eas.secondary_identifier) = ot.three_letter_abbrev"; 
 
     $queryHandle = $dbh->prepare($sql) or die $dbh->errstr;
     $queryHandle->execute() or die $dbh->errstr;
@@ -155,7 +155,8 @@ sub writeToGroupTable {
     my ($dbInstance,$dbLogin,$dbPassword) = getDbCredentials();
     my $cmd = "sqlldr $dbLogin/$dbPassword\@$dbInstance data=$tempFile control=$ctlFile log=$sqlldrLog rows=25000 direct=TRUE";
     print STDERR "Running: $cmd \n";
-    system($cmd);
+    my $error = system($cmd);
+    die "sqlldr had an error: $! \nSee log file: $sqlldrLog" if ($error);
 }
 
 sub writeControlFile {
