@@ -1,4 +1,4 @@
-<project name="OrthoMCL" default="OrthoMCLData-Installation" basedir=".">
+<project name="OrthoMCLData" basedir=".">
 
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
@@ -7,42 +7,18 @@
   <import file="${projectsDir}/ApiCommonData/build.xml" optional="true" />
   <import file="${projectsDir}/OrthoMCLModel/build.xml" />
 
-
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
   <target name="OrthoMCLData-Installation" depends="OrthoMCLModel-Installation,
-                                                    OrthoMCLData-MavenInstallation,
                                                     OrthoMCLData/Common-Installation,
-                                                    OrthoMCLData/Load-Installation">
-    <ant target="ApiCommonData-Installation" />
-
+                                                    OrthoMCLData/Load-Installation,
+                                                    ApiCommonData-Installation">
     <ant target="defaultProjectInstall">
       <property name="project" value="OrthoMCLData" />
     </ant>
   </target>
-
-  <target name="OrthoMCLData-MavenInstallation">
-    <ant target="mavenBuildProject">
-      <property name="project" value="OrthoMCLData" />
-    </ant>
-    <property name="alreadyBuilt" value="true" />
-  </target>
-
-
-  <!-- ooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
-
-  <target name="OrthoMCLData-Installation-postprocess">
-    <echo message="Postprocessing the OrthoMCLData installation" />
-
-    <replace dir="${targetDir}/bin"
-             propertyFile="${targetDir}/config/replacements.prop">
-      <include name="**/*" />
-      <replacefilter token="@perl@" property="perl" />
-    </replace>
-  </target>
-
 
   <!-- ooooooooooooooooooooooo  Install Components  ooooooooooooooooooooooo -->
 
@@ -53,35 +29,11 @@
     </ant>
   </target>
 
-  <target name="OrthoMCLData/Load-Installation" depends="ProjectTree">
+  <target name="OrthoMCLData/Load-Installation">
     <ant target="defaultComponentInstall">
       <property name="project" value="OrthoMCLData" />
       <property name="component" value="Load" />
     </ant>
   </target>
 
-
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooo  Distributable  ooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-
-  <target name="OrthoMCLData-Distributable" depends="ProjectTree">
-    <copy todir="${targetDir}">
-      <fileset dir="${projectsDir}">
-        <exclude name="**/.svn/*" />
-      </fileset>
-    </copy>
-  </target>
-
-
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooo  ProjectTree  ooooooooooooooooooooooooooo -->
-  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
-
-  <target name="ProjectTree" if="${checkout}">
-    <ant target="projectCheckOut" />
-  </target>
-
 </project>
-
-
