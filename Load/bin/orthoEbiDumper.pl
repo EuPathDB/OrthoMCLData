@@ -14,11 +14,12 @@ use CBIL::Util::PropertySet;
 
 my $databaseName = "core";
 
-my ($help, $containerName, $initDir, $dataDir, $outputDir, $orthomclAbbrev, $proteomeFileName, $ecFileName, $ebi2gusVersion);
+my ($help, $containerName, $initDir, $dataDir, $socketDir, $outputDir, $orthomclAbbrev, $proteomeFileName, $ecFileName, $ebi2gusVersion);
 
 &GetOptions('help|h' => \$help,
             'container_name=s' => \$containerName,
             'init_directory=s' => \$initDir,
+            'socket_directory=s' => \$socketDir,
             'mysql_directory=s' => \$dataDir,
             'output_directory=s' => \$outputDir,
             'orthomclAbbrev=s' => \$orthomclAbbrev,
@@ -27,7 +28,7 @@ my ($help, $containerName, $initDir, $dataDir, $outputDir, $orthomclAbbrev, $pro
 	    'ebi2gus_tag=s' => \$ebi2gusVersion,
             );
 
-foreach($initDir,$dataDir,$outputDir) {
+foreach($initDir,$dataDir,$outputDir, $socketDir) {
   unless(-d $_) {
     &usage();
     die "directory $_ does not exist";
@@ -58,12 +59,12 @@ if($containerExists) {
   die "There is an existing container named $containerName";
 }
 
-my $mysqlServiceCommand = "singularity instance start --bind ${outputDir}:/tmp --bind ${registryFn}:/usr/local/etc/ensembl_registry.conf --bind ${dataDir}:/var/lib/mysql --bind ${initDir}:/docker-entrypoint-initdb.d  docker://veupathdb/ebi2gus:${ebi2gusVersion} $containerName";
+my $mysqlServiceCommand = "singularity instance start --bind ${outputDir}:/tmp --bind ${registryFn}:/usr/local/etc/ensembl_registry.conf --bind ${socketDir}:/run/mysqld --bind ${dataDir}:/var/lib/mysql --bind ${initDir}:/docker-entrypoint-initdb.d  docker://veupathdb/ebi2gus:${ebi2gusVersion} $containerName";
 
 system($mysqlServiceCommand) == 0
     or &stopContainerAndDie($containerName, "singularity exec failed: $?");
 
-my $runscript = "SINGULARITYENV_MYSQL_ROOT_PASSWORD=${randomPassword} SINGULARITYENV_MYSQL_DATABASE=${databaseName} singularity run instance://${containerName} mysqld --skip-networking --max_allowed_packet=1G";
+my $runscript = "APPTAINERENV_MYSQL_ROOT_PASSWORD=${randomPassword} APPTAINERENV_MYSQL_DATABASE=${databaseName} singularity run instance://${containerName} mysqld --skip-networking --max_allowed_packet=1G";
 
 my $servicePid = open(SERVICE, "-|", $runscript) or die "Could not start service: $!";
 
