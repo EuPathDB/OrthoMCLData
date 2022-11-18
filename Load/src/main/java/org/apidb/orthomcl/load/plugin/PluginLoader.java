@@ -33,7 +33,7 @@ public class PluginLoader {
         
         // create an instance of the plugin
         Class<?> pluginClass = Class.forName(pluginClassName);
-        Plugin plugin = (Plugin) pluginClass.newInstance();
+        Plugin plugin = (Plugin)pluginClass.getConstructor().newInstance();
 
         // invoke the plugin
         long start = System.currentTimeMillis();
