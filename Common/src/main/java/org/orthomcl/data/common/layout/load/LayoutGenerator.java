@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.orthomcl.data.common.layout.load;
 
 import java.util.ArrayList;
@@ -8,10 +5,9 @@ import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
@@ -38,7 +34,7 @@ public class LayoutGenerator {
    */
   public static void main(String[] args) throws OrthoMCLDataException {
     Options options = prepareOptions();
-    CommandLineParser parser = new GnuParser();
+    CommandLineParser parser = new DefaultParser();
     try {
       CommandLine commandLine = parser.parse(options, args);
       LayoutGenerator generator = new LayoutGenerator(commandLine);
@@ -62,18 +58,17 @@ public class LayoutGenerator {
   private static Options prepareOptions() {
     Options options = new Options();
 
-    Option maxMember = OptionBuilder.withArgName(ARG_MAX_MEMBER).withDescription(
+    Option maxMember = Option.builder().argName(ARG_MAX_MEMBER).desc(
         "Only process groups with number of members up to the given " + "value. Default is " +
-            DEFAULT_MAX_MEMBER).hasArg().create(ARG_MAX_MEMBER);
+            DEFAULT_MAX_MEMBER).hasArg().build();
     options.addOption(maxMember);
 
-    Option taskCount = OptionBuilder.withArgName(ARG_TASK_COUNT).withDescription(
-        "The number of tasks to run the layout. Default is " + DEFAULT_TASK_COUNT).hasArg().create(
-        ARG_TASK_COUNT);
+    Option taskCount = Option.builder().argName(ARG_TASK_COUNT).desc(
+        "The number of tasks to run the layout. Default is " + DEFAULT_TASK_COUNT).hasArg().build();
     options.addOption(taskCount);
 
-    Option undo = OptionBuilder.withArgName(ARG_UNDO).withDescription(
-        "Remove all generated layouts from database.").hasArg(false).create(ARG_UNDO);
+    Option undo = Option.builder().argName(ARG_UNDO).desc(
+        "Remove all generated layouts from database.").hasArg(false).build();
     options.addOption(undo);
 
     return options;
