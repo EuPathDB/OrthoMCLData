@@ -8,6 +8,8 @@ use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
 
+use Data::Dumper;
+
 use GUS::Model::ApiDB::OrthologGroup;
 use GUS::Model::ApiDB::OrthologGroupAaSequence;
 use GUS::Model::SRes::ExternalDatabase;
@@ -35,7 +37,7 @@ my $argsDeclaration =
 	     reqd  => 1,
 	     constraintFunc => undef,
 	   }),
- stringArg({ descr => 'specify core (C), peripheral (P), and/or residual (R) groups',
+ stringArg({ descr => 'specify core (C), peripheral (P), or residual (R) groups',
 	     name  => 'groupTypesCPR',
 	     isList    => 0,
 	     reqd  => 1,
@@ -113,7 +115,7 @@ sub run {
     my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
     my $overwriteExisting = uc($self->getArg('overwriteExisting'));
 
-    if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
+    if ( $groupTypesCPR !~ /^[CPRcpr]$/ ) {
 	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
     }
     if ( $overwriteExisting !~ /^[YyNn]/ ) {
@@ -126,7 +128,7 @@ sub run {
 
     my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR,$overwriteExisting);
 
-    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $simSeqTableSuffix, $orthologTableSuffix);
+    my ($updatedGrps,$updatedgrpsAaSeqs) = $self->processUnfinishedGroups($unfinished, $orthologTableSuffix, $simSeqTableSuffix);
 
 
     $self->log("$updatedGrps apidb.OrthologGroups and $updatedgrpsAaSeqs apidb.OrthologGroupAaSequence rows updated\n");
@@ -138,10 +140,6 @@ sub getUnfinishedOrthologGroups {
 
   $self->log("Getting the ids of groups not yet updated\n");
 
-  my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
-  my $text = join("','",keys %types);
-  $text = "('$text')";
-
   my $overwriteText="";
   if ( $overwriteExisting =~ /^[Nn]/ ) {
       $overwriteText = "AND number_of_match_pairs IS NULL";
@@ -150,11 +148,11 @@ sub getUnfinishedOrthologGroups {
   my %unfinished;
 
   my $sqlGetUnfinishedGroups = <<"EOF";
-     SELECT ortholog_group_id, core_peripheral_residual
+     SELECT ortholog_group_id, name
      FROM apidb.OrthologGroup
-     WHERE core_peripheral_residual in $text
+     WHERE core_peripheral_residual = '$groupTypesCPR'
 	   AND number_of_members > 1
-	   $overwriteText
+     $overwriteText
 EOF
 
   my $dbh = $self->getQueryHandle();
@@ -173,7 +171,7 @@ EOF
 }
 
 sub processUnfinishedGroups {
-  my ($self, $unfinished, $simSeqTableSuffix, $orthologTableSuffix) = @_;
+  my ($self, $unfinished, $orthologTableSuffix, $simSeqTableSuffix) = @_;
 
   my $updatedGrps;
 
@@ -189,33 +187,50 @@ EOF
 
   my $sth = $dbh->prepare($sqlSelectOrthGrpAASeq);
 
-  my $sqlSelectSimSeqs = "
+  my $simSeqsSql = "
      SELECT s.evalue_mant, s.evalue_exp,
        s.percent_identity, s.percent_match
      FROM apidb.SimilarSequences$simSeqTableSuffix s
-     WHERE (s.query_id = ? AND s.subject_id = ?)
-            OR (s.subject_id = ? AND s.query_id = ?)
+     WHERE s.query_id = ? AND s.subject_id = ?
+     UNION ALL
+    SELECT s.evalue_mant, s.evalue_exp,
+       s.percent_identity, s.percent_match
+     FROM apidb.SimilarSequences$simSeqTableSuffix s
+     WHERE s.subject_id = ? AND s.query_id = ?
 ";
 
-  my $sth2 = $dbh->prepare($sqlSelectSimSeqs);
+  my $simSeqsSth = $dbh->prepare($simSeqsSql);
 
-  my $sth3="";
+  my $conCountSth="";
   if ($orthologTableSuffix ne "peripheral") {
-      my $conCount = <<"EOF";
+      my $conCountSql = <<"EOF";
 select count(*) from
      (SELECT sequence_id_a
       FROM apidb.ortholog$orthologTableSuffix
-      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+      where sequence_id_a = ? and sequence_id_b = ?
+      UNION
+      SELECT sequence_id_a
+      FROM apidb.ortholog$orthologTableSuffix
+      where sequence_id_a = ? and sequence_id_b = ?
       UNION
       SELECT sequence_id_a
       FROM apidb.coortholog$orthologTableSuffix
-      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?)
+      where sequence_id_a = ? and sequence_id_b = ?
+      UNION
+      SELECT sequence_id_a
+      FROM apidb.coortholog$orthologTableSuffix
+      where sequence_id_a = ? and sequence_id_b = ?
       UNION
       SELECT sequence_id_a
       FROM apidb.inparalog$orthologTableSuffix
-      where (sequence_id_a = ? and sequence_id_b = ?) or (sequence_id_a = ? and sequence_id_b = ?))
+      where sequence_id_a = ? and sequence_id_b = ?
+      UNION
+      SELECT sequence_id_a
+      FROM apidb.inparalog$orthologTableSuffix
+      where sequence_id_a = ? and sequence_id_b = ?
+     )
 EOF
-      $sth3 = $dbh->prepare($conCount);
+      $conCountSth = $dbh->prepare($conCountSql);
   }
 
   foreach my $groupId (keys %{$unfinished}) {
@@ -234,7 +249,7 @@ EOF
 
     next if @seqIdArr < 2;
 
-    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$sth2,$sth3,$orthologTableSuffix);
+    my ($grps, $aaseqs) = $self->processSeqsInGroup(\@seqIdArr, $groupId,$simSeqsSth,$conCountSth,$orthologTableSuffix);
 
     $updatedGrps += $grps;
 
@@ -248,7 +263,7 @@ EOF
 }
 
 sub processSeqsInGroup {
-  my ($self,$seqIdArr, $groupId, $sth, $sth2, $orthologTableSuffix) = @_;
+  my ($self,$seqIdArr, $groupId, $simSeqsSth,$conCountSth, $orthologTableSuffix) = @_;
 
   my $grpSize = @{$seqIdArr};
 
@@ -267,44 +282,51 @@ sub processSeqsInGroup {
       my @sequence1 = split (/,/, $seqIdArr->[$i]);
       my @sequence2 = split (/,/, $seqIdArr->[$j]);
 
-      $sth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
+      $simSeqsSth->execute($sequence1[1], $sequence2[1], $sequence1[1], $sequence2[1]);
 
       my $isPair=0;
-      while (my @row = $sth->fetchrow_array()) {
-	  die "Cannot handle e-value of 0e0 for $sequence1[1] and $sequence2[1]. Need to set to lowest e-value minus 1." if ($row[0]==0 && $row[1]==0);
-	  $row[0] = 1 if ($row[0] == 0);
-	  my $eValue = $row[0] . "e" . $row[1];
-	  push @eValues, log($eValue)/log(10);
-	  $sumPercentMatch += $row[3];
-	  $sumPercentIdentity += $row[2];
-	  $numOneWays++;
-	  $isPair=1 if ($eValue <= 1e-5);
+      while (my @row = $simSeqsSth->fetchrow_array()) {
+        die "Cannot handle e-value of 0e0 for $sequence1[1] and $sequence2[1]. Need to set to lowest e-value minus 1." if ($row[0]==0 && $row[1]==0);
+        $row[0] = 1 if ($row[0] == 0);
+        my $eValue = $row[0] . "e" . $row[1];
+        push @eValues, log($eValue)/log(10);
+        $sumPercentMatch += $row[3];
+        $sumPercentIdentity += $row[2];
+        $numOneWays++;
+        $isPair=1 if ($eValue <= 1e-5);
       }
       $numMatchPairs++ if ($isPair==1);
       
-      if ($orthologTableSuffix ne "peripheral") {
-	  my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $sth2);
-	  $connectivity{$seqIdArr->[$i]} += $isConnected;
-	  $connectivity{$seqIdArr->[$j]} += $isConnected;
+      if ($isPair && $orthologTableSuffix ne "peripheral") {
+        my $isConnected = $self->getPairIsConnected($sequence1[1], $sequence2[1], $conCountSth);
+        $connectivity{$seqIdArr->[$i]} += $isConnected;
+        $connectivity{$seqIdArr->[$j]} += $isConnected;
       }
     }
   }
-  my $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity, $orthologTableSuffix);
+
+   my $grpAaSeqUpdated = 0;
+  # if ($orthologTableSuffix ne "peripheral") {
+  #   $grpAaSeqUpdated += $self->updateOrthologGroupAaSequences($groupId, $seqIdArr, \%connectivity);
+  # }
 
   my $groupsUpdated += $self->updateOrthologGroup($groupId,$numOneWays,$numMatchPairs,$sumPercentIdentity,$sumPercentMatch,\@eValues,\%connectivity,$grpSize,$orthologTableSuffix);
 
-  return ($groupsUpdated,$grpAaSeqUpdated);
+  return ($groupsUpdated, $grpAaSeqUpdated);
 
 }
 
 sub getPairIsConnected {
-  my ($self,$seq1,$seq2,$sth) = @_;
+  my ($self,$seq1,$seq2,$conCountSth) = @_;
 
-  $sth ->execute($seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1);
+  $conCountSth->execute($seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1,$seq1,$seq2,$seq2,$seq1);
 
-  my @row = $sth->fetchrow_array();
+  my @row = $conCountSth->fetchrow_array();
 
-  return $row[0];
+  if($row[0]) {
+    return 1;
+  }
+  return 0;
 }
 
 sub updateOrthologGroup {
@@ -361,7 +383,7 @@ sub updateOrthologGroup {
     $orthologGroup->set('avg_evalue_mant', $medianMant);
   }
 
-  my $submit = $orthologGroup->submit();
+    my $submit = $orthologGroup->submit();
 
   $self->undefPointerCache();
 
@@ -384,7 +406,7 @@ sub getAvgConnectivity {
 }
 
 sub updateOrthologGroupAaSequences {
-  my ($self, $groupId, $seqIdArr, $connectivity, $orthologTableSuffix) = @_;
+  my ($self, $groupId, $seqIdArr, $connectivity) = @_;
 
   # un-comment for debugging
   # $self->log("Updating orthologgroupaasequence rows\n");
@@ -400,13 +422,11 @@ sub updateOrthologGroupAaSequences {
     my $groupExists = $orthGrpAaSeq->retrieveFromDB();
 
     if (! $groupExists) {
-	die "Trying to get only one row for 'aa_sequence_id' $ids[0] and 'ortholog_group_id' $groupId but failed.\n";
+      die "Trying to get only one row for 'aa_sequence_id' $ids[0] and 'ortholog_group_id' $groupId but failed.\n";
     }
 
-    if ($orthologTableSuffix ne "peripheral") {
-	if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$idents}) {
+    if ($orthGrpAaSeq->get('connectivity') != $connectivity->{$idents}) {
 	    $orthGrpAaSeq->set('connectivity', $connectivity->{$idents});
-	}
     }
 
     $submitted = $orthGrpAaSeq->submit();
@@ -451,7 +471,7 @@ WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
       AND apk.ALGORITHM_PARAM_KEY = 'groupTypesCPR'";
     my $sh = $dbh->prepareAndExecute($sql);
     while (my @row = $sh->fetchrow_array()) {
-	die "The groupTypesCPR value must consist of C, P and R only" if ($row[0] !~ /^[CPR]{1,3}$/);
+	die "The groupTypesCPR value must consist of C, P and R only" if ($row[0] !~ /^[CPRcpr]$/);
 	die "There are multiple groupTypesCPR values for this step" if ($groupTypesCPR ne "" && $groupTypesCPR ne $row[0]);
 	$groupTypesCPR = $row[0];
     }
@@ -461,6 +481,7 @@ WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
     my $text = join("','",keys %types);
     $text = "('$text')";
 
+    # NEVER Undo the Core Stats.  They don't change
     $sql = "
 UPDATE apidb.OrthologGroup
 SET avg_percent_identity = NULL,
@@ -470,7 +491,8 @@ SET avg_percent_identity = NULL,
     avg_connectivity = NULL,
     number_of_match_pairs = NULL,
     percent_match_pairs = NULL
-WHERE core_peripheral_residual in $text";    
+WHERE core_peripheral_residual in $text
+  and core_peripheral_residual in ('P', 'R')";
     $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 }
