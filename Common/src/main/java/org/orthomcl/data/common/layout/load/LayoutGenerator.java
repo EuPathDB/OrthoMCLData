@@ -58,18 +58,23 @@ public class LayoutGenerator {
   private static Options prepareOptions() {
     Options options = new Options();
 
-    Option maxMember = Option.builder().argName(ARG_MAX_MEMBER).desc(
-        "Only process groups with number of members up to the given " + "value. Default is " +
-            DEFAULT_MAX_MEMBER).hasArg().build();
-    options.addOption(maxMember);
+    options.addOption(Option.builder()
+        .option(ARG_MAX_MEMBER)
+        .desc("Only process groups with number of members up to the given value. Default is " + DEFAULT_MAX_MEMBER)
+        .hasArg()
+        .build());
 
-    Option taskCount = Option.builder().argName(ARG_TASK_COUNT).desc(
-        "The number of tasks to run the layout. Default is " + DEFAULT_TASK_COUNT).hasArg().build();
-    options.addOption(taskCount);
+    options.addOption(Option.builder()
+        .option(ARG_TASK_COUNT)
+        .desc("The number of tasks to run the layout. Default is " + DEFAULT_TASK_COUNT)
+        .hasArg()
+        .build());
 
-    Option undo = Option.builder().argName(ARG_UNDO).desc(
-        "Remove all generated layouts from database.").hasArg(false).build();
-    options.addOption(undo);
+    options.addOption(Option.builder()
+        .option(ARG_UNDO)
+        .desc("Remove all generated layouts from database.")
+        .hasArg(false)
+        .build());
 
     return options;
   }
