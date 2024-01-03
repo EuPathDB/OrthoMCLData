@@ -122,7 +122,7 @@ sub checkForExemplar {
   my $seq = $proteinInfo->{seq};
   my $seqLength = $proteinInfo->{seqLength};
 
-  return if $seqLength == 0;  # for mysterious reasons, we sometimes get protein coding genes w/ 0 length
+  return if $seqLength <= 10;
 
   $geneIds{$gene} = 1;
 
@@ -167,7 +167,7 @@ sub usage {
   die "
 Find an example protein sequence per gene.  Use these criteria:
   1) if a preferred source is provided (eg sp for swissprot), then there should be only one per gene, and use that
-  2) otherwise, use the longest (but filter away those with too many stop codons)
+  2) otherwise, use the longest (but filter away those with too many stop codons and those with 10 or less amino acids)
 
 Usage: findExmplarProteins --fastaFile file --outputFile file < --geneIdRegex regex | --proteinToGeneFile file > --proteinIdRegex regex --maxStopCodonPercent percent --log file [--preferredSource source] [--verbose]
 
