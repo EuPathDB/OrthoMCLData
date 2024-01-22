@@ -126,7 +126,7 @@ SQL
 SELECT ed.name, edr.version, edr.id_url
 FROM Sres.ExternalDatabase ed,
      Sres.ExternalDatabaseRelease edr
-WHERE (ed.name like '%orthomcl%Proteome_RSRC'
+WHERE (ed.name like '%orthomclProteome_RSRC'
           OR ed.name like '%PeripheralFrom%'
           OR ed.name like '%CoreFrom%')
       AND ed.external_database_id = edr.external_database_id

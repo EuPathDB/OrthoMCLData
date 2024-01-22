@@ -11,12 +11,12 @@ where sim.subject_id = subject.aa_sequence_id
 
 grant select on apidb.SimilarSequences to public;
 
-prompt index SimilarSequences (query_id, subject_taxon_id, pvalue_exp, pvalue_mant, query_taxon_id, subject_id)
+prompt index SimilarSequences (query_id, subject_taxon_id, evalue_exp, evalue_mant, query_taxon_id, subject_id)
 create index apidb.ss_qtaxexp_ix
-on apidb.SimilarSequences(query_id, subject_taxon_id, pvalue_exp, pvalue_mant, query_taxon_id, subject_id);
+on apidb.SimilarSequences(query_id, subject_taxon_id, evalue_exp, evalue_mant, query_taxon_id, subject_id);
 
 prompt index SimilarSequences (query_id, subject_id)
-create index apidb.ss_seqs_ix on apidb.SimilarSequences(query_id, subject_id, pvalue_exp, pvalue_mant);
+create index apidb.ss_seqs_ix on apidb.SimilarSequences(query_id, subject_id, evalue_exp, evalue_mant);
 
 -----------------------------------------------------------------
 
