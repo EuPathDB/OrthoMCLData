@@ -93,6 +93,7 @@ sub run {
 						  INTERPRO_FAMILY_ID => $interproFamilyId
 					     });
          $row->submit();
+         $self->undefPointerCache();
  }
  print "$rowCount rows added.\n"
 }

@@ -46,6 +46,7 @@ ApiDB.OrthomclTaxon,
 Sres.ExternalDatabase,
 Sres.ExternalDatabaseRelease,
 Sres.Taxon
+Sres.TaxonName
 TABLES_DEPENDED_ON
 
 my $howToRestart = <<RESTART;
@@ -107,9 +108,11 @@ sub getSpeciesFromOrtho {
     my ($self) = @_;
 
     my $sql = <<SQL;
-SELECT ot.three_letter_abbrev,ot.orthomcl_taxon_id,ot.name,t.ncbi_tax_id
-FROM apidb.orthomcltaxon ot, sres.taxon t
-WHERE ot.core_peripheral IN ('C','P') AND ot.taxon_id=t.taxon_id
+SELECT ot.three_letter_abbrev, ot.orthomcl_taxon_id, ot.name, t.ncbi_tax_id
+FROM apidb.orthomcltaxon ot, sres.taxon t, sres.taxonname tn
+WHERE ot.core_peripheral IN ('C','P')
+AND ot.name = tn.name
+AND tn.taxon_id = t.taxon_id 
 SQL
  
     my $dbh = $self->getQueryHandle();
@@ -117,6 +120,7 @@ SQL
 
     my $species;
     while (my @row = $sth->fetchrow_array()) {
+        $self->log("abbrev is $row[0]\n");
 	$species->{$row[0]}->{orthomclId} = $row[1];
 	$species->{$row[0]}->{name} = $row[2];
 	$species->{$row[0]}->{ncbiTaxId} = $row[3];
@@ -126,9 +130,9 @@ SQL
 SELECT ed.name, edr.version, edr.id_url
 FROM Sres.ExternalDatabase ed,
      Sres.ExternalDatabaseRelease edr
-WHERE (ed.name like '%orthomclProteome_RSRC'
-          OR ed.name like '%PeripheralFrom%'
-          OR ed.name like '%CoreFrom%')
+WHERE (ed.name like '%_orthomclProteome_RSRC'
+          OR ed.name like '%_orthomclPeripheral%'
+          OR ed.name like '%PeripheralFrom%')
       AND ed.external_database_id = edr.external_database_id
 SQL
  

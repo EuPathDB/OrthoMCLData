@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+ 
+use strict;
+
+usage() unless scalar(@ARGV) == 2;
+
+my ($inputFastaFile, $outputFastaFile) = @ARGV;
+
+open(INPUT, $inputFastaFile) || die "Can't open '$inputFastaFile' for reading\n";
+open(OUT, ">$outputFastaFile") || die "Can't open '$outputFastaFile' for writing\n";
+
+# sample input defline: >NEUDI_135651T0  | Neurospora discreta FGSC 8579 | unspecified product
+# sample output defline: >NEUDI_135651T0 gene=NEUDI_135651T0 product=unspecified product
+
+while(<INPUT>) {
+    my $line = $_;
+    if ($line =~ /^>/) {
+	my $proteinName;
+	my $proteinProduct;
+        if ($line =~ /^>(\S+)\s+\|\s+(.+)\s\|\s(\S+)/) {
+	    $proteinName = $1;
+	    $proteinProduct = $2;
+	} else {
+	    die "unexpected defline format: $_";
+	}
+	print OUT ">$proteinName gene=$proteinName product=$proteinProduct\n";
+    } else {
+	print OUT;
+    }
+}
+
+exit;
+
+
+
+sub usage {
+
+die "
+Make a fasta file that is orthomcl compliant, for a uniprot reference proteome.
+
+Usage: orthomclMakeCompliantEupathFasta input_fasta_file output_fasta_file
+
+Where: 
+  input_fasta_file:             uniprot fasta file
+  output_fasta_file:            the file to write to
+
+sample input defline: >NEUDI_135651T0  | Neurospora discreta FGSC 8579 | unspecified product
+sample output defline: >NEUDI_135651T0 gene=NEUDI_135651T0 product=unspecified product
+";
+}

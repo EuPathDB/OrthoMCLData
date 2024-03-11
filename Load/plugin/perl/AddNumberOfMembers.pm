@@ -13,17 +13,7 @@ use GUS::Model::ApiDB::OrthologGroupAaSequence;
 use GUS::Model::SRes::ExternalDatabase;
 use GUS::Model::SRes::ExternalDatabaseRelease;
 
-#use ApiCommonData::Load::Util;
-
-my $argsDeclaration =
-[
- stringArg({ descr => 'OrthoGroup types to edit (P=Peripheral,C=Core,R=Residual)',
-	     name  => 'groupTypesCPR',
-	     isList    => 0,
-	     reqd  => 1,
-	     constraintFunc => undef,
-	   }),
-];
+my $argsDeclaration = [];
 
 my $purpose = <<PURPOSE;
 update ApiDB::OrthologGroup table.
@@ -32,7 +22,6 @@ PURPOSE
 my $purposeBrief = <<PURPOSE_BRIEF;
 update apidb.orthologgroup number_of_members.
 PURPOSE_BRIEF
-
 
 my $notes = <<NOTES;
 NOTES
@@ -62,8 +51,6 @@ my $documentation = { purpose          => $purpose,
                       howToRestart     => $howToRestart,
                       failureCases     => $failureCases };
 
-
-
 # ----------------------------------------------------------------------
 
 sub new {
@@ -74,26 +61,18 @@ sub new {
   $self->initialize({ requiredDbVersion => 4,
                       cvsRevision       => '$Revision$',
                       name              => ref($self),
-		      argsDeclaration   => $argsDeclaration,
+                      argsDeclaration   => $argsDeclaration,
                       documentation     => $documentation});
 
   return $self;
 }
-
-
 
 # ======================================================================
 
 sub run {
     my ($self) = @_;
 
-    my $groupTypesCPR = uc($self->getArg('groupTypesCPR'));
-
-    if ( $groupTypesCPR !~ /^[CPRcpr]{1,3}$/ ) {
-	die "The orthoGroup type must consist of C, P, and/or R. The value is currently '$groupTypesCPR'\n";
-    }
-
-    my $unfinished = $self->getUnfinishedOrthologGroups($groupTypesCPR);
+    my $unfinished = $self->getUnfinishedOrthologGroups();
 
     my ($numUpdatedGroups) = $self->processUnfinishedGroups($unfinished);
 
@@ -102,20 +81,15 @@ sub run {
 
 
 sub getUnfinishedOrthologGroups {
-  my ($self,$groupTypesCPR) = @_;
+  my ($self) = @_;
 
   $self->log ("Getting the ids of groups to add number_of_members\n");
 
-  my %types = map { $_ => 1 } split('',uc($groupTypesCPR));
-  my $text = join("','",keys %types);
-  $text = "('$text')";
-
-  my %unfinished;
+  my @unfinished;
 
   my $sqlGetUnfinishedGroups = <<"EOF";
-     SELECT ortholog_group_id, core_peripheral_residual
+     SELECT group_id
      FROM apidb.OrthologGroup
-     WHERE core_peripheral_residual in $text
 EOF
 
   my $dbh = $self->getQueryHandle();
@@ -123,14 +97,14 @@ EOF
   my $sth = $dbh->prepareAndExecute($sqlGetUnfinishedGroups);
 
   while (my @row = $sth->fetchrow_array()) {
-      $unfinished{$row[0]}=$row[1];
+      push(@unfinished, $row[0]);
   }
 
-  my $num = keys %unfinished;
+  my $num = scalar @unfinished;
 
   $self->log ("   There are $num groups\n");
 
-  return \%unfinished;
+  return \@unfinished;
 }
 
 sub processUnfinishedGroups {
@@ -141,27 +115,62 @@ sub processUnfinishedGroups {
   my $dbh = $self->getQueryHandle();
 
   my $sqlNumProteinsInGroup = <<"EOF";
-     SELECT count(*)
-     FROM apidb.OrthologGroupAaSequence
-     WHERE ortholog_group_id = ?
+  SELECT COUNT(aa_sequence_id)
+  FROM apidb.orthologgroupaasequence
+  WHERE group_id = ? 
 EOF
 
-  my $sth = $dbh->prepare($sqlNumProteinsInGroup);
+  my $sqlCoreNumProteinsInGroup = <<"EOF";
+  SELECT COUNT(aa_sequence_id) 
+  FROM (SELECT ogs.aa_sequence_id, ogs.group_id, oas.is_core 
+        FROM apidb.orthologgroupaasequence ogs, dots.orthoaasequence oas 
+        WHERE ogs.group_id = ? 
+        AND ogs.aa_sequence_id = oas.aa_sequence_id
+       ) 
+  WHERE is_core = 1
+EOF
 
-  $self->log("Calculating number_of_members for group_ids: ");
-  foreach my $groupId (keys %{$unfinished}) {
+  my $sqlPeripheralNumProteinsInGroup = <<"EOF";
+  SELECT COUNT(aa_sequence_id) 
+  FROM (SELECT ogs.aa_sequence_id, ogs.group_id, oas.is_core 
+        FROM apidb.orthologgroupaasequence ogs, dots.orthoaasequence oas 
+        WHERE ogs.group_id = ? 
+        AND ogs.aa_sequence_id = oas.aa_sequence_id
+       ) 
+  WHERE is_core = 0
+EOF
+
+  $self->log("Calculating core_number_of_members for group_ids: ");
+  foreach my $groupId (@{$unfinished}) {
     $self->log("$groupId ");
 
-    $sth->execute($groupId);
-    my ($numMembers) = $sth->fetchrow_array();
+    my $totalQry = $dbh->prepare($sqlNumProteinsInGroup);
+    $totalQry->execute($groupId);
+    my ($numMembers) = $totalQry->fetchrow_array();
 
     if ($numMembers == 0) {
 	die "No proteins were found in group with id '$groupId'\n";
     }
 
-    my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'ortholog_group_id'=>$groupId});
+    my $coreQry = $dbh->prepare($sqlCoreNumProteinsInGroup);
+    $coreQry->execute($groupId);
+    
+    my ($coreNumMembers) = $coreQry->fetchrow_array();
+
+    my $peripheralQry = $dbh->prepare($sqlPeripheralNumProteinsInGroup);
+    $peripheralQry->execute($groupId);
+    
+    my ($peripheralNumMembers) = $peripheralQry->fetchrow_array();
+
+    if ($coreNumMembers + $peripheralNumMembers != $numMembers) {
+	die "Number of core and peripheral members do not add up to total number of members for group '$groupId'\n";
+    }
+
+    my $orthologGroup = GUS::Model::ApiDB::OrthologGroup->new({'group_id'=>$groupId});
     $orthologGroup->retrieveFromDB();
     $orthologGroup->set('number_of_members', $numMembers);
+    $orthologGroup->set('number_of_core_members', $coreNumMembers);
+    $orthologGroup->set('number_of_peripheral_members', $peripheralNumMembers);
     my $submit = $orthologGroup->submit();
     $self->undefPointerCache();
 
@@ -171,45 +180,20 @@ EOF
   return $numUpdatedGroups;
 }
 
-
-
-
 # ----------------------------------------------------------------------
-
 
 sub undoTables {
   my ($self) = @_;
-
-  return (
-         );
+  return ();
 }
 
 sub undoPreprocess {
-    my ($self, $dbh, $rowAlgInvocationList) = @_;
-    my $rowAlgInvocations = join(',', @{$rowAlgInvocationList});
+    my ($self, $dbh) = @_;
 
-    my $groupTypesCPR = "";
-    my $sql = " 
-SELECT ap.string_value
-FROM CORE.ALGORITHMPARAM ap, core.algorithmparamkey apk
-WHERE ap.ALGORITHM_PARAM_KEY_ID = apk.ALGORITHM_PARAM_KEY_ID
-      AND ap.ROW_ALG_INVOCATION_ID IN ($rowAlgInvocations)
-      AND apk.ALGORITHM_PARAM_KEY = 'groupTypesCPR'";
-    my $sh = $dbh->prepareAndExecute($sql);
-    while (my @row = $sh->fetchrow_array()) {
-	die "The groupTypesCPR value must consist of C, P and R only" if ($row[0] !~ /^[CPR]{1,3}$/);
-	die "There are multiple groupTypesCPR values for this step" if ($groupTypesCPR ne "" && $groupTypesCPR ne $row[0]);
-	$groupTypesCPR = $row[0];
-    }
-    $sh->finish();
+    my $sql = "UPDATE apidb.OrthologGroup SET number_of_members = -1";
+    my $sql = "UPDATE apidb.OrthologGroup SET number_of_core_members = -1";
+    my $sql = "UPDATE apidb.OrthologGroup SET number_of_peripheral_members = -1";
 
-    my %types = map { $_ => 1 } split('',$groupTypesCPR);
-    my $text = join("','",keys %types);
-    $text = "('$text')";
-
-    $sql = "UPDATE apidb.OrthologGroup
-               SET number_of_members = -1
-               WHERE core_peripheral_residual in $text";    
     my $sh = $dbh->prepareAndExecute($sql);
     $sh->finish();
 }

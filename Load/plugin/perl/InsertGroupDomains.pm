@@ -148,9 +148,11 @@ sub run {
     # read sequence descriptions from db per group
     my $dbh = $self->getQueryHandle();
 
-    my $sql_groups = "SELECT og.ortholog_group_id, og.number_of_members
-                      FROM apidb.OrthologGroup og
-                      WHERE og.core_peripheral_residual in $text";
+    my $sql_groups = "SELECT group_id, COUNT(aa_sequence_id)
+                      AS num_of_members
+                      FROM apidb.orthologgroupaasequence
+                      GROUP BY group_id";
+
     my $ps_groups = $dbh->prepare($sql_groups);
     $ps_groups->execute();
     my %orthIdToNum;
@@ -158,7 +160,7 @@ sub run {
 	$orthIdToNum{$groupId} = $numSeqs;
     }
 
-    my $sql_domains_per_group = "SELECT og.ortholog_group_id, ogs.aa_sequence_id, 
+    my $sql_domains_per_group = "SELECT og.group_id, ogs.aa_sequence_id, 
                                         dbref.remark 
                                  FROM apidb.OrthologGroup og,
                                       apidb.OrthologGroupAaSequence ogs, 
@@ -168,9 +170,9 @@ sub run {
                                  WHERE ogs.aa_sequence_id = df.aa_sequence_id
                                    AND df.aa_feature_id = dbaf.aa_feature_id
                                    AND dbaf.db_ref_id = dbref.db_ref_id
-                                   AND ogs.ortholog_group_id = og.ortholog_group_id
-                                   AND dbref.remark IS NOT NULL
-                                   AND og.core_peripheral_residual in $text";
+                                   AND ogs.group_id = og.group_id
+                                   AND dbref.remark IS NOT NULL";
+
     my $ps_domains_per_group = $dbh->prepare($sql_domains_per_group);
     $ps_domains_per_group->execute();
     my %sequenceDomain;

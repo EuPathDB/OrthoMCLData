@@ -127,9 +127,9 @@ sub checkForExemplar {
   $geneIds{$gene} = 1;
 
   my $aaCount = ($seq =~ tr/[^A-Za-z]//);
-  my $aaStopCodonPercent = ($seqLength - $aaCount)/$seqLength * 100;
 
-  return if $aaStopCodonPercent > $maxStopCodonPercent;
+  # Return if sequence contains a stop codon
+  return if $seqLength > $aaCount;
 
   if (!$exemplars{$gene}) {
     $exemplars{$gene}= $proteinInfo;

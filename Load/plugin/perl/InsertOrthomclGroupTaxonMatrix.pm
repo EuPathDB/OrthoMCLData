@@ -95,20 +95,19 @@ CREATE TABLE apidb.orthologgrouptaxon (
     three_letter_abbrev,
     number_of_proteins,
     number_of_taxa,
-    ortholog_group_id,
-    CONSTRAINT orthoGroupTax_pk1 PRIMARY KEY (three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id)
+    group_id,
+    CONSTRAINT orthoGroupTax_pk1 PRIMARY KEY (three_letter_abbrev,number_of_proteins,number_of_taxa,group_id)
     )
 ORGANIZATION index
 NOLOGGING
 AS    
 SELECT NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier),
        count(ogas.aa_sequence_id),
-       1 as number_of_taxa, og.ortholog_group_id
+       1 as number_of_taxa, og.group_id
 FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.ExternalAaSequence eas        
-WHERE ogas.ortholog_group_id = og.ortholog_group_id
-  AND og.core_peripheral_residual in ('P','R')
+WHERE ogas.group_id = og.group_id
   AND eas.aa_sequence_id = ogas.aa_sequence_id                                                    
-GROUP BY NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier), og.ortholog_group_id
+GROUP BY NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier), og.group_id
 EOF
 
     $dbh->prepareAndExecute($sql);
@@ -122,7 +121,7 @@ EOF
     $dbh->prepareAndExecute($sql);
     $dbh->commit();
 
-    $sql = "create index APIDB.OGT_IX01 on APIDB.ORTHOLOGGROUPTAXON(LOWER('THREE_LETTER_ABBREV'),'ORTHOLOG_GROUP_ID')";
+    $sql = "create index APIDB.OGT_IX01 on APIDB.ORTHOLOGGROUPTAXON(LOWER('THREE_LETTER_ABBREV'),'GROUP_ID')";
     $dbh->prepareAndExecute($sql);
     $dbh->commit();
 
@@ -179,7 +178,7 @@ sub addCladeRows {
 
     my $clades;
     my $sql = <<EOF;
-SELECT three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id
+SELECT three_letter_abbrev,number_of_proteins,number_of_taxa,group_id
 FROM apidb.orthologgrouptaxon
 EOF
 
@@ -193,7 +192,7 @@ EOF
 
     my $numCladeRows = 0;
     $sql = <<EOF;
-INSERT INTO apidb.orthologgrouptaxon (three_letter_abbrev,number_of_proteins,number_of_taxa,ortholog_group_id)
+INSERT INTO apidb.orthologgrouptaxon (three_letter_abbrev,number_of_proteins,number_of_taxa,group_id)
 VALUES (?,?,?,?)
 EOF
     $stmt = $dbh->prepare($sql);

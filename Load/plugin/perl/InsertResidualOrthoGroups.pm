@@ -1,4 +1,4 @@
-package OrthoMCLData::Load::Plugin::InsertOrthoGroups;
+package OrthoMCLData::Load::Plugin::InsertResidualOrthoGroups;
 
 @ISA = qw(GUS::PluginMgr::Plugin);
 
@@ -22,14 +22,7 @@ my $argsDeclaration =
             constraintFunc => undef,
             isList         => 0, }),
 
- stringArg({ descr => 'isResidual (0 or 1)',
-	     name  => 'isResidual',
-	     isList    => 0,
-	     reqd  => 1,
-	     constraintFunc => undef,
-	   }),
-
-stringArg({ descr => 'orthoVersion (7)',
+ stringArg({ descr => 'orthoVersion (7)',
 	     name  => 'orthoVersion',
 	     isList    => 0,
 	     reqd  => 1,
@@ -115,9 +108,6 @@ sub run {
 
     my $orthologFile = $self->getArg('orthoFile');
 
-    my $isResidual = $self->getArg('isResidual');
-    die "The isResidual variable must be 1 or 0. It is currently set to '$isResidual'" if ($isResidual != 1 && $isResidual != 0);
-	
     my $orthoVersion = $self->getArg('orthoVersion');
 
     my $dbReleaseId = $self->getDbRls();
@@ -129,7 +119,7 @@ sub run {
         chomp;
         $lineCount++;
 
-        if ($self->_parseGroup($_, $isResidual, $orthoVersion, $dbReleaseId)) {
+        if ($self->_parseGroup($_, $orthoVersion, $dbReleaseId)) {
             $groupCount++;
             if (($groupCount % 1000) == 0) {
                 $self->log("$groupCount ortholog groups loaded.");
@@ -142,46 +132,25 @@ sub run {
 }
 
 sub _parseGroup {
-    my ($self, $line, $isResidual, $orthoVersion, $dbReleaseId) = @_;
+    my ($self, $line, $orthoVersion, $dbReleaseId) = @_;
 
     # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
-    if ($isResidual == 0) {
-        if ($line = /^OG(\d+)_(\d+):\s.*/) {
-            my $groupVersion = $1;
-            my $groupNumber = $2;
-            my $groupId;
-            $groupId = 'OG' . $groupVersion . '_' . $groupNumber;
-            # create a OrthlogGroup instance
-            my $orthoGroup = GUS::Model::ApiDB::OrthologGroup->new({group_id => $groupId,
-                                                                    is_residual => $isResidual,
-                                                                    external_database_release_id => $dbReleaseId,
-                                                                   });
-            $orthoGroup->submit();
-            $orthoGroup->undefPointerCache();
-            return 1;
-        }
-        else {
-            return 0;
-        } 
-    } 
-    else {
-        if ($line = /^OG(\d+):\s.*/) {
-            my $groupNumber = $1;
-            my $groupId;
-            $groupId = 'OGR' . $orthoVersion . '_' . $groupNumber;
-            # create a OrthlogGroup instance
-            my $orthoGroup = GUS::Model::ApiDB::OrthologGroup->new({group_id => $groupId,
-                                                                    is_residual => $isResidual,
-                                                                    external_database_release_id => $dbReleaseId,
-                                                                   });
-            $orthoGroup->submit();
-            $orthoGroup->undefPointerCache();
-            return 1;
-        }
-        else {
-            return 0;
-        }
+    my $groupId;
+    if ($line = /^(OGR\d+_\d+):\s.*/) {
+        $groupId = $1;
     }
+    else {
+        die "Improper group file format";
+    }
+         
+    # create a OrthlogGroup instance
+    my $orthoGroup = GUS::Model::ApiDB::OrthologGroup->new({group_id => $groupId,
+                                                            is_residual => 1,
+                                                            external_database_release_id => $dbReleaseId,
+                                                           });
+    $orthoGroup->submit();
+    $orthoGroup->undefPointerCache();
+    return 1;
 }
 
 sub getDbRls {
@@ -216,8 +185,15 @@ sub getDbRls {
 
 sub undoTables {
   my ($self) = @_;
-
   return ('ApiDB.OrthologGroup');
 }
+
+sub undoPreprocess {
+  my ($self, $dbh, $rowAlgInvocationList) = @_;
+  my $sql = "DELETE FROM apidb.orthologgroup WHERE IS_RESIDUAL = 1";
+  my $sh = $dbh->prepare($sql); 
+  $sh->execute();
+  $sh->finish();
+} 
 
 1;

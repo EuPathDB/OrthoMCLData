@@ -130,60 +130,49 @@ sub _parseGroup {
     my $dbh = $self->getQueryHandle();
 
     # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
+    my $groupId;
+    my @groupSeqs;
     if ($isResidual == 0) {
-        if ($line = /^OG(\d+)_(\d+):\s(.*)/) {
-            my $groupVersion = $1;
-            my $groupNumber = $2;
-            my $groupId;
-            $groupId = 'OG' . $groupVersion . '_' . $groupNumber;
-            my @groupSeqs = split(/\s/,$3);
-            
-            foreach my $groupSeq (@groupSeqs) {
-                my $sql = "SELECT aa_sequence_id FROM dots.orthoaasequence WHERE SECONDARY_IDENTIFIER = '$groupSeq'";
-                my $aaSequenceQuery = $dbh->prepare($sql);
-                $aaSequenceQuery->execute();
-		my @data = $aaSequenceQuery->fetchrow_array();
-                my $aaSequence = $data[0];
-                # create a OrthlogGroupAASequence instance
-                my $orthoGroupAASequence = GUS::Model::ApiDB::OrthologGroupAASequence->new({group_id => $groupId,
-                                                                                            aa_sequence_id => $aaSequence
-                                                                                           });
-                $orthoGroupAASequence->submit();
-                $orthoGroupAASequence->undefPointerCache();
-            }
-            return 1;
+        if ($line = /^(OG\d+_\d+):\s(.*)/) {
+            $groupId = $1;
+            @groupSeqs = split(/\s/,$2);
         }
         else {
-            return 0;
-        } 
-    } 
-    else {
-        if ($line = /^OG(\d+):\s(.*)/) {
-            my $groupNumber = $1;
-            my $groupId;
-            $groupId = 'OGR' . $orthoVersion . '_' . $groupNumber;
-            my @groupSeqs = split(/\s/,$2);
-            
-            foreach my $groupSeq (@groupSeqs) {
-                my $sql = "SELECT aa_sequence_id FROM dots.orthoaasequence WHERE SECONDARY_IDENTIFIER = '$groupSeq'";
-                my $aaSequenceQuery = $dbh->prepare($sql);
-                $aaSequenceQuery->execute();
-		my @data = $aaSequenceQuery->fetchrow_array();
-                my $aaSequence = $data[0];
-                # create a OrthlogGroupAASequence instance
-                my $orthoGroupAASequence = GUS::Model::ApiDB::OrthologGroupAASequence->new({group_id => $groupId,
-                                                                                            aa_sequence_id => $aaSequence
-                                                                                           });
-                $orthoGroupAASequence->submit();
-                $orthoGroupAASequence->undefPointerCache();
-            }
-            return 1;
-        }
-        else {
-            return 0;
-        }
+            die "Improper groupFile format";
+	}
     }
+    else {
+        if ($line = /^(OGR\d+_\d+):\s(.*)/) {
+            $groupId = $1;
+            @groupSeqs = split(/\s/,$2);
+        }
+        else {
+            die "Improper groupFile format";
+	}
+    }
+
+    my $numOfSeqs = @groupSeqs;
+ 
+    if ($numOfSeqs == 0) {
+        die "No Sequences assigned to group";
+    }
+
+    foreach my $groupSeq (@groupSeqs) {
+        my $sql = "SELECT aa_sequence_id FROM dots.orthoaasequence WHERE SECONDARY_IDENTIFIER = '$groupSeq'";
+        my $aaSequenceQuery = $dbh->prepare($sql);
+        $aaSequenceQuery->execute();
+        my @data = $aaSequenceQuery->fetchrow_array();
+        my $aaSequence = $data[0];
+        # create a OrthlogGroupAASequence instance
+        my $orthoGroupAASequence = GUS::Model::ApiDB::OrthologGroupAASequence->new({group_id => $groupId,
+                                                                                    aa_sequence_id => $aaSequence
+                                                                                   });
+        $orthoGroupAASequence->submit();
+        $orthoGroupAASequence->undefPointerCache();
+    }
+    return 1;
 }
+
 
 # ----------------------------------------------------------------------
 

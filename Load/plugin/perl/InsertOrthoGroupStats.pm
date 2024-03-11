@@ -127,6 +127,7 @@ sub addRow {
                                                          PROTEIN_SUBSET => $proteinSubset
                                                      });
   $row->submit();
+  $row->undefPointerCache();
 }
 
 sub undoTables {

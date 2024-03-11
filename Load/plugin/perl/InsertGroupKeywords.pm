@@ -143,14 +143,13 @@ sub run {
     
     # read sequence descriptions from db per group
     my $dbh = $self->getQueryHandle();
-    my $sql = "SELECT ogs.ortholog_group_id, eas.description
+    my $sql = "SELECT ogs.group_id, eas.description
                FROM ApiDB.OrthologGroupAaSequence ogs,
                     DoTS.ExternalAaSequence eas,
                     ApiDB.OrthologGroup og
                WHERE ogs.aa_sequence_id = eas.aa_sequence_id
-                    and ogs.ortholog_group_id = og.ortholog_group_id
-                    and og.core_peripheral_residual in $text
-               ORDER BY ogs.ortholog_group_id ASC";
+                    and ogs.group_id = og.group_id
+               ORDER BY ogs.group_id ASC";
     my $stmt = $dbh->prepare($sql);
     
     $stmt->execute();
