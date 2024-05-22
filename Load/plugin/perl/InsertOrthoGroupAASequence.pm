@@ -1,5 +1,5 @@
 package OrthoMCLData::Load::Plugin::InsertOrthoGroupAASequence;
-
+use lib "$ENV{GUS_HOME}/lib/perl";
 @ISA = qw(GUS::PluginMgr::Plugin);
 
 # ----------------------------------------------------------------------
@@ -7,7 +7,9 @@ package OrthoMCLData::Load::Plugin::InsertOrthoGroupAASequence;
 use strict;
 use GUS::PluginMgr::Plugin;
 use FileHandle;
-
+use GUS::Supported::Util;
+use File::Temp qw/ tempfile /;
+use POSIX qw/strftime/;
 use GUS::Model::ApiDB::OrthologGroup;
 use GUS::Model::ApiDB::OrthologGroupAASequence;
 use GUS::Model::DoTS::OrthoAASequence;
@@ -91,8 +93,6 @@ sub new {
   return $self;
 }
 
-
-
 # ======================================================================
 
 sub run {
@@ -103,76 +103,145 @@ sub run {
     my $isResidual = $self->getArg('isResidual');
     die "The isResidual variable must be 1 or 0. It is currently set to '$isResidual'" if ($isResidual != 1 && $isResidual != 0);
 	
-    my $orthoVersion = $self->getArg('orthoVersion');
-
-    open ORTHO_FILE, "<$orthologFile";
-    my $groupCount = 0;
-    my $lineCount = 0;
-    while (<ORTHO_FILE>) {
-        chomp;
-        $lineCount++;
-
-        if ($self->_parseGroup($_, $isResidual, $orthoVersion)) {
-            $groupCount++;
-            if (($groupCount % 1000) == 0) {
-                $self->log("$groupCount ortholog groups loaded.");
-            }
-        } else {
-            $self->log("line cannot be parsed:\n#$lineCount '$_'.");
-        }
-    }
-    $self->log("total $lineCount lines processed, and $groupCount groups loaded.");
-}
-
-sub _parseGroup {
-    my ($self, $line, $isResidual, $orthoVersion) = @_;
-
+    my %sequenceIdHash;
+    my $sql = "SELECT aa_sequence_id, secondary_identifier FROM dots.orthoaasequence";
     my $dbh = $self->getQueryHandle();
+    my $aaSequenceQuery = $dbh->prepare($sql);
+    $aaSequenceQuery->execute();
 
-    # example line: OG2_1009: osa|ENS1222992 pfa|PF11_0844
-    my $groupId;
-    my @groupSeqs;
-    if ($isResidual == 0) {
-        if ($line = /^(OG\d+_\d+):\s(.*)/) {
-            $groupId = $1;
-            @groupSeqs = split(/\s/,$2);
-        }
-        else {
-            die "Improper groupFile format";
-	}
-    }
-    else {
-        if ($line = /^(OGR\d+_\d+):\s(.*)/) {
-            $groupId = $1;
-            @groupSeqs = split(/\s/,$2);
-        }
-        else {
-            die "Improper groupFile format";
-	}
+    while (my ($aaSeqId , $seqId)= $aaSequenceQuery->fetchrow_array()) {
+        $sequenceIdHash{$seqId} = $aaSeqId;
     }
 
-    my $numOfSeqs = @groupSeqs;
- 
-    if ($numOfSeqs == 0) {
-        die "No Sequences assigned to group";
-    }
+    my $formattedFile = $self->formatInput($orthologFile, %sequenceIdHash);
 
-    foreach my $groupSeq (@groupSeqs) {
-        my $sql = "SELECT aa_sequence_id FROM dots.orthoaasequence WHERE SECONDARY_IDENTIFIER = '$groupSeq'";
-        my $aaSequenceQuery = $dbh->prepare($sql);
-        $aaSequenceQuery->execute();
-        my @data = $aaSequenceQuery->fetchrow_array();
-        my $aaSequence = $data[0];
-        # create a OrthlogGroupAASequence instance
-        my $orthoGroupAASequence = GUS::Model::ApiDB::OrthologGroupAASequence->new({group_id => $groupId,
-                                                                                    aa_sequence_id => $aaSequence
-                                                                                   });
-        $orthoGroupAASequence->submit();
-        $orthoGroupAASequence->undefPointerCache();
-    }
-    return 1;
+    my ($ctrlFh, $ctrlFile) = tempfile(SUFFIX => '.dat');
+
+    $self->loadGroupSequence($filteredFile, $ctrlFile);
+
 }
 
+# ---------------------- Subroutines ----------------------
+
+sub formatInput {
+    my ($self, $inputFile, $sequenceIds) = @_;
+
+    my $outputFile = "$inputFile\_formatted.txt";
+
+    open(IN, $inputFile) or die "Cannot open input file $inputFile for reading. Please check and try again\n$!\n\n";
+    open(OUT, "> $outputFile") or die "Cannot open output file $outputFile for writing. Please check and try again\n$!\n\n";
+
+    while (<IN>) {
+        my $line = $_;
+       
+        my @groupAndSeqs =  split(/:\s/,$line);
+        my $groupId = $groupAndSeqs[0];
+        my $seqs = $groupAndSeqs[1];
+        my @groupSeqs = split(/\s/,$seqs);
+
+        my $numOfSeqs = @groupSeqs;
+ 
+        if ($numOfSeqs == 0) {
+            die "No Sequences assigned to group $groupId";
+        }
+
+        foreach my $seq (@groupSeqs) {
+ 
+            print OUT "$groupId,$sequenceIdHash{$seq}\n";
+
+        }    
+        
+    }
+    close(IN);
+    close(OUT);
+
+    return $outputFile;
+}
+
+sub loadGroupSequence {
+    my ($self, $inputFile, $ctrlFile) = @_;
+
+    my $ctrlFile = "$ctrlFile.ctrl";
+    my $logFile = "$ctrlFile.log";
+
+    $self->writeConfigFile($ctrlFile, $inputFile);
+
+    my $login = $self->getConfig->getDatabaseLogin();
+    my $password = $self->getConfig->getDatabasePassword();
+    my $dbiDsn = $self->getConfig->getDbiDsn();
+    my ($dbi, $type, $db) = split(':', $dbiDsn);
+
+    if($self->getArg('commit')) {
+        my $exitstatus = system("sqlldr $login/$password\@$db control=$ctrlFile log=$logFile rows=2000 errors=0");
+        if ($exitstatus != 0){
+            die "ERROR: sqlldr returned exit status $exitstatus";
+        }
+
+        open(LOG, $logFile) or die "Cannot open log file $logFile: $!";
+        while (<LOG>) {
+            $self->log($_);
+        }
+        close LOG;
+        unlink $logFile;
+    }
+    unlink $ctrlFile;
+}
+
+sub writeConfigFile {                                                                                                                                                                                      
+    my ($self, $configFile, $inputFile) = @_;
+
+    my $modDate = uc(strftime("%d-%b-%Y", localtime));
+    my $database = $self->getDb();
+    my $projectId = $database->getDefaultProjectId();
+    my $userId = $database->getDefaultUserId();
+    my $groupId = $database->getDefaultGroupId();
+    my $algInvocationId = $database->getDefaultAlgoInvoId();
+    my $userRead = $database->getDefaultUserRead();
+    my $userWrite = $database->getDefaultUserWrite();
+    my $groupRead = $database->getDefaultGroupRead();
+    my $groupWrite = $database->getDefaultGroupWrite();
+    my $otherRead = $database->getDefaultOtherRead();
+    my $otherWrite = $database->getDefaultOtherWrite();
+
+    open(CONFIG, "> $configFile") or die "Cannot open file $configFile For writing:$!";
+
+  print CONFIG "LOAD DATA
+CHARACTERSET UTF8
+LENGTH SEMANTICS CHAR
+INFILE '$inputFile'
+APPEND
+INTO TABLE ApiDB.OrthoGroupAASequence
+REENABLE DISABLED_CONSTRAINTS
+FIELDS TERMINATED BY ','
+TRAILING NULLCOLS
+(
+ortholog_group_aa_sequence_id SEQUENCE(MAX,1),
+group_id,
+aa_sequence_id,
+modification_date constant \"$modDate\",
+user_read constant $userRead,
+user_write constant $userWrite,
+group_read constant $groupRead,
+group_write constant $groupWrite,
+other_read constant $otherRead,
+other_write constant $otherWrite,
+row_user_id constant $userId,
+row_group_id constant $groupId,
+row_project_id constant $projectId,
+row_alg_invocation_id constant $algInvocationId
+)\n";
+  close CONFIG;
+}
+
+sub getConfig {
+    my ($self) = @_;
+
+    if(!$self->{config}) {
+        my $gusConfigFile = $self->getArg('gusConfigFile');
+        $self->{config} = GUS::Supported::GusConfig->new($gusConfigFile);
+    }
+    $self->{config}
+}
 
 # ----------------------------------------------------------------------
 
