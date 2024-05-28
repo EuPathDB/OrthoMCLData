@@ -96,6 +96,7 @@ CREATE TABLE apidb.orthologgrouptaxon (
     number_of_proteins,
     number_of_taxa,
     group_id,
+    modification_date,
     CONSTRAINT orthoGroupTax_pk1 PRIMARY KEY (three_letter_abbrev,number_of_proteins,number_of_taxa,group_id)
     )
 ORGANIZATION index
@@ -103,7 +104,7 @@ NOLOGGING
 AS    
 SELECT NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier),
        count(ogas.aa_sequence_id),
-       1 as number_of_taxa, og.group_id
+       1 as number_of_taxa, og.group_id, sysdate
 FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.ExternalAaSequence eas        
 WHERE ogas.group_id = og.group_id
   AND eas.aa_sequence_id = ogas.aa_sequence_id                                                    
@@ -192,8 +193,8 @@ EOF
 
     my $numCladeRows = 0;
     $sql = <<EOF;
-INSERT INTO apidb.orthologgrouptaxon (three_letter_abbrev,number_of_proteins,number_of_taxa,group_id)
-VALUES (?,?,?,?)
+INSERT INTO apidb.orthologgrouptaxon (three_letter_abbrev,number_of_proteins,number_of_taxa,group_id,modification_date)
+VALUES (?,?,?,?,sysdate)
 EOF
     $stmt = $dbh->prepare($sql);
     foreach my $clade (keys %{$clades}) {
