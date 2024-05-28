@@ -78,15 +78,15 @@ sub run {
  while (my $line = <$data>) {
      my $rowCount++;
      chomp $line;
-     my ($proteinSourceId, $seqMd5Digest, $seqLen, $interproDbName, $interproFamilyId, $analysisDesc, $interproStartMin, $interproEndMin, $interproEValue, $status, $date, $interproPrimaryId, $interproDescription) = split(/\t/, $line);
+     my ($proteinSourceId, $seqMd5Digest, $seqLen, $interproDbName, $interproPrimaryId, $analysisDesc, $interproStartMin, $interproEndMin, $interproEValue, $status, $date, $interproFamilyId, $interproDescription) = split(/\t/, $line);
      my $row = GUS::Model::ApiDB::InterproResults->new({TRANSCRIPT_SOURCE_ID => $transcriptSourceId,
 						  PROTEIN_SOURCE_ID => $proteinSourceId,
 						  GENE_SOURCE_ID => $geneSourceId,
 						  NCBI_TAX_ID => $ncbiTaxId,
 						  INTERPRO_DB_NAME => $interproDbName,
 						  INTERPRO_PRIMARY_ID => $interproPrimaryId,
-						  INTERPRO_SECONDARY_ID => $interproPrimaryId,
-						  INTERPRO_DESC => $interproDescription,
+# TODO: add back if we get the short name						  INTERPRO_SECONDARY_ID => $interproPrimaryId,
+						  INTERPRO_DESC => $analysisDesc,
 						  INTERPRO_START_MIN => $interproStartMin,
 						  INTERPRO_END_MIN => $interproEndMin,
 						  INTERPRO_E_VALUE => $interproEValue,
