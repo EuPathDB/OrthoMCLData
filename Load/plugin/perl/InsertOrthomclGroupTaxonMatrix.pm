@@ -31,7 +31,7 @@ ApiDB.OrthologGroupTaxon,
 TABLES_AFFECTED
 
 my $tablesDependedOn = <<TABLES_DEPENDED_ON;
-ApiDB.OrthomclTaxon, ApiDB.OrthologGroup, ApiDB.OrthologGroupAaSequence, Dots.ExternalAaSequence,
+ApiDB.OrthomclTaxon, ApiDB.OrthologGroup, ApiDB.OrthologGroupAaSequence, Dots.OrthoAaSequence,
 TABLES_DEPENDED_ON
 
 my $howToRestart = <<RESTART;
@@ -105,7 +105,7 @@ AS
 SELECT NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier),
        count(ogas.aa_sequence_id),
        1 as number_of_taxa, og.group_id, sysdate
-FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.ExternalAaSequence eas        
+FROM apidb.orthologgroup og, apidb.orthologgroupaasequence ogas, dots.OrthoAaSequence eas        
 WHERE ogas.group_id = og.group_id
   AND eas.aa_sequence_id = ogas.aa_sequence_id                                                    
 GROUP BY NVL(SUBSTR(eas.secondary_identifier, 0, INSTR(eas.secondary_identifier, '|')-1), eas.secondary_identifier), og.group_id

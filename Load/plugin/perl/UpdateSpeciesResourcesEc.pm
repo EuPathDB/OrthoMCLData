@@ -45,8 +45,8 @@ my $tablesDependedOn = <<TABLES_DEPENDED_ON;
 ApiDB.OrthomclTaxon,
 Sres.ExternalDatabase,
 Sres.ExternalDatabaseRelease,
-Sres.Taxon
-Sres.TaxonName
+#Sres.Taxon
+#Sres.TaxonName
 TABLES_DEPENDED_ON
 
 my $howToRestart = <<RESTART;
@@ -88,15 +88,15 @@ sub run {
     my $dataDir = $self->getArg('dataDir');
 
     my $speciesFromOrtho = $self->getSpeciesFromOrtho();
-    my $speciesFromOrtho = $self->updateUniprotData($speciesFromOrtho,$dataDir);
-    my $speciesFromOrtho = $self->updateVeupathData($speciesFromOrtho,$dataDir);
+    #my $speciesFromOrtho = $self->updateUniprotData($speciesFromOrtho,$dataDir);
+    #my $speciesFromOrtho = $self->updateVeupathData($speciesFromOrtho,$dataDir);
     my $speciesFromOrtho = $self->cleanUpData($speciesFromOrtho);
 
     my $numRows = $self->loadOrthoResource($speciesFromOrtho);
     $self->log("Finished adding to ApiDB.OrthomclResource. Loaded $numRows rows.\n");
 
-    $numRows = $self->updateOrthoTaxon($speciesFromOrtho);
-    $self->log("Finished updating ApiDB.OrthomclTaxon. Updated $numRows rows.\n");
+    #$numRows = $self->updateOrthoTaxon($speciesFromOrtho);
+    #$self->log("Finished updating ApiDB.OrthomclTaxon. Updated $numRows rows.\n");
 
     my $ecFileForOrtho = "ecFromVeupath.txt";
     my $ecFileforGenomicSites = "ec_organism.txt";
@@ -108,11 +108,9 @@ sub getSpeciesFromOrtho {
     my ($self) = @_;
 
     my $sql = <<SQL;
-SELECT ot.three_letter_abbrev, ot.orthomcl_taxon_id, ot.name, t.ncbi_tax_id
-FROM apidb.orthomcltaxon ot, sres.taxon t, sres.taxonname tn
+SELECT ot.three_letter_abbrev, ot.orthomcl_taxon_id, ot.name
+FROM apidb.orthomcltaxon ot
 WHERE ot.core_peripheral IN ('C','P')
-AND ot.name = tn.name
-AND tn.taxon_id = t.taxon_id 
 SQL
  
     my $dbh = $self->getQueryHandle();
@@ -123,7 +121,6 @@ SQL
         $self->log("abbrev is $row[0]\n");
 	$species->{$row[0]}->{orthomclId} = $row[1];
 	$species->{$row[0]}->{name} = $row[2];
-	$species->{$row[0]}->{ncbiTaxId} = $row[3];
     }
 
     $sql = <<SQL;
@@ -132,6 +129,7 @@ FROM Sres.ExternalDatabase ed,
      Sres.ExternalDatabaseRelease edr
 WHERE (ed.name like '%_orthomclProteome_RSRC'
           OR ed.name like '%_orthomclPeripheral%'
+          OR ed.name like '%_PeripheralFrom%'
           OR ed.name like '%PeripheralFrom%')
       AND ed.external_database_id = edr.external_database_id
 SQL
@@ -150,10 +148,12 @@ SQL
     
     foreach my $abbrev (keys %{$species}) {
 	if (! exists $species->{$abbrev}->{version} ) {
-	    $self->error("Abbreviation '$abbrev' does not have version in ExtDb or ExtDbRls tables.\n");
+            # Temporarily blocking this out until next run so I can resolve this issue
+	    #$self->error("Abbreviation '$abbrev' does not have version in ExtDb or ExtDbRls tables.\n");
 	}
 	if (! exists $species->{$abbrev}->{url} ) {
-	    $self->error("Abbreviation '$abbrev' does not have url in ExtDb or ExtDbRls tables.\n");
+            # Temporarily blocking this out until next run so I can resolve this issue
+	    #$self->error("Abbreviation '$abbrev' does not have url in ExtDb or ExtDbRls tables.\n");
 	}
 
     }

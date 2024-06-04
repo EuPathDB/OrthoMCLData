@@ -117,14 +117,14 @@ sub run {
 
     my ($ctrlFh, $ctrlFile) = tempfile(SUFFIX => '.dat');
 
-    $self->loadGroupSequence($filteredFile, $ctrlFile);
+    $self->loadGroupSequence($formattedFile, $ctrlFile);
 
 }
 
 # ---------------------- Subroutines ----------------------
 
 sub formatInput {
-    my ($self, $inputFile, $sequenceIds) = @_;
+    my ($self, $inputFile, %sequenceIds) = @_;
 
     my $outputFile = "$inputFile\_formatted.txt";
 
@@ -146,9 +146,14 @@ sub formatInput {
         }
 
         foreach my $seq (@groupSeqs) {
- 
-            print OUT "$groupId,$sequenceIdHash{$seq}\n";
-
+            $seq =~ s/_RNA/:RNA/g;
+            $seq =~ s/_mRNA/:mRNA/g;
+            if ($sequenceIds{$seq}) {
+                print OUT "$groupId,$sequenceIds{$seq}\n";
+            }
+            else {
+                die "No aasequenceId for sequence $seq\n";
+            }
         }    
         
     }
@@ -210,7 +215,7 @@ CHARACTERSET UTF8
 LENGTH SEMANTICS CHAR
 INFILE '$inputFile'
 APPEND
-INTO TABLE ApiDB.OrthoGroupAASequence
+INTO TABLE ApiDB.OrthologGroupAASequence
 REENABLE DISABLED_CONSTRAINTS
 FIELDS TERMINATED BY ','
 TRAILING NULLCOLS
